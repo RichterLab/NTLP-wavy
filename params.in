@@ -38,6 +38,7 @@ ifields = 1  ! if set to 1, reads the initial condition from path_ran below; oth
 ievap = 0
 i_tank = 10 
 i_zeta = 1  !Do particle statistics correspond to zeta (i_zeta=1) or z (i_zeta=0) levels?
+inetcdf=1   !If set to 1, writes history file to netcdf format. Otherwise writes original binary
 /
 
 !Grid and domain parameters

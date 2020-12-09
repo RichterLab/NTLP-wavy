@@ -6,6 +6,7 @@ c
       use particles
       use con_data
       use con_stats
+      use netcdf_io
       include 'mpif.h'
 c
 c ------------- definition of internal flags
@@ -13335,6 +13336,7 @@ c
       use fields
       use con_data
       use con_stats
+      use netcdf_io
 c
       data ionce /0/
       save ionce

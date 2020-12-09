@@ -10,7 +10,6 @@ OUTPUTOPT = -DNETCDF -DNCFPLUS
 LINKOPTS  = -lnetcdf -lnetcdff
 
 SRC = 	fft.f \
-	kdtree.f90 \
         defs.F \
         netcdf_io.f90
 
