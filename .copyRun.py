@@ -86,20 +86,22 @@ if 'h' in args:
     and the process name is set to newRun_[LESdir] in les.run.")
     quit()
 
-# Get newRun dir for saving to same dir in scratch
+# Get parent/newRun dir for saving to same dir in scratch
 dirs = os.getcwd().split('/')
-os.system("mkdir " + newRun + " &> /dev/null")  # silences output
-os.system("cp " + oldRun+"/*.dat " + newRun+"/")
 procName = newRun + "_" + dirs[-1]
 path = dirs[-1] + "/" + newRun
 
-# change path in params.in
+# Copy over run files
+os.system("mkdir " + newRun + " &> /dev/null")  # silences output
+os.system("cp " + oldRun+"/*.dat " + newRun+"/") # copy over dat files
+
+# Change path in params.in
 pStr = setPath(pStr, "path_seed", path)
 pStr = setPath(pStr, "path_part", path)
 pStr = setPath(pStr, "path_res",  path)
 pStr = setPath(pStr, "path_ran",  path)
 
-# change process name in les.run
+# Change process name in les.run
 lStr = setProcName(lStr, procName)
 
 with open(newRun + "/params.in", "w+") as file:
