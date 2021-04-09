@@ -5,8 +5,7 @@ import sys
 # Copies all files from first arg to second arg (dir created if needed)
 # Changes param directories to /scratch365/$USER/[this dir, 2 deep]/*
 # Also sets les.run process name to the current directory, 2 deep
-# Optional arg -p sets max particles
-# Optional arg -n sets number of nodes and procs
+
 
 def setPath(text, var, path):
     home = os.path.expanduser("~")
@@ -18,7 +17,7 @@ def setPath(text, var, path):
     j = text.find('\"', i)
     j = text[i:j].rfind('/') + i
     return text[:i] + dir+path + text[j:]
-        
+
 def setProcName(text, name):
     var = "#$ -N "
     i = text.find(var)+len(var)
@@ -28,6 +27,7 @@ def setProcName(text, name):
 def setVar(text, var, val):
     # Find variable
     i = text.find(var) + len(var);
+    if i == len(var)-1: return text # var not found
     # Skip '=' and spaces
     while text[i]==' ' or text[i]=='=': i+=1
     # Find end of current value
@@ -49,42 +49,43 @@ def setArg(text, prog, arg, val):
     # Insert new value and return
     return text[:i] + str(val) + text[j:]
 
+def printHelp():
+    print("Usage:\n  ./"+sys.argv[0][1:-3]+" oldRun newRun -param1 value -param2 value " \
+        + "-paramN value")
+    print("Help:\n  Copies oldRun directory to newRun directory, which is created. \n" \
+        + "  The paths set in params.in are updated to /scratch365/$USER/[LESdir]/newRun \n" \
+        + "  and the process name is set to newRun_[LESdir] in les.run. Optional \n" \
+        + "  parameters matching entries in params.in are set to the given values")
+
+
 
 # Parse CLI #
-if len(sys.argv) < 3:
-    print("Usage:\n"+sys.argv[0]+" [oldRun] [newRun]")
-    quit()
-oldRun = sys.argv[1]
-newRun = sys.argv[2]
 args = {} # dictionary to hold cli args
 for i in range(0, len(sys.argv)):
     a = sys.argv[i]
-    if a[0] == '-':
+    if a == '-help' or a =='-h':
+        printHelp()
+        quit()
+    elif a[0] == '-':
         args[a[1:]] = sys.argv[i+1]
 
+if len(sys.argv) < 3:
+    print("Error:\n  Not enough arguments")
+    printHelp()
+    quit()
+
 # Open files #
+oldRun = sys.argv[1]
+newRun = sys.argv[2]
 with open(oldRun+"/params.in") as file:
     pStr = file.read()
 with open(oldRun+"/les.run") as file:
     lStr = file.read()
 
-# Set number of nodes and processors
-if 'c' in args:
-    cores = args['c']
-    lStr = setArg(lStr, "mpirun", "-n", cores)
-    lStr = setArg(lStr, "#$ -pe", "mpi-16", cores)
 
-# Set max particles
-if 'p' in args:
-    pStr = setVar(pStr, "tnumpart", args['p'])
-
-# Print help
-if 'h' in args:
-    print("Usage:\n"+sys.argv[0]+" [oldRun] [newRun]")
-    print("Copies oldRun directory to newRun directory, which is created. The \
-    paths set in params.in are updated to /scratch365/$USER/[LESdir]/newRun \
-    and the process name is set to newRun_[LESdir] in les.run.")
-    quit()
+# Set parameters given
+for a in args:
+    pStr = setVar(pStr, a, args[a] + "   ")
 
 # Get parent/newRun dir for saving to same dir in scratch
 dirs = os.getcwd().split('/')
