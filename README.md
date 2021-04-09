@@ -4,7 +4,7 @@ To install this project on an ND CRC server, navigate to the desired location
 in a terminal and run the following commands:  
 
 ---
-git clone https://www.github.com/trihedral/NTLP-wavy  
+git clone https://www.github.com/RichterLab/NTLP-wavy  
 cd NTLP-wavy/build  
 module load intel  
 module load mvapich2  
