@@ -89,7 +89,7 @@ if 'h' in args:
 # Get newRun dir for saving to same dir in scratch
 dirs = os.getcwd().split('/')
 os.system("mkdir " + newRun + " &> /dev/null")  # silences output
-os.system("cp -r " + oldRun+"/* " + newRun+"/")
+os.system("cp " + oldRun+"/*.dat " + newRun+"/")
 procName = newRun + "_" + dirs[-1]
 path = dirs[-1] + "/" + newRun
 
