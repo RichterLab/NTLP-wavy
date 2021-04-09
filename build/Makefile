@@ -11,23 +11,26 @@ OUTPUTLIB = -L$(NETCDFBASE)/lib
 OUTPUTOPT = -DNETCDF -DNCFPLUS
 LINKOPTS  = -lnetcdf -lnetcdff
 
-SRC = 	fft.f \
-        defs.F \
-        netcdf_io.f90
+SRC =   fft.f \
+        modules.F \
+        netcdf_io.f90 \
+        subroutines.F \
+        particleSubs.F \
+        ioSubs.F
 
 OBJS = $(addsuffix .o, $(basename $(SRC)))
 
 
-lesmpi.a: $(OBJS) les.F
+lesmpi.a: $(OBJS) ../src/les.F
 	$(FORTRAN) $^ -o $@  $(FLAGS) $(DEBUG_FLAGS) $(OUTPUTINC) $(OUTPUTLIB) $(LINKOPTS)
 
-%.o: %.f
+%.o: ../src/%.f
 	$(FORTRAN) $(FLAGS) $(DEBUG_FLAGS) -c $< $(OUTPUTINC) $(OUTPUTLIB)
 
-%.o: %.f90
+%.o: ../src/%.f90
 	$(FORTRAN) $(FLAGS) $(DEBUG_FLAGS) -c $< $(OUTPUTINC) $(OUTPUTLIB)
 
-%.o: %.F
+%.o: ../src/%.F
 	$(FORTRAN) $(FLAGS) $(DEBUG_FLAGS) -c $< $(OUTPUTINC) $(OUTPUTLIB)
 
 

@@ -1,0 +1,39 @@
+#!/bin/bash
+#$ -M Email
+#$ -m abe	   # Send mail when job aborts, begins or ends
+#$ -pe mpi-16 64
+#$ -q *@@richter
+#$ -N ExRun_Mono_NTLP-wavy
+#$ -j y
+
+# If no input, run from current directory
+homedir=~/$@;
+if [ $# -eq 0 ]; then
+  homedir=$(pwd);
+fi
+
+# Make sure build directory is adjacent
+if !(echo $(ls $homedir/..) | grep -q "build"); then
+  echo "Invalid directory: "$homedir
+  echo "Cannot locate adjacent build directory; aborting.";
+  exit 1
+fi
+
+# Locate and create data directory if needed
+case=$(basename $(pwd))
+time=0000000
+parent=$(basename $(dirname $(pwd)))
+datadir=/scratch365/$USER/$parent/$case
+mkdir -p $datadir
+cd $homedir
+
+module load mvapich2
+module load intel
+module load netcdf
+
+imachine=0
+echo $imachine > ./mach.file
+echo $datadir >> ./mach.file
+
+runout=$case.out.$time # output file
+mpirun -n 64 $homedir/../build/lesmpi.a $homedir/params.in > $datadir/$runout

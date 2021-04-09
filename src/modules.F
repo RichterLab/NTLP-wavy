@@ -11,7 +11,8 @@ c ----------------------------------------------------------------------
      + ivis0,ifix_dt,new_vis,iflat,
      + i3d_surf,i_pm,lpbc,k_stab,
      + no_pgrad,ispray,iDNS,
-     + ifields,ievap,i_tank,i_zeta,inetcdf
+     + ifields,ievap,i_tank,i_zeta,
+     + inetcdf,i_pinertia
 
 c
 c -------- j_recl = record length in "bytes" for history file
@@ -71,7 +72,7 @@ c ----------------------------------------------------------------------
      +              a_decay, p_surf
       integer ::    izi, iz_min, i_match
       real, allocatable ::
-     +              wind(:,:), tau13m(:,:), tau23m(:,:), 
+     +              wind(:,:), tau13m(:,:), tau23m(:,:),
      +              taut3m(:,:,:), t_grnd(:,:,:)
 c ----------------------------------------------------------------------
       real ::       u_mn(0:maxnz1), v_mn(0:maxnz1),
@@ -88,7 +89,7 @@ c ----------------------------------------------------------------------
      +              ck, ceps, csmag, stab_c, vis_mean(0:maxnz), pow3
       integer ::    nmatch
 c ----------------------------------------------------------------------
-      real ::       zetas(3), gama(3), etas(4), 
+      real ::       zetas(3), gama(3), etas(4),
      +              umax,vmax,wmax, wabs, emax, vismax,
      +              cfl, tzero,
      +              ucfl, vcfl, wcfl,
@@ -99,7 +100,7 @@ c ----------------------------------------------------------------------
 c ----------------------------------------------------------------------
       integer, parameter :: ip_accel=100
       integer ::    ip_max, ip_ramp
-      real ::       ptol, p_iter, p_err, accel_min, accel_max, 
+      real ::       ptol, p_iter, p_err, accel_min, accel_max,
      +              accel(ip_accel),
      +              avg_j(0:maxnz1), avg_j_i(0:maxnz1)
 c ----------------------------------------------------------------------
@@ -119,7 +120,7 @@ c ----------------------------------------------------------------------
 c ----------------------------------------------------------------------
       integer ::    myid, numprocs, i_root,
      +              ziloc, myid_newvis, ncpu_s, ncpu_z, maxp
-      integer, allocatable, dimension(:) :: 
+      integer, allocatable, dimension(:) ::
      +              ix_s, ix_e, jx_s, jx_e,
      +              kx_s, kx_e, mx_s, mx_e,
      +              iy_s, iy_e, jy_s, jy_e,
@@ -166,7 +167,7 @@ c ----------------------------------------------------------------------
       real :: CpaCpp,Pra,Sc,Cpa,Cpp
       real :: Mw,Ru,Sal,Ms,Gam,Ion,Os
 
-      integer, parameter :: histbins = 256,numhistvars=4
+      integer, parameter :: histbins = 256,numhistvars=5
       integer :: hist_flag=0
       real :: hist_locations(histbins+2,histbins+2)
       real :: hist_restime(histbins+2,histbins+2)
@@ -174,7 +175,7 @@ c ----------------------------------------------------------------------
       real :: hist_momentum(histbins+2,histbins+2)
       real :: bins(histbins+2,5)  !residence time, wave-relative origin, wave-relative death, max height
 
-      
+
       !REMEMBER: IF ADDING ANYTHING, MUST UPDATE MPI DATATYPE!
       type :: particle
       integer :: pidx,procidx
@@ -219,26 +220,26 @@ c
       end module tank_pars
 c ----------------------------------------------------------------------
       module fields
-        real, allocatable :: 
-     +      u(:,:,:), v(:,:,:), w(:,:,:), t(:,:,:,:), e(:,:,:), 
+        real, allocatable ::
+     +      u(:,:,:), v(:,:,:), w(:,:,:), t(:,:,:,:), e(:,:,:),
      +      r1(:,:,:), r2(:,:,:), r3(:,:,:), r4(:,:,:,:), r5(:,:,:),
-     +      uf(:,:,:), vf(:,:,:), wf(:,:,:), 
+     +      uf(:,:,:), vf(:,:,:), wf(:,:,:),
      +      ufi(:,:,:), vfi(:,:,:), wfi(:,:,:), rj(:,:,:)
-        real, allocatable :: 
-     +      ux(:,:,:), uy(:,:,:), vx(:,:,:), vy(:,:,:), 
+        real, allocatable ::
+     +      ux(:,:,:), uy(:,:,:), vx(:,:,:), vy(:,:,:),
      +      wx(:,:,:), wy(:,:,:),
-     +      p(:,:,:), ptop(:,:,:), p_old(:,:,:), 
+     +      p(:,:,:), ptop(:,:,:), p_old(:,:,:),
      +      vis_m(:,:,:), vis_s(:,:,:)
-        real, allocatable :: 
-     +      ubc(:,:,:), vbc(:,:,:), wbc(:,:,:), tbc(:,:,:,:), 
+        real, allocatable ::
+     +      ubc(:,:,:), vbc(:,:,:), wbc(:,:,:), tbc(:,:,:,:),
      +      ebc(:,:,:), pbc(:,:,:), pbc2(:,:,:),
      +      ufbc(:,:,:), vfbc(:,:,:), wfbc(:,:,:)
         real, allocatable ::
      +      xgrid(:), ygrid(:), zgrid_w(:,:,:,:), zgrid_u(:,:,:),
-     +      gm(:,:,:,:), gm2(:,:,:,:), gm3(:,:,:,:), gms(:,:,:), 
-     +      bndy(:,:), hdot(:,:), 
+     +      gm(:,:,:,:), gm2(:,:,:,:), gm3(:,:,:,:), gms(:,:,:),
+     +      bndy(:,:), hdot(:,:),
      +      w_orbit(:,:), u_orbit(:,:), v_orbit(:,:),
-     +      bndy_t(:,:,:), hdot_t(:,:,:), 
+     +      bndy_t(:,:,:), hdot_t(:,:,:),
      +      z1b(:,:), z1b_2(:,:), z1b_3(:,:)
       end module fields
 c ----------------------------------------------------------------------
@@ -251,29 +252,29 @@ c ----------------------------------------------------------------------
         use pars, only : nscl
         type con_d
         sequence
-        real ::  vk, vkin, vk74, vk74in, 
+        real ::  vk, vkin, vk74, vk74in,
      +           gcp, fcor_h, pi2,
-     +           batagk, batag, 
+     +           batagk, batag,
      +           cdbtm, dtdzf(nscl), dtjump, ugal, divgls,
-     +           z1, utausv, dx, dy, dz, 
+     +           z1, utausv, dx, dy, dz,
      +           dt, dt1,
      +           fnxy, dzdz, dsl, c23, dtgama, dtzeta, xkmax,
-     +           time, t_zero, zody, zody74, 
+     +           time, t_zero, zody, zody74,
      +           utau, wtsfc(nscl),
      +           uusfc, uvsfc, uwsfc, vvsfc, vwsfc, wwsfc, amonin,
      +           zol, hol, smal_e, sml_eg,drg_x,drg_y
         end type con_d
         type(con_d), target :: c_c
         real, pointer ::
-     +           vk, vkin, vk74, vk74in, 
+     +           vk, vkin, vk74, vk74in,
      +           gcp, fcor_h, pi2,
      +           batagk, batag,
      +           cdbtm, dtdzf(:), dtjump, ugal, divgls,
-     +           z1, utausv, dx, dy, dz, 
+     +           z1, utausv, dx, dy, dz,
      +           dt, dt1,
-     +           fnxy, dzdz, dsl, c23, dtgama, dtzeta, xkmax, 
-     +           time, t_zero, zody, zody74, 
-     +           utau, wtsfc(:), 
+     +           fnxy, dzdz, dsl, c23, dtgama, dtzeta, xkmax,
+     +           time, t_zero, zody, zody74,
+     +           utau, wtsfc(:),
      +           uusfc, uvsfc, uwsfc, vvsfc, vwsfc, wwsfc, amonin,
      +           zol, hol, smal_e, sml_eg,drg_x,drg_y
       contains
@@ -281,7 +282,7 @@ c ----------------------------------------------------------------------
 c
 c --------------- pointer associations for constant variables
 c
-             vk     => c_c%vk 
+             vk     => c_c%vk
              vkin   => c_c%vkin
              vk74   => c_c%vk74
              vk74in => c_c%vk74in
@@ -326,8 +327,8 @@ c
              hol    => c_c%hol
              smal_e => c_c%smal_e
              sml_eg => c_c%sml_eg
-             drg_x  => c_c%drg_x 
-             drg_y  => c_c%drg_y 
+             drg_x  => c_c%drg_x
+             drg_y  => c_c%drg_y
          return
          end subroutine fill_cc
       end module con_data
@@ -389,7 +390,7 @@ c ----------------------------------------------------------------------
      +           txym(:,:), divz(:), utle(:,:), utsb(:,:),
      +           vtle(:,:), vtsb(:,:), wtle(:,:), wtsb(:,:),
      +           wctle(:,:), wt_tot(:,:), z(:), zz(:), shrz(:), buyz(:),
-     +           triz(:), uwsb(:), vwsb(:), uwle(:), vwle(:), wwle(:), 
+     +           triz(:), uwsb(:), vwsb(:), uwle(:), vwle(:), wwle(:),
      +           uwcle(:), vwcle(:),
      +           uw_tot(:), vw_tot(:), drg_z_x(:), drg_z_y(:),
      +           drg_zs_x(:), drg_zs_y(:),
@@ -406,17 +407,17 @@ c ----------------------------------------------------------------------
      +           Tfmean(:),qfmean(:),radmean(:),
      +           rad2mean(:),qstarmean(:),pflux(:),
      +           pfluxup(:),pfluxdn(:)
-        real, pointer ::  
+        real, pointer ::
      +           xkn(:), ykn(:), xk(:), yk(:), xkk(:), ykk(:),
      +           xks(:,:), wavexy(:,:)
-        real, pointer ::  
+        real, pointer ::
      +           ug(:), vg(:), wls(:), uls(:)
-        real, pointer ::  
+        real, pointer ::
      +           udrift, vdrift, stokesw, stokesa,
      +           stokess, stokes(:)
-        real, pointer ::  
+        real, pointer ::
      +           dtg, dslg, dzg
-        real, pointer ::  
+        real, pointer ::
      +           dfac(:)
       contains
          subroutine fill_cs
@@ -424,7 +425,7 @@ c
 c -------------- pointer association for stat arrays and get size
 c                of stat arrays isize for history files
 c
-             isize = 0 
+             isize = 0
              wwsb     => c_s%wwsb      ; isize = isize + size(wwsb)
              engz     => c_s%engz      ; isize = isize + size(engz)
              engsbz   => c_s%engsbz    ; isize = isize + size(engsbz)
@@ -502,7 +503,7 @@ c
              yk       => c_s%yk
              xkk      => c_s%xkk
              ykk      => c_s%ykk
-             xks      => c_s%xks 
+             xks      => c_s%xks
              wavexy   => c_s%wavexy
              ug       => c_s%ug
              vg       => c_s%vg
@@ -515,9 +516,10 @@ c
              stokess  => c_s%stokess
              stokes   => c_s%stokes
              dtg      => c_s%dtg
-             dslg     => c_s%dslg 
+             dslg     => c_s%dslg
              dzg      => c_s%dzg
              dfac     => c_s%dfac
          return
          end subroutine fill_cs
       end module con_stats
+c ----------------------------------------------------------------------

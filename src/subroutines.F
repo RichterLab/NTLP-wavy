@@ -1,382 +1,8 @@
-c ----------------------------------------------------------------------
-      program les_mpi_2d
-c
-      use pars
-      use fields
-      use particles
-      use con_data
-      use con_stats
-      use netcdf_io
-      include 'mpif.h'
-c
-c ------------- definition of internal flags
-c
-c       iDNS    = 0; call the subgrid computation of vis_m and vis_s
-c               = 1; call the molecular viscosity and diffusivity
-c
-c       igrdr   =  3; data comes from restart file
-c               =  2; data comes from initialization (random)
-c               =  1; data comes from coarser grid (or otherwise)
-c
-c       ibcu    = 1 ; upper boundary condition set by radiation bc
-c               = 0 ; fixed value = 0.
-c               = -1; wind tunnel setup, gradient = 0 bcs
-c               = 2; Sullivan et al. Couette flow, sets u = Uo and w = v = 0 (NO SCALAR CHANGE YET)
-c
-c       ibcl    = 0 ; lower boundary condition set by similarity theory (sr. setup)
-c               = -1; value defined by coarser mesh for all variables
-c
-c       ifix_dt = 0 ; variable time step with fixed cfl number in setcon
-c               = 1 ; fixed time step set in sr. get_dt
-c
-c       ifree   = 0 ; use spatially averaged surface conditions for MO (call lower)
-c               = 1 ; use point-by-point conditions for MO free convection (call lower_free)
-c               = 2 ; use point-by-point conditions for MO with curvy boundaries (call lower_curvy)
-c               = 3 ; DNS no-slip conditions on the bottom boundary (call lower_curvy_dns)
-c
-c       iflat   = 0 ; flat lower bottom, no pressure iteration
-c               = 1 ; curvy lower boundary terrain following grid
-c                     iterate for pressure field
-c               = 2 ; time dependent lower boundary shape
-c
-c       lpbc    = 0 ; dpdz = 0 lower boundary condition for (u,v,w,uf,vf) updates
-c               = 1 ; linear extrapolation to get ghost point for p(iz=0)
-c               = 2 ; solve for p(iz=0) from wf equation at boundary
-c     
-c       imesh   = 0 ; stationary bottom
-c               = 1 ; moving lower bottom
-c
-c       i_move_step  < 0  ; never move the bottom
-c                    = it ; step where the moving grid starts
-c
-c       i_pm    = 1 ; use Peirson-Moskowitz wave spectrum
-c              /= 1 ; use Donelan spectrum with wave age and wind dependence
-c
-c       i3d_surf   = 0  ; call simple l_bndy surface
-c                  = 1  ; call moving 3d surface (water waves)
-c                  = 2  ; call moving 3d surface with time varying amplitude
-c                  = 3  ; call moving 3d surface with time varying amplitude (tank)
-c
-c       ihst    = nn; frequency at which global variables are output in history file
-c               < 0 ; no history files
-c
-c       iviz    = nn; frequency at which global variables are output in viz files
-c               < 0 ; no viz files
-c
-c       it_his  = time step where history files start, incremented by itape
-c
-c       it_viz  = time step where viz files start, incremented by itape
-c
-c       ismlt   = 1 ; use businger formulas in MO 
-c                 0 ; use large and everyone elses formulas in MO 
-c
-c       iupwnd  = 0;  use skew symmetric formulas for all derivatives
-c                     in scalar equations
-c               = 1;  use hybrid upwind scheme for all derivatives
-c                     in scalar equations
-c
-c       iskew   = 0;  use skew symmetric form for advection in (u,v,w) equations
-c               = 1;  use flux form for advection in momentum equations
-c
-c       ivis0   = 0; old eddy viscosity model 
-c               = 1; new eddy viscosity model 
-c
-c       iz_space = 1; non-uniform spacing with first grid point = zw1
-c                = 2; non-uniform grid with adjusted first point off
-c                     the surface to give constant stretching
-c                = 3; non-uniform exponential curvy grid, good for
-c                     moving boundaries
-c                = 4; non-uniform exponential curvy grid with constant
-c                     grid space at boundary and first grid point, good for
-c                     moving boundaries
-c                = 5; algebraic mapping with control over decay with height
-c                     good for wavy boundaries. see a_decay for grid decay
-c                = 0; uniform spacing
-c
-c       k_stab   = an iz (or k) index where stability corrected length scale is turned on
-c                = -1 correction is always on
-c                > nnz correction is never on
-c                = value correction is on at iz = value
-c
-c       new_vis = step; the iteration step for which the new model
-c                       is turned on when ivis0=1
-c               < 0; new model is on at all steps for ivis0=1
-c
-c       nscl  .ge. 1   number of scalars to be followed set in parameter statements
-c                      change entries in sr. init, and sr. suft for surface bc's
-c
-c -------------------------------------------------------------------------------
-c
-c ---------- initialize MPI, get myid, numprocs, 
-c            test if on root process
-c
-      call mpi_init(ierr)
-      call mpi_comm_rank(mpi_comm_world,myid,ierr)
-      call mpi_comm_size(mpi_comm_world,numprocs,ierr)
-c
-      i_root = 0
-      l_root = .false.
-      if(myid .eq. i_root) l_root = .true.
-c
-      l_debug = .false.
-      if(idebug .eq. 1) l_debug = .true.
-c
-      ts_mpi = mpi_wtime()
 
-      !Read the input file for all parameters
-      call read_input_file
-
-c
-c -------- set number of x-y slab cpus
-c
-c
-      case_inp = 'wav'
-c
-      call get_units
-      call gridd
-      call setcon
-      call set_paths
-c
-c -------------- scratch run
-c
-      if (iti.eq.0)  then
-         igrdr = 2
-         case = case_inp
-         call init
-         call setup(it)
-         call mesh
-         if (inetcdf .eq. 1) then
-         call netcdf_init
-         end if
-         
-         if (ispray==1) then
-            call particle_setup
-            call particle_init
-            !call read_part_res
-         end if
-
-c
-c ---------- choose routine for getting initial guess
-c
-         if(iocean .eq. 1) then
-            call randoc
-         else
-            if (ifields .eq. 1) then
-               call get_fields
-            else
-               call random
-               !call random_f
-               !call random_wt
-            end if
-         endif
-         call dns_vis
-         call get_max
-      else
-         igrdr = 3
-         call restart
-         call get_max
-         call setup(it)
-         call mesh
-
-         if (ispray==1) then
-            call particle_setup
-            call read_part_res
-            !call particle_init
-         end if
-      endif
-c
-c --------------- time loop ------------
-c
-      tzero = time
-      call get_dt(it)
- 9000 continue
-      call set_sav(it,iti)
-
-      if (myid==0) then
-      write(*,*) 'Starting time loop'
-      write(*,*) 'it,time = ',it,time
-      end if
-      if (ispray==1) then
-      if (it == 1) numpart = 0
-      part => first_particle
-      do while (associated(part))
-      if (part%pidx == 1 .and. part%procidx == 0) then
-      write(*,'(a4,4e15.6)') 'xp1:',time,part%xp(1:3)
-      write(*,'(a5,4e15.6)') 'xip1:',time,part%xip(1:3)
-      write(*,'(a4,4e15.6)') 'vp1:',time,part%vp(1:3)
-      write(*,'(a4,4e15.6)') 'uf1:',time,part%uf(1:3)
-      write(*,'(a4,2e15.6)') 'Tp1:',time,part%Tp
-      write(*,'(a4,2e15.6)') 'Tf1:',time,part%Tf
-      write(*,'(a4,2e15.6)') 'qf1:',time,part%qinf
-      write(*,'(a5,2e15.6)') 'rad1:',time,part%radius
-      end if
-      part => part%next
-      if (it == 1) numpart = numpart + 1
-      end do
-      if (myid==0) write(*,*) 'time,tnumpart:',time,tnumpart
-      end if
-
-c
-c --------- specially designed surface cooling routine
-c           for gabls run
-c
-c     call forcing
-c
-      if(it .ge. new_vis .and. ivis0 .eq. 1) then
-          ivis = 1
-      else
-          ivis = 0
-      endif
-c
-c ---------------- 3 stage runge-kutta time stepping
-c
-      do  8999 istage=1,3
-c
-      dtzeta   = dt*zetas(istage)
-      dtgama   = dt*gama(istage)
-      dtalp    = dtzeta + dtgama
-      t_stage  = time + dt*etas(istage)
-      t_stage2 = time + dt*etas(istage+1)
-      if(istage .le. 2) then
-        t_stage3 = time + dt*etas(istage+2)
-      else
-        t_stage3 = time + dt + dt1*etas(istage-1)
-      endif
-c
-c ---------- compute derivatives of (u,v,w)
-c
-      call exchange
-c
-      call get_derv
-c
-c --------- check for moving grid
-c
-      if(imesh .eq. 1) then
-        call new_mesh(it,istage)
-        call grid_speed(it,istage)
-      endif
-
-c
-c --------- new eddy viscosity, and bcs
-c
-      if(iss .eq. 0 .and. ifree .eq. 0) then
-         call lower(it)
-      elseif(ifree .eq. 1) then
-         call lower_free(it)
-      elseif(ifree .eq. 2) then
-         call lower_curvy(it,istage)
-      elseif(ifree .eq. 3) then
-         call lower_curvy_dns(it,istage)
-      endif
-c
-      if(ise .eq. numprocs-1) then
-         if (iDNS .eq. 1) then
-            call upper_dns
-         else
-            call upper
-         endif
-      endif
-      call bcast_pbc
-      call bcast_surf
-      call get_means(istage)
-      if(ivis .eq. 1) then
-         call iso(it)
-         call surfvis(it)
-      endif
-      if(istage .eq. 1)then
-        call xy_stats
-        call tke_budget
-        call pbltop(itop)
-      endif
-c
-c ------------ save velocity aand pressure fields
-c
-      if(msave .and. istage .eq. 1) then
-         call save_v(it)
-         call save_p
-         if (ispray==1) call save_particles
-      endif
-      if(msave_v .and. istage .eq. 1) then
-         call save_bndy(it)
-!         call save_viz(it)
-      endif
-
-      if (msave .and. istage .eq. 1) then
-        call write_histograms(it-itape+1)
-        call clean_histograms
-      end if
-
-c
-c --------- get rhs/J for all equations
-c
-      call comp1(istage,it)
-c
-      if(istage .eq. 1) then
-         if(msave .and. l_root) call save_c(it)
-      endif
-c
-c --------- solve for pressure
-c
-      call psolver(istage)
-c     call chk_div
-c
-c --------- add pressure gradient and dealias
-c
-      call comp2
-c
-      if(micut) then
-         call dealias
-         call dealias_grid_speed
-      endif
-c     call chk_div
-
-c      
-c -------- update particles
-c
-      if (ispray==1) then
-         !t_s = mpi_wtime() 
-         call particle_update_rk3(it,istage) 
-         !t_f = mpi_wtime()
-         !call mpi_barrier(mpi_comm_world,ierr)
-         !if (myid==5) write(*,*) 'time part: ',t_f-t_s
-      end if
-
-      if(mnout .and. istage .eq. 1)  then
-          if(l_debug) then
-             call print(nprt,it,izs,ize)
-          endif
-          if(l_root) call print(6,it,1,nnz)
-      endif
-      if(l_root) then
-         if (inetcdf .eq. 1) then
-            if(mhis  .and. istage .eq. 1)  call write_his_netcdf
-         if(mhis  .and. istage .eq. 1 .and. mtape) call close_his_netcdf
-         else
-            if(mhis  .and. istage .eq. 1)  call write_his(itop)
-            if(mhis  .and. istage .eq. 1 .and. mtape) call close_his
-         end if
-      endif
- 8999 continue
-      call get_max
-      call get_dt(it)
-c
-      if (it.ge.itmax) go to 99000
-      go to 9000
-c
-99000 continue
-      te_mpi = mpi_wtime()
-      write(6,9997) (te_mpi - ts_mpi)
- 9997 format(' Job Execution Time = ',e15.6)
-c
- 9998 continue
-      call mpi_finalize(ierr)
-c
-      stop
-      end
       subroutine get_max
 c
 c --------- routine computes max velocities as sweep through
-c           the flux velocity field 
+c           the flux velocity field
 c
       use pars
       use fields
@@ -485,7 +111,7 @@ c
 c
 c ------------- if used, change to fit your problem
 c
-c        dt_new = 0.000370099
+         dt_new = 0.000370099
       else
 c
 c ------------------- new estimate of best time step
@@ -529,7 +155,7 @@ c
       end
       subroutine lterp(n,zary,zpt,i,ip1,ratio)
 c
-c ---- linear interpolation for zpt in zary, where zary is 
+c ---- linear interpolation for zpt in zary, where zary is
 c      monotonic increasing or decreasing function
 c
       dimension zary(*)
@@ -569,7 +195,7 @@ c
 c
 c **** decreasing array
 c
-  101 continue 
+  101 continue
         if(zpt .gt. zary(1)) then
           i = 1
           ip1 = 1
@@ -648,10 +274,10 @@ c
       stabmin = 1.0e-12
 c
 c ---------------- minimum dsl length constant
-c 
+c
       almin_c = 0.0001
 c
-c -------------------- set viscosity model parameters 
+c -------------------- set viscosity model parameters
 c                      to usual values, overridden by iso
 c                      dfac is in constant file for calculation
 c                      of max eddy viscosity
@@ -699,7 +325,7 @@ c
 c           accel_max = 1.0
 c           accel_min = 1.0
 c           ip_max    = 15
-c      
+c
 c
 c ---------- for initialization with flat
 c
@@ -713,7 +339,7 @@ c           ip_ramp   = 30
             ip_max    = 30
 c           ip_max    = 2
 c
-c           ip_max    = 1 ! with wave amplitude = 0 
+c           ip_max    = 1 ! with wave amplitude = 0
 c
             accel_max = 1.0
             accel_min = 1.0
@@ -777,7 +403,7 @@ c
 c
       etas(1)  = 0.0
       etas(2)  = 8.0/15.0
-      etas(3)  = 2.0/3.0 
+      etas(3)  = 2.0/3.0
 c
 c ----------- a full step, at the new time
 c
@@ -806,7 +432,7 @@ c     path_res  --- the path and file name of the velocity restart file
 c     path_sav  --- the path where the new 3d volumes are to be saved
 c     path_his  --- the path where the new history files are to be saved
 c     path_viz  --- the path where xy, xz, or yz planes of data will be stored
-c     path_stuf --- the path where fun facts about the viz planes of 
+c     path_stuf --- the path where fun facts about the viz planes of
 c                   data will be stored
 c     path_bndy --- the path where the boundary shape is stored
 c     path_seed --- seed name
@@ -876,7 +502,7 @@ c     if(ifilt.eq.1)call filter
      +             method, iocean, ivis
       endif
 c
-c -------------- boundary condition flags 
+c -------------- boundary condition flags
 c
       !ibcu = 2
       ibcu = -1
@@ -999,7 +625,7 @@ c
       gridr = 1.0
       sml_eg = smal_e*gridr
 c
-c -------------------- set viscosity model parameters 
+c -------------------- set viscosity model parameters
 c                      now in setcon
 c
 c     if(ivis .ne. 1) then
@@ -1099,7 +725,7 @@ c --------------------------- format statements
       subroutine set_lower_bc
 c
 c -------- for curvy lower boundary set
-c          distribution of heat flux or other 
+c          distribution of heat flux or other
 c          scalar sources and sinks
 c
       use pars
@@ -1181,7 +807,7 @@ c
       real sfk(1:nnz)
 c
 c ---- get isotropy factor and scale it to match at the matching
-c      height. uses boundary conditions from lower and upper. 
+c      height. uses boundary conditions from lower and upper.
 c
       do iz=1,nnz
 c        dfac(iz) = 1.0
@@ -1305,7 +931,7 @@ c
       viscon = 0.0
       vise   = 0.0
 c
-c ----------- only root process(es) compute 
+c ----------- only root process(es) compute
 c
       if(iss .eq. 0) then
 
@@ -1341,9 +967,9 @@ c
       vws = 0.0
       do iy=iys,iye
       do ix=1,nnx
-         uws = uws + 0.5*(u(ix,iy,iz)-u_mn(iz) + 
+         uws = uws + 0.5*(u(ix,iy,iz)-u_mn(iz) +
      +         u(ix,iy,izp1) - u_mn(izp1))*(w(ix,iy,iz)-w_mn(iz))
-         vws = vws + 0.5*(v(ix,iy,iz)-v_mn(iz) + 
+         vws = vws + 0.5*(v(ix,iy,iz)-v_mn(iz) +
      +         v(ix,iy,izp1) - v_mn(izp1))*(w(ix,iy,iz)-w_mn(iz))
       enddo
       enddo
@@ -1441,9 +1067,9 @@ c
       real stat(1:nnz,nstat)
 c
 c ------ temp arrays to hold rhs from step n-1 and
-c        field variables from step n 
+c        field variables from step n
 c
-      real urhs(nnx,iys:iye,izs:ize), 
+      real urhs(nnx,iys:iye,izs:ize),
      +     vrhs(nnx,iys:iye,izs:ize),
      +     wrhs(nnx,iys:iye,izs:ize),
      +     erhs(nnx,iys:iye,izs:ize),
@@ -1489,9 +1115,9 @@ c -------- evaluate rhs of scalar equations
 c
       do l=1,nscl
          if (iDNS .eq. 1) then
-            call rhs_scl_dns(istep,l) 
+            call rhs_scl_dns(istep,l)
          else
-            call rhs_scl(istep,l) 
+            call rhs_scl(istep,l)
          endif
       enddo
 c
@@ -1586,7 +1212,7 @@ c ------ get rhs of intermediate velocity (uf,vf,wf)
 c        by interpolating from cell center values.
 c        extrapolate from interior to get surface value for wf.
 c        assumes that rhs of the (u,v,w) equations are
-c        multiplied by (1/J) from comp1, ie, 
+c        multiplied by (1/J) from comp1, ie,
 c        the right sides used in the interpolation here
 c        are (u/J,v/J,w/J).
 c
@@ -1664,10 +1290,10 @@ c
               vfi(i,j,k) = v(i,j,k)
               wf_k       = w(i,j,k)*gm(i,j,k,4)  +
      +                     u(i,j,k)*gm(i,j,k,2)  +
-     +                     v(i,j,k)*gm(i,j,k,3) 
+     +                     v(i,j,k)*gm(i,j,k,3)
               wf_kp1     = w(i,j,kp1)*gm(i,j,kp1,4)  +
      +                     u(i,j,kp1)*gm(i,j,kp1,2)  +
-     +                     v(i,j,kp1)*gm(i,j,kp1,3) 
+     +                     v(i,j,kp1)*gm(i,j,kp1,3)
               wfi(i,j,k) = wf_k*weitm(k) + wf_kp1*weit(k)
            enddo
            enddo
@@ -1691,10 +1317,10 @@ c
                vfi(i,j,km1) = v(i,j,k)
                wf_k         = w(i,j,k)*gm(i,j,k,4)  +
      +                        u(i,j,k)*gm(i,j,k,2)  +
-     +                        v(i,j,k)*gm(i,j,k,3) 
+     +                        v(i,j,k)*gm(i,j,k,3)
                wf_kp1       = w(i,j,kp1)*gm(i,j,kp1,4)  +
      +                        u(i,j,kp1)*gm(i,j,kp1,2)  +
-     +                        v(i,j,kp1)*gm(i,j,kp1,3) 
+     +                        v(i,j,kp1)*gm(i,j,kp1,3)
                wfi(i,j,km1) = wf_k*w2 + wf_kp1*w1
                wfi_sum(km1) = wfi_sum(km1) + wfi(i,j,km1)
             enddo
@@ -1762,7 +1388,7 @@ c
 c
       if(iskew .eq. 0) then
          upfac = 0.5
-      else 
+      else
          upfac = 1.0
       endif
 c
@@ -1775,7 +1401,7 @@ c
          do j=iys,iye
          do i=1,nnx
             fnt4(i,j) = weit(k)*gm(i,j,kp1,1) + weitm(k)*gm(i,j,k,1)
-            fnt4(i,j) = 2.0*(weit(k)*vis_m(i,j,kp1) + 
+            fnt4(i,j) = 2.0*(weit(k)*vis_m(i,j,kp1) +
      +                       weitm(k)*vis_m(i,j,k))*fnt4(i,j)
             fnt5(i,j) = weit(km1)*gm(i,j,k,1) + weitm(km1)*gm(i,j,km1,1)
          enddo
@@ -1845,19 +1471,19 @@ c
 c
          u_adv = 0.5*(uf(i,j,k)*ux(i,j,k) + vf(i,j,k)*uy(i,j,k) +
      +           (wf(i,j,k)*u_avg_u - wf(i,j,km1)*u_avg_l)*dzw_i(k)) +
-     +           0.25*(wf(i,j,k)*uz + wf(i,j,km1)*uzm) 
+     +           0.25*(wf(i,j,k)*uz + wf(i,j,km1)*uzm)
          v_adv = 0.5*(uf(i,j,k)*vx(i,j,k) + vf(i,j,k)*vy(i,j,k) +
      +           (wf(i,j,k)*v_avg_u - wf(i,j,km1)*v_avg_l)*dzw_i(k)) +
-     +           0.25*(wf(i,j,k)*vz + wf(i,j,km1)*vzm) 
+     +           0.25*(wf(i,j,k)*vz + wf(i,j,km1)*vzm)
          w_adv = 0.5*(uf(i,j,k)*wx(i,j,k) + vf(i,j,k)*wy(i,j,k) +
      +           (wf(i,j,k)*w_avg_u - wf(i,j,km1)*w_avg_l)*dzw_i(k)) +
-     +           0.25*(wf(i,j,k)*wz + wf(i,j,km1)*wzm) 
+     +           0.25*(wf(i,j,k)*wz + wf(i,j,km1)*wzm)
 c
 c ------------ totals
 c
          r1(i,j,k) = r1(i,j,k) - u_adv
-         r2(i,j,k) = r2(i,j,k) - v_adv 
-         r3(i,j,k) = r3(i,j,k) - w_adv 
+         r2(i,j,k) = r2(i,j,k) - v_adv
+         r3(i,j,k) = r3(i,j,k) - w_adv
       enddo
       enddo
       enddo ! end z-loop
@@ -1886,8 +1512,8 @@ c
 c ------------ totals
 c
          r1(i,j,k) = r1(i,j,k) - u_adv
-         r2(i,j,k) = r2(i,j,k) - v_adv 
-         r3(i,j,k) = r3(i,j,k) - w_adv 
+         r2(i,j,k) = r2(i,j,k) - v_adv
+         r3(i,j,k) = r3(i,j,k) - w_adv
       enddo
       enddo
       enddo ! end z-loop
@@ -1895,7 +1521,7 @@ c
       endif ! end of skew check
 c
 c ----------- SGS cell center x-contributions + resolved fluxes
-c             advective terms can be written in skew symmetric 
+c             advective terms can be written in skew symmetric
 c             or flux form. treat first point special if at lower boundary,
 c             average boundary and upper cell tau flux
 c
@@ -1904,11 +1530,11 @@ c
             call strain_u(sij,k)
             do j=iys,iye
             do i=1,nnx
-               tauij(i,j,1,2) = 0.5*(fnt4(i,j)*sij(i,j,1) - 
+               tauij(i,j,1,2) = 0.5*(fnt4(i,j)*sij(i,j,1) -
      +                               t11bc(i,j)*fnt5(i,j))
-               tauij(i,j,2,2) = 0.5*(fnt4(i,j)*sij(i,j,2) - 
+               tauij(i,j,2,2) = 0.5*(fnt4(i,j)*sij(i,j,2) -
      +                               t12bc(i,j)*fnt5(i,j))
-               tauij(i,j,3,2) = 0.5*(fnt4(i,j)*sij(i,j,3) - 
+               tauij(i,j,3,2) = 0.5*(fnt4(i,j)*sij(i,j,3) -
      +                               t13bc(i,j)*fnt5(i,j))
             enddo
             enddo
@@ -1959,7 +1585,7 @@ c
          do n=1,6
          do j=iys,iye
          do i=1,nnx
-            fac   = 2.0*(weit(izs-1)*vis_m(i,j,izs) + 
+            fac   = 2.0*(weit(izs-1)*vis_m(i,j,izs) +
      +              weitm(izs-1)*vis_m(i,j,izs-1))
             tauij(i,j,n,2) = fac*sij(i,j,n)
          enddo
@@ -1980,7 +1606,7 @@ c
          do n=1,6
          do j=iys,iye
          do i=1,nnx
-            fac   = 2.0*(weit(k)*vis_m(i,j,kp1) + 
+            fac   = 2.0*(weit(k)*vis_m(i,j,kp1) +
      +                   weitm(k)*vis_m(i,j,k))
             tauij(i,j,n,2) = fac*sij(i,j,n)
          enddo
@@ -1991,14 +1617,14 @@ c
          ww_sum = 0.0
          do j=iys,iye
          do i=1,nnx
-            gm_xu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) + 
-     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,2)  
-            gm_xl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,2) + 
-     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,2)  
-            gm_yu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,3) + 
-     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,3)  
-            gm_yl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,3) + 
-     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,3)  
+            gm_xu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) +
+     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,2)
+            gm_xl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,2) +
+     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,2)
+            gm_yu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,3) +
+     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,3)
+            gm_yl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,3) +
+     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,3)
             tau_up    = tauij(i,j,1,2)*gm_xu + tauij(i,j,2,2)*gm_yu +
      +                  tauij(i,j,3,2)
             tau_lo    = tauij(i,j,1,1)*gm_xl + tauij(i,j,2,1)*gm_yl +
@@ -2044,7 +1670,7 @@ c ---------- end z loop
 c
       enddo
 c
-c ---------- SGS fluxes tau_12, tau_22, tau_23 that depend on 
+c ---------- SGS fluxes tau_12, tau_22, tau_23 that depend on
 c            y-derivatives at cell centers. special treatment
 c            of first point at lower boundary. assumes strain
 c            at k = 1 is at upper face, see strain_12,_22,_23
@@ -2054,7 +1680,7 @@ c
          if(k .eq. 1) then
             do j=iys,iye
             do i=1,nnx
-               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) - 
+               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) -
      +                            t12bc(i,j)*fnt5(i,j))
                fntd(i,j,k) = tau_c  - upfac*vf(i,j,k)*u(i,j,k)
             enddo
@@ -2084,7 +1710,7 @@ c
          if(k .eq. 1) then
             do j=iys,iye
             do i=1,nnx
-               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) - 
+               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) -
      +                            t22bc(i,j)*fnt5(i,j))
                fntd(i,j,k) = tau_c  - upfac*vf(i,j,k)*v(i,j,k)
             enddo
@@ -2114,7 +1740,7 @@ c
          if(k .eq. 1) then
             do j=iys,iye
             do i=1,nnx
-               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) - 
+               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) -
      +                            t23bc(i,j)*fnt5(i,j))
                fntd(i,j,k) = tau_c - upfac*vf(i,j,k)*w(i,j,k)
             enddo
@@ -2213,7 +1839,7 @@ c
 c
       if(iskew .eq. 0) then
          upfac = 0.5
-      else 
+      else
          upfac = 1.0
       endif
       sfc_flx = 0.0
@@ -2227,7 +1853,7 @@ c
          do j=iys,iye
          do i=1,nnx
             fnt4(i,j) = weit(k)*gm(i,j,kp1,1) + weitm(k)*gm(i,j,k,1)
-            fnt4(i,j) = 2.0*(weit(k)*vis_m(i,j,kp1) + 
+            fnt4(i,j) = 2.0*(weit(k)*vis_m(i,j,kp1) +
      +                       weitm(k)*vis_m(i,j,k))*fnt4(i,j)
             fnt5(i,j) = weit(km1)*gm(i,j,k,1) + weitm(km1)*gm(i,j,km1,1)
          enddo
@@ -2297,19 +1923,19 @@ c
 c
          u_adv = 0.5*(uf(i,j,k)*ux(i,j,k) + vf(i,j,k)*uy(i,j,k) +
      +           (wf(i,j,k)*u_avg_u - wf(i,j,km1)*u_avg_l)*dzw_i(k)) +
-     +           0.25*(wf(i,j,k)*uz + wf(i,j,km1)*uzm) 
+     +           0.25*(wf(i,j,k)*uz + wf(i,j,km1)*uzm)
          v_adv = 0.5*(uf(i,j,k)*vx(i,j,k) + vf(i,j,k)*vy(i,j,k) +
      +           (wf(i,j,k)*v_avg_u - wf(i,j,km1)*v_avg_l)*dzw_i(k)) +
-     +           0.25*(wf(i,j,k)*vz + wf(i,j,km1)*vzm) 
+     +           0.25*(wf(i,j,k)*vz + wf(i,j,km1)*vzm)
          w_adv = 0.5*(uf(i,j,k)*wx(i,j,k) + vf(i,j,k)*wy(i,j,k) +
      +           (wf(i,j,k)*w_avg_u - wf(i,j,km1)*w_avg_l)*dzw_i(k)) +
-     +           0.25*(wf(i,j,k)*wz + wf(i,j,km1)*wzm) 
+     +           0.25*(wf(i,j,k)*wz + wf(i,j,km1)*wzm)
 c
 c ------------ totals
 c
          r1(i,j,k) = r1(i,j,k) - u_adv
-         r2(i,j,k) = r2(i,j,k) - v_adv 
-         r3(i,j,k) = r3(i,j,k) - w_adv 
+         r2(i,j,k) = r2(i,j,k) - v_adv
+         r3(i,j,k) = r3(i,j,k) - w_adv
       enddo
       enddo
       enddo ! end z-loop
@@ -2338,8 +1964,8 @@ c
 c ------------ totals
 c
          r1(i,j,k) = r1(i,j,k) - u_adv
-         r2(i,j,k) = r2(i,j,k) - v_adv 
-         r3(i,j,k) = r3(i,j,k) - w_adv 
+         r2(i,j,k) = r2(i,j,k) - v_adv
+         r3(i,j,k) = r3(i,j,k) - w_adv
       enddo
       enddo
       enddo ! end z-loop
@@ -2347,7 +1973,7 @@ c
       endif ! end of skew check
 c
 c ----------- SGS cell center x-contributions + resolved fluxes
-c             advective terms can be written in skew symmetric 
+c             advective terms can be written in skew symmetric
 c             or flux form. treat first point special if at lower boundary,
 c             average boundary and upper cell tau flux
 c
@@ -2356,11 +1982,11 @@ c
 !            call strain_u(sij,k)
 !            do j=iys,iye
 !            do i=1,nnx
-!               tauij(i,j,1,2) = 0.5*(fnt4(i,j)*sij(i,j,1) - 
+!               tauij(i,j,1,2) = 0.5*(fnt4(i,j)*sij(i,j,1) -
 !     +                               t11bc(i,j)*fnt5(i,j))
-!               tauij(i,j,2,2) = 0.5*(fnt4(i,j)*sij(i,j,2) - 
+!               tauij(i,j,2,2) = 0.5*(fnt4(i,j)*sij(i,j,2) -
 !     +                               t12bc(i,j)*fnt5(i,j))
-!               tauij(i,j,3,2) = 0.5*(fnt4(i,j)*sij(i,j,3) - 
+!               tauij(i,j,3,2) = 0.5*(fnt4(i,j)*sij(i,j,3) -
 !     +                               t13bc(i,j)*fnt5(i,j))
 !            enddo
 !            enddo
@@ -2411,7 +2037,7 @@ c
          do n=1,6
          do j=iys,iye
          do i=1,nnx
-            fac   = 2.0*(weit(izs-1)*vis_m(i,j,izs) + 
+            fac   = 2.0*(weit(izs-1)*vis_m(i,j,izs) +
      +              weitm(izs-1)*vis_m(i,j,izs-1))
             tauij(i,j,n,2) = fac*sij(i,j,n)
          enddo
@@ -2432,7 +2058,7 @@ c
          do n=1,6
          do j=iys,iye
          do i=1,nnx
-            fac   = 2.0*(weit(k)*vis_m(i,j,kp1) + 
+            fac   = 2.0*(weit(k)*vis_m(i,j,kp1) +
      +                   weitm(k)*vis_m(i,j,k))
             tauij(i,j,n,2) = fac*sij(i,j,n)
          enddo
@@ -2443,14 +2069,14 @@ c
          ww_sum = 0.0
          do j=iys,iye
          do i=1,nnx
-            gm_xu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) + 
-     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,2)  
-            gm_xl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,2) + 
-     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,2)  
-            gm_yu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,3) + 
-     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,3)  
-            gm_yl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,3) + 
-     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,3)  
+            gm_xu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) +
+     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,2)
+            gm_xl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,2) +
+     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,2)
+            gm_yu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,3) +
+     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,3)
+            gm_yl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,3) +
+     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,3)
             tau_up    = tauij(i,j,1,2)*gm_xu + tauij(i,j,2,2)*gm_yu +
      +                  tauij(i,j,3,2)
             tau_lo    = tauij(i,j,1,1)*gm_xl + tauij(i,j,2,1)*gm_yl +
@@ -2514,7 +2140,7 @@ c ---------- end z loop
 c
       enddo
 c
-c ---------- SGS fluxes tau_12, tau_22, tau_23 that depend on 
+c ---------- SGS fluxes tau_12, tau_22, tau_23 that depend on
 c            y-derivatives at cell centers. special treatment
 c            of first point at lower boundary. assumes strain
 c            at k = 1 is at upper face, see strain_12,_22,_23
@@ -2525,7 +2151,7 @@ c
 !         if(k .eq. 1) then
 !            do j=iys,iye
 !            do i=1,nnx
-!               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) - 
+!               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) -
 !     +                            t12bc(i,j)*fnt5(i,j))
 !               fntd(i,j,k) = tau_c  - upfac*vf(i,j,k)*u(i,j,k)
 !            enddo
@@ -2556,7 +2182,7 @@ c
 !         if(k .eq. 1) then
 !            do j=iys,iye
 !            do i=1,nnx
-!               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) - 
+!               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) -
 !     +                            t22bc(i,j)*fnt5(i,j))
 !               fntd(i,j,k) = tau_c  - upfac*vf(i,j,k)*v(i,j,k)
 !            enddo
@@ -2587,7 +2213,7 @@ c
 !         if(k .eq. 1) then
 !            do j=iys,iye
 !            do i=1,nnx
-!               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) - 
+!               tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) -
 !     +                            t23bc(i,j)*fnt5(i,j))
 !               fntd(i,j,k) = tau_c - upfac*vf(i,j,k)*w(i,j,k)
 !            enddo
@@ -2684,7 +2310,7 @@ c
 c
       if(iskew .eq. 0) then
          upfac = 0.5
-      else 
+      else
          upfac = 1.0
       endif
 c
@@ -2754,19 +2380,19 @@ c
 c
          u_adv = 0.5*(uf(i,j,k)*ux(i,j,k) + vf(i,j,k)*uy(i,j,k) +
      +           (wf(i,j,k)*u_avg_u - wf(i,j,km1)*u_avg_l)*dzw_i(k)) +
-     +           0.25*(wf(i,j,k)*uz + wf(i,j,km1)*uzm) 
+     +           0.25*(wf(i,j,k)*uz + wf(i,j,km1)*uzm)
          v_adv = 0.5*(uf(i,j,k)*vx(i,j,k) + vf(i,j,k)*vy(i,j,k) +
      +           (wf(i,j,k)*v_avg_u - wf(i,j,km1)*v_avg_l)*dzw_i(k)) +
-     +           0.25*(wf(i,j,k)*vz + wf(i,j,km1)*vzm) 
+     +           0.25*(wf(i,j,k)*vz + wf(i,j,km1)*vzm)
          w_adv = 0.5*(uf(i,j,k)*wx(i,j,k) + vf(i,j,k)*wy(i,j,k) +
      +           (wf(i,j,k)*w_avg_u - wf(i,j,km1)*w_avg_l)*dzw_i(k)) +
-     +           0.25*(wf(i,j,k)*wz + wf(i,j,km1)*wzm) 
+     +           0.25*(wf(i,j,k)*wz + wf(i,j,km1)*wzm)
 c
 c ------------ totals
 c
          r1(i,j,k) = r1(i,j,k) - u_adv
-         r2(i,j,k) = r2(i,j,k) - v_adv 
-         r3(i,j,k) = r3(i,j,k) - w_adv 
+         r2(i,j,k) = r2(i,j,k) - v_adv
+         r3(i,j,k) = r3(i,j,k) - w_adv
       enddo
       enddo
       enddo ! end z-loop
@@ -2795,8 +2421,8 @@ c
 c ------------ totals
 c
          r1(i,j,k) = r1(i,j,k) - u_adv
-         r2(i,j,k) = r2(i,j,k) - v_adv 
-         r3(i,j,k) = r3(i,j,k) - w_adv 
+         r2(i,j,k) = r2(i,j,k) - v_adv
+         r3(i,j,k) = r3(i,j,k) - w_adv
       enddo
       enddo
       enddo ! end z-loop
@@ -2846,7 +2472,7 @@ c
          do n=1,6
          do j=iys,iye
          do i=1,nnx
-            fac   = 2.0*(weit(izs-1)*vis_m(i,j,izs) + 
+            fac   = 2.0*(weit(izs-1)*vis_m(i,j,izs) +
      +              weitm(izs-1)*vis_m(i,j,izs-1))
             tauij(i,j,n,2) = fac*sij(i,j,n)
          enddo
@@ -2867,7 +2493,7 @@ c
          do n=1,6
          do j=iys,iye
          do i=1,nnx
-            fac   = 2.0*(weit(k)*vis_m(i,j,kp1) + 
+            fac   = 2.0*(weit(k)*vis_m(i,j,kp1) +
      +                   weitm(k)*vis_m(i,j,k))
             tauij(i,j,n,2) = fac*sij(i,j,n)
          enddo
@@ -2878,14 +2504,14 @@ c
          ww_sum = 0.0
          do j=iys,iye
          do i=1,nnx
-            gm_xu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) + 
-     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,2)  
-            gm_xl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,2) + 
-     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,2)  
-            gm_yu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,3) + 
-     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,3)  
-            gm_yl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,3) + 
-     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,3)  
+            gm_xu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) +
+     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,2)
+            gm_xl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,2) +
+     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,2)
+            gm_yu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,3) +
+     +                  weitm(k)*gm(i,j,k,1)*gm(i,j,k,3)
+            gm_yl     = weit(km1)*gm(i,j,k,1)*gm(i,j,k,3) +
+     +                  weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,3)
             tau_up    = tauij(i,j,1,2)*gm_xu + tauij(i,j,2,2)*gm_yu +
      +                  tauij(i,j,3,2)
             tau_lo    = tauij(i,j,1,1)*gm_xl + tauij(i,j,2,1)*gm_yl +
@@ -2931,7 +2557,7 @@ c ---------- end z loop
 c
       enddo
 c
-c ---------- SGS fluxes tau_12, tau_22, tau_23 that depend on 
+c ---------- SGS fluxes tau_12, tau_22, tau_23 that depend on
 c            y-derivatives at cell centers
 c
       do k=izs,ize
@@ -2989,7 +2615,7 @@ c           fntd(i,j,k) = fac*sij(i,j,1) - upfac*vf(i,j,k)*w(i,j,k)
      +           iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
 c
 c --------- add a constant to r3 to account for hydrostatic pressure
-c           and for periodic sidewalls. we have r3/J therefore the 
+c           and for periodic sidewalls. we have r3/J therefore the
 c           constant to be added  = - <J*r3/J>/J
 c
       do k=1,nnz
@@ -3063,9 +2689,9 @@ c -------- at upper face
 c
       do j=iys,iye
       do i=1,nnx
-         uzet  = (u(i,j,kp1) - u(i,j,k))*dzu_i(kp1) 
-         vzet  = (v(i,j,kp1) - v(i,j,k))*dzu_i(kp1) 
-         wzet  = (w(i,j,kp1) - w(i,j,k))*dzu_i(kp1) 
+         uzet  = (u(i,j,kp1) - u(i,j,k))*dzu_i(kp1)
+         vzet  = (v(i,j,kp1) - v(i,j,k))*dzu_i(kp1)
+         wzet  = (w(i,j,kp1) - w(i,j,k))*dzu_i(kp1)
          uxi   = w1*ux(i,j,kp1) + w1m*ux(i,j,k)
          vxi   = w1*vx(i,j,kp1) + w1m*vx(i,j,k)
          wxi   = w1*wx(i,j,kp1) + w1m*wx(i,j,k)
@@ -3088,7 +2714,7 @@ c
       end
       subroutine strain_c_dns(sij_c,k)
 c
-c ---------- get strain matrix at the cell center 
+c ---------- get strain matrix at the cell center
 c ---------- for DNS just don't treak k = 1 any different
 c
 c        strain definitions
@@ -3131,7 +2757,7 @@ c
 !         gm_y  = gm(i,j,k,3)
 !         gm_z  = gm(i,j,k,4)
 !         sij_c(i,j,1) = ux(i,j,k)  + uzet*gm_x
-!         sij_c(i,j,2) = 0.5*(uy(i,j,k) + uzet*gm_y + 
+!         sij_c(i,j,2) = 0.5*(uy(i,j,k) + uzet*gm_y +
 !     +                       vx(i,j,k)  + vzet*gm_x)
 !         sij_c(i,j,3) = 0.5*(uzet*gm_z + wx(i,j,k)  + wzet*gm_x)
 !         sij_c(i,j,4) = vy(i,j,k) + vzet*gm_y
@@ -3148,18 +2774,18 @@ c
       do i=1,nnx
          uup   = w1*u(i,j,kp1) + w1m*u(i,j,k)
          ulo   = w2*u(i,j,k) + w2m*u(i,j,km1)
-         uzet  = (uup - ulo)*dzw_i(k) 
+         uzet  = (uup - ulo)*dzw_i(k)
          vup   = w1*v(i,j,kp1) + w1m*v(i,j,k)
          vlo   = w2*v(i,j,k) + w2m*v(i,j,km1)
-         vzet  = (vup - vlo)*dzw_i(k) 
+         vzet  = (vup - vlo)*dzw_i(k)
          wup   = w1*w(i,j,kp1) + w1m*w(i,j,k)
          wlo   = w2*w(i,j,k) + w2m*w(i,j,km1)
-         wzet  = (wup - wlo)*dzw_i(k) 
+         wzet  = (wup - wlo)*dzw_i(k)
          gm_x  = gm(i,j,k,2)
          gm_y  = gm(i,j,k,3)
          gm_z  = gm(i,j,k,4)
          sij_c(i,j,1) = ux(i,j,k)  + uzet*gm_x
-         sij_c(i,j,2) = 0.5*(uy(i,j,k) + uzet*gm_y + 
+         sij_c(i,j,2) = 0.5*(uy(i,j,k) + uzet*gm_y +
      +                       vx(i,j,k)  + vzet*gm_x)
          sij_c(i,j,3) = 0.5*(uzet*gm_z + wx(i,j,k)  + wzet*gm_x)
          sij_c(i,j,4) = vy(i,j,k) + vzet*gm_y
@@ -3174,7 +2800,7 @@ c
       end
       subroutine strain_c(sij_c,k)
 c
-c ---------- get strain matrix at the cell center 
+c ---------- get strain matrix at the cell center
 c            special if at first level off the wall
 c
 c        strain definitions
@@ -3217,7 +2843,7 @@ c
          gm_y  = gm(i,j,k,3)
          gm_z  = gm(i,j,k,4)
          sij_c(i,j,1) = ux(i,j,k)  + uzet*gm_x
-         sij_c(i,j,2) = 0.5*(uy(i,j,k) + uzet*gm_y + 
+         sij_c(i,j,2) = 0.5*(uy(i,j,k) + uzet*gm_y +
      +                       vx(i,j,k)  + vzet*gm_x)
          sij_c(i,j,3) = 0.5*(uzet*gm_z + wx(i,j,k)  + wzet*gm_x)
          sij_c(i,j,4) = vy(i,j,k) + vzet*gm_y
@@ -3234,18 +2860,18 @@ c
       do i=1,nnx
          uup   = w1*u(i,j,kp1) + w1m*u(i,j,k)
          ulo   = w2*u(i,j,k) + w2m*u(i,j,km1)
-         uzet  = (uup - ulo)*dzw_i(k) 
+         uzet  = (uup - ulo)*dzw_i(k)
          vup   = w1*v(i,j,kp1) + w1m*v(i,j,k)
          vlo   = w2*v(i,j,k) + w2m*v(i,j,km1)
-         vzet  = (vup - vlo)*dzw_i(k) 
+         vzet  = (vup - vlo)*dzw_i(k)
          wup   = w1*w(i,j,kp1) + w1m*w(i,j,k)
          wlo   = w2*w(i,j,k) + w2m*w(i,j,km1)
-         wzet  = (wup - wlo)*dzw_i(k) 
+         wzet  = (wup - wlo)*dzw_i(k)
          gm_x  = gm(i,j,k,2)
          gm_y  = gm(i,j,k,3)
          gm_z  = gm(i,j,k,4)
          sij_c(i,j,1) = ux(i,j,k)  + uzet*gm_x
-         sij_c(i,j,2) = 0.5*(uy(i,j,k) + uzet*gm_y + 
+         sij_c(i,j,2) = 0.5*(uy(i,j,k) + uzet*gm_y +
      +                       vx(i,j,k)  + vzet*gm_x)
          sij_c(i,j,3) = 0.5*(uzet*gm_z + wx(i,j,k)  + wzet*gm_x)
          sij_c(i,j,4) = vy(i,j,k) + vzet*gm_y
@@ -3314,11 +2940,11 @@ c
       do i=1,nnx
          uup   = w1*u(i,j,kp1) + w1m*u(i,j,k)
          ulo   = w2*u(i,j,k) + w2m*u(i,j,km1)
-         uzet  = (uup - ulo)*dzw_i(k) 
+         uzet  = (uup - ulo)*dzw_i(k)
          vup   = w1*v(i,j,kp1) + w1m*v(i,j,k)
          vlo   = w2*v(i,j,k) + w2m*v(i,j,km1)
-         vzet  = (vup - vlo)*dzw_i(k) 
-         sij_y(i,j) = 0.5*(uy(i,j,k) + uzet*gm(i,j,k,3) + 
+         vzet  = (vup - vlo)*dzw_i(k)
+         sij_y(i,j) = 0.5*(uy(i,j,k) + uzet*gm(i,j,k,3) +
      +                     vx(i,j,k) + vzet*gm(i,j,k,2))
       enddo
       enddo
@@ -3383,11 +3009,11 @@ c
       do i=1,nnx
          uup   = w1*u(i,j,kp1) + w1m*u(i,j,k)
          ulo   = w2*u(i,j,k) + w2m*u(i,j,km1)
-         uzet  = (uup - ulo)*dzw_i(k) 
+         uzet  = (uup - ulo)*dzw_i(k)
          vup   = w1*v(i,j,kp1) + w1m*v(i,j,k)
          vlo   = w2*v(i,j,k) + w2m*v(i,j,km1)
-         vzet  = (vup - vlo)*dzw_i(k) 
-         sij_y(i,j) = 0.5*(uy(i,j,k) + uzet*gm(i,j,k,3) + 
+         vzet  = (vup - vlo)*dzw_i(k)
+         sij_y(i,j) = 0.5*(uy(i,j,k) + uzet*gm(i,j,k,3) +
      +                     vx(i,j,k) + vzet*gm(i,j,k,2))
       enddo
       enddo
@@ -3448,7 +3074,7 @@ c
       do i=1,nnx
          vup   = w1*v(i,j,kp1) + w1m*v(i,j,k)
          vlo   = w2*v(i,j,k) + w2m*v(i,j,km1)
-         vzet  = (vup - vlo)*dzw_i(k) 
+         vzet  = (vup - vlo)*dzw_i(k)
          sij_y(i,j) = vy(i,j,k) + vzet*gm(i,j,k,3)
       enddo
       enddo
@@ -3509,7 +3135,7 @@ c
       do i=1,nnx
          vup   = w1*v(i,j,kp1) + w1m*v(i,j,k)
          vlo   = w2*v(i,j,k) + w2m*v(i,j,km1)
-         vzet  = (vup - vlo)*dzw_i(k) 
+         vzet  = (vup - vlo)*dzw_i(k)
          sij_y(i,j) = vy(i,j,k) + vzet*gm(i,j,k,3)
       enddo
       enddo
@@ -3572,11 +3198,11 @@ c
       do i=1,nnx
          vup   = w1*v(i,j,kp1) + w1m*v(i,j,k)
          vlo   = w2*v(i,j,k) + w2m*v(i,j,km1)
-         vzet  = (vup - vlo)*dzw_i(k) 
+         vzet  = (vup - vlo)*dzw_i(k)
          wup   = w1*w(i,j,kp1) + w1m*w(i,j,k)
          wlo   = w2*w(i,j,k) + w2m*w(i,j,km1)
-         wzet  = (wup - wlo)*dzw_i(k) 
-         sij_y(i,j) = 0.5*(vzet*gm(i,j,k,4) + 
+         wzet  = (wup - wlo)*dzw_i(k)
+         sij_y(i,j) = 0.5*(vzet*gm(i,j,k,4) +
      +                     wy(i,j,k) + wzet*gm(i,j,k,3))
       enddo
       enddo
@@ -3639,11 +3265,11 @@ c
       do i=1,nnx
          vup   = w1*v(i,j,kp1) + w1m*v(i,j,k)
          vlo   = w2*v(i,j,k) + w2m*v(i,j,km1)
-         vzet  = (vup - vlo)*dzw_i(k) 
+         vzet  = (vup - vlo)*dzw_i(k)
          wup   = w1*w(i,j,kp1) + w1m*w(i,j,k)
          wlo   = w2*w(i,j,k) + w2m*w(i,j,km1)
-         wzet  = (wup - wlo)*dzw_i(k) 
-         sij_y(i,j) = 0.5*(vzet*gm(i,j,k,4) + 
+         wzet  = (wup - wlo)*dzw_i(k)
+         sij_y(i,j) = 0.5*(vzet*gm(i,j,k,4) +
      +                     wy(i,j,k) + wzet*gm(i,j,k,3))
       enddo
       enddo
@@ -3656,7 +3282,7 @@ c
 c
 c ------ get right hand side of scalar equation (iscl)
 c        monotone scalar fluxes only in z
-c        for pencil size (nnx, iys:iye, izs:ize) 
+c        for pencil size (nnx, iys:iye, izs:ize)
 c        care is taken so that if monotone is on then
 c        conservative horizontal flux form is used!
 c        uses flux conservation form for advection always
@@ -3715,9 +3341,9 @@ c
 !     +                               t1tbc(i,j,iscl)*gm_l)
 !               tflx(i,j,2,1) = 0.5*(fac*scl_g(i,j,2)*gm_u -
 !     +                               t2tbc(i,j,iscl)*gm_l)
-!               fnt1(i,j)     = tflx(i,j,1,1) - 
+!               fnt1(i,j)     = tflx(i,j,1,1) -
 !     +                         upfac*uf(i,j,k)*t(i,j,iscl,k)
-!               fntd(i,j,k)   = tflx(i,j,2,1) - 
+!               fntd(i,j,k)   = tflx(i,j,2,1) -
 !     +                         upfac*vf(i,j,k)*t(i,j,iscl,k)
 !            enddo
 !            enddo
@@ -3728,9 +3354,9 @@ c
             do i=1,nnx
                tflx(i,j,1,1) = vis_s(i,j,k)*scl_g(i,j,1)*gm(i,j,k,1)
                tflx(i,j,2,1) = vis_s(i,j,k)*scl_g(i,j,2)*gm(i,j,k,1)
-               fnt1(i,j)     = tflx(i,j,1,1) - 
+               fnt1(i,j)     = tflx(i,j,1,1) -
      +                         upfac*uf(i,j,k)*t(i,j,iscl,k)
-               fntd(i,j,k)   = tflx(i,j,2,1) - 
+               fntd(i,j,k)   = tflx(i,j,2,1) -
      +                         upfac*vf(i,j,k)*t(i,j,iscl,k)
             enddo
             enddo
@@ -3780,7 +3406,7 @@ c
       do k=izs,ize
          do j=iys,iye
          do i=1,nnx
-            r4(i,j,iscl,k) = r4(i,j,iscl,k) - 
+            r4(i,j,iscl,k) = r4(i,j,iscl,k) -
      +            upfac*(uf(i,j,k)*tx(i,j,k) + vf(i,j,k)*ty(i,j,k))
          enddo
          enddo
@@ -3842,7 +3468,7 @@ c
      +                   tflx(i,j,3,2)
             tflx_lo    = tflx(i,j,1,1)*gm_xl + tflx(i,j,2,1)*gm_yl +
      +                   tflx(i,j,3,1)
-            r4(i,j,iscl,k) = r4(i,j,iscl,k) + 
+            r4(i,j,iscl,k) = r4(i,j,iscl,k) +
      +                       (tflx_up - tflx_lo)*dzw_i(k)
             if (k==1) then
             sfc_flx = sfc_flx + tflx_lo
@@ -3892,7 +3518,7 @@ c
      +                weit(k)*t(i,j,iscl,kp1)
             theta_l = weit(km1)*t(i,j,iscl,k) +
      +                weitm(km1)*t(i,j,iscl,km1)
-            t_adv   = 0.5*(wf(i,j,k)*theta_u - 
+            t_adv   = 0.5*(wf(i,j,k)*theta_u -
      +                     wf(i,j,km1)*theta_l)*dzw_i(k) +
      +                0.25*(wf(i,j,k)*tz + wf(i,j,km1)*tzm)
             r4(i,j,iscl,k) = r4(i,j,iscl,k) - t_adv
@@ -3916,7 +3542,7 @@ c
                  wflx_u      = wf(i,j,k)   - gm(i,j,k,5)
                  flux_l(i,j) = sgn*0.5*wflx_l*
      +                         (t(i,j,iscl,km1)+t(i,j,iscl,k))
-                 flux_u(i,j) = 
+                 flux_u(i,j) =
      +           amax1(sgn*wflx_u,0.)*(t(i,j,iscl,k) +
      +           rlim(t(i,j,iscl,kp1),t(i,j,iscl,k),
      +                t(i,j,iscl,km1))) +
@@ -3932,7 +3558,7 @@ c
                  wflx_u      = wf(i,j,k) - gm(i,j,k,5)
                  flux_u(i,j) = sgn*0.5*wflx_u*
      +                        (t(i,j,iscl,kp1)+t(i,j,iscl,k))
-                 flux_l(i,j) = 
+                 flux_l(i,j) =
      +           amax1(sgn*wflx_l,0.)*(t(i,j,iscl,km1) +
      +           rlim(t(i,j,iscl,k),t(i,j,iscl,km1),
      +                t(i,j,iscl,km2))) +
@@ -3946,14 +3572,14 @@ c
               do i=1,nnx
                  wflx_l      = wf(i,j,km1) - gm(i,j,km1,5)
                  wflx_u      = wf(i,j,k) - gm(i,j,k,5)
-                 flux_u(i,j) = 
+                 flux_u(i,j) =
      +           amax1(sgn*wflx_u,0.)*(t(i,j,iscl,k) +
      +           rlim(t(i,j,iscl,kp1),t(i,j,iscl,k),
      +                t(i,j,iscl,km1))) +
      +           amin1(sgn*wflx_u,0.)*(t(i,j,iscl,kp1) +
      +           rlim(t(i,j,iscl,k),t(i,j,iscl,kp1),
      +                t(i,j,iscl,kp2)))
-                 flux_l(i,j) = 
+                 flux_l(i,j) =
      +           amax1(sgn*wflx_l,0.)*(t(i,j,iscl,km1) +
      +           rlim(t(i,j,iscl,k),t(i,j,iscl,km1),
      +                t(i,j,iscl,km2))) +
@@ -3987,7 +3613,7 @@ c
 c
 c ------ get right hand side of scalar equation (iscl)
 c        monotone scalar fluxes only in z
-c        for pencil size (nnx, iys:iye, izs:ize) 
+c        for pencil size (nnx, iys:iye, izs:ize)
 c        care is taken so that if monotone is on then
 c        conservative horizontal flux form is used!
 c        uses flux conservation form for advection always
@@ -4047,9 +3673,9 @@ c
      +                               t1tbc(i,j,iscl)*gm_l)
                tflx(i,j,2,1) = 0.5*(fac*scl_g(i,j,2)*gm_u -
      +                               t2tbc(i,j,iscl)*gm_l)
-               fnt1(i,j)     = tflx(i,j,1,1) - 
+               fnt1(i,j)     = tflx(i,j,1,1) -
      +                         upfac*uf(i,j,k)*t(i,j,iscl,k)
-               fntd(i,j,k)   = tflx(i,j,2,1) - 
+               fntd(i,j,k)   = tflx(i,j,2,1) -
      +                         upfac*vf(i,j,k)*t(i,j,iscl,k)
             enddo
             enddo
@@ -4059,9 +3685,9 @@ c
             do i=1,nnx
                tflx(i,j,1,1) = vis_s(i,j,k)*scl_g(i,j,1)*gm(i,j,k,1)
                tflx(i,j,2,1) = vis_s(i,j,k)*scl_g(i,j,2)*gm(i,j,k,1)
-               fnt1(i,j)     = tflx(i,j,1,1) - 
+               fnt1(i,j)     = tflx(i,j,1,1) -
      +                         upfac*uf(i,j,k)*t(i,j,iscl,k)
-               fntd(i,j,k)   = tflx(i,j,2,1) - 
+               fntd(i,j,k)   = tflx(i,j,2,1) -
      +                         upfac*vf(i,j,k)*t(i,j,iscl,k)
             enddo
             enddo
@@ -4111,7 +3737,7 @@ c
       do k=izs,ize
          do j=iys,iye
          do i=1,nnx
-            r4(i,j,iscl,k) = r4(i,j,iscl,k) - 
+            r4(i,j,iscl,k) = r4(i,j,iscl,k) -
      +            upfac*(uf(i,j,k)*tx(i,j,k) + vf(i,j,k)*ty(i,j,k))
          enddo
          enddo
@@ -4173,7 +3799,7 @@ c
      +                   tflx(i,j,3,2)
             tflx_lo    = tflx(i,j,1,1)*gm_xl + tflx(i,j,2,1)*gm_yl +
      +                   tflx(i,j,3,1)
-            r4(i,j,iscl,k) = r4(i,j,iscl,k) + 
+            r4(i,j,iscl,k) = r4(i,j,iscl,k) +
      +                       (tflx_up - tflx_lo)*dzw_i(k)
          enddo
          enddo
@@ -4213,7 +3839,7 @@ c
      +                weit(k)*t(i,j,iscl,kp1)
             theta_l = weit(km1)*t(i,j,iscl,k) +
      +                weitm(km1)*t(i,j,iscl,km1)
-            t_adv   = 0.5*(wf(i,j,k)*theta_u - 
+            t_adv   = 0.5*(wf(i,j,k)*theta_u -
      +                     wf(i,j,km1)*theta_l)*dzw_i(k) +
      +                0.25*(wf(i,j,k)*tz + wf(i,j,km1)*tzm)
             r4(i,j,iscl,k) = r4(i,j,iscl,k) - t_adv
@@ -4237,7 +3863,7 @@ c
                  wflx_u      = wf(i,j,k)   - gm(i,j,k,5)
                  flux_l(i,j) = sgn*0.5*wflx_l*
      +                         (t(i,j,iscl,km1)+t(i,j,iscl,k))
-                 flux_u(i,j) = 
+                 flux_u(i,j) =
      +           amax1(sgn*wflx_u,0.)*(t(i,j,iscl,k) +
      +           rlim(t(i,j,iscl,kp1),t(i,j,iscl,k),
      +                t(i,j,iscl,km1))) +
@@ -4253,7 +3879,7 @@ c
                  wflx_u      = wf(i,j,k) - gm(i,j,k,5)
                  flux_u(i,j) = sgn*0.5*wflx_u*
      +                        (t(i,j,iscl,kp1)+t(i,j,iscl,k))
-                 flux_l(i,j) = 
+                 flux_l(i,j) =
      +           amax1(sgn*wflx_l,0.)*(t(i,j,iscl,km1) +
      +           rlim(t(i,j,iscl,k),t(i,j,iscl,km1),
      +                t(i,j,iscl,km2))) +
@@ -4267,14 +3893,14 @@ c
               do i=1,nnx
                  wflx_l      = wf(i,j,km1) - gm(i,j,km1,5)
                  wflx_u      = wf(i,j,k) - gm(i,j,k,5)
-                 flux_u(i,j) = 
+                 flux_u(i,j) =
      +           amax1(sgn*wflx_u,0.)*(t(i,j,iscl,k) +
      +           rlim(t(i,j,iscl,kp1),t(i,j,iscl,k),
      +                t(i,j,iscl,km1))) +
      +           amin1(sgn*wflx_u,0.)*(t(i,j,iscl,kp1) +
      +           rlim(t(i,j,iscl,k),t(i,j,iscl,kp1),
      +                t(i,j,iscl,kp2)))
-                 flux_l(i,j) = 
+                 flux_l(i,j) =
      +           amax1(sgn*wflx_l,0.)*(t(i,j,iscl,km1) +
      +           rlim(t(i,j,iscl,k),t(i,j,iscl,km1),
      +                t(i,j,iscl,km2))) +
@@ -4308,7 +3934,7 @@ c
 c
 c ------ get right hand side of scalar equation (iscl)
 c        monotone scalar fluxes only in z
-c        for pencil size (nnx, iys:iye, izs:ize) 
+c        for pencil size (nnx, iys:iye, izs:ize)
 c        care is taken so that if monotone is on then
 c        conservative horizontal flux form is used!
 c        uses flux conservation form for advection always
@@ -4355,11 +3981,11 @@ c
          call grads_c(scl_g,k,tx,ty,iscl)
          do j=iys,iye
          do i=1,nnx
-            tflx(i,j,1,1) = vis_s(i,j,k)*scl_g(i,j,1) 
-            tflx(i,j,2,1) = vis_s(i,j,k)*scl_g(i,j,2) 
-            fnt1(i,j)     = gm(i,j,k,1)*tflx(i,j,1,1) - 
+            tflx(i,j,1,1) = vis_s(i,j,k)*scl_g(i,j,1)
+            tflx(i,j,2,1) = vis_s(i,j,k)*scl_g(i,j,2)
+            fnt1(i,j)     = gm(i,j,k,1)*tflx(i,j,1,1) -
      +                      upfac*uf(i,j,k)*t(i,j,iscl,k)
-            fntd(i,j,k)   = gm(i,j,k,1)*tflx(i,j,2,1) - 
+            fntd(i,j,k)   = gm(i,j,k,1)*tflx(i,j,2,1) -
      +                      upfac*vf(i,j,k)*t(i,j,iscl,k)
          enddo
          enddo
@@ -4408,7 +4034,7 @@ c
       do k=izs,ize
          do j=iys,iye
          do i=1,nnx
-            r4(i,j,iscl,k) = r4(i,j,iscl,k) - 
+            r4(i,j,iscl,k) = r4(i,j,iscl,k) -
      +            upfac*(uf(i,j,k)*tx(i,j,k) + vf(i,j,k)*ty(i,j,k))
          enddo
          enddo
@@ -4470,7 +4096,7 @@ c
      +                   tflx(i,j,3,2)
             tflx_lo    = tflx(i,j,1,1)*gm_xl + tflx(i,j,2,1)*gm_yl +
      +                   tflx(i,j,3,1)
-            r4(i,j,iscl,k) = r4(i,j,iscl,k) + 
+            r4(i,j,iscl,k) = r4(i,j,iscl,k) +
      +                       (tflx_up - tflx_lo)*dzw_i(k)
          enddo
          enddo
@@ -4510,7 +4136,7 @@ c
      +                weit(k)*t(i,j,iscl,kp1)
             theta_l = weit(km1)*t(i,j,iscl,k) +
      +                weitm(km1)*t(i,j,iscl,km1)
-            t_adv   = 0.5*(wf(i,j,k)*theta_u - 
+            t_adv   = 0.5*(wf(i,j,k)*theta_u -
      +                     wf(i,j,km1)*theta_l)*dzw_i(k) +
      +                0.25*(wf(i,j,k)*tz + wf(i,j,km1)*tzm)
             r4(i,j,iscl,k) = r4(i,j,iscl,k) - t_adv
@@ -4534,7 +4160,7 @@ c
                  wflx_u      = wf(i,j,k)   - gm(i,j,k,5)
                  flux_l(i,j) = sgn*0.5*wflx_l*
      +                         (t(i,j,iscl,km1)+t(i,j,iscl,k))
-                 flux_u(i,j) = 
+                 flux_u(i,j) =
      +           amax1(sgn*wflx_u,0.)*(t(i,j,iscl,k) +
      +           rlim(t(i,j,iscl,kp1),t(i,j,iscl,k),
      +                t(i,j,iscl,km1))) +
@@ -4550,7 +4176,7 @@ c
                  wflx_u      = wf(i,j,k) - gm(i,j,k,5)
                  flux_u(i,j) = sgn*0.5*wflx_u*
      +                        (t(i,j,iscl,kp1)+t(i,j,iscl,k))
-                 flux_l(i,j) = 
+                 flux_l(i,j) =
      +           amax1(sgn*wflx_l,0.)*(t(i,j,iscl,km1) +
      +           rlim(t(i,j,iscl,k),t(i,j,iscl,km1),
      +                t(i,j,iscl,km2))) +
@@ -4564,14 +4190,14 @@ c
               do i=1,nnx
                  wflx_l      = wf(i,j,km1) - gm(i,j,km1,5)
                  wflx_u      = wf(i,j,k) - gm(i,j,k,5)
-                 flux_u(i,j) = 
+                 flux_u(i,j) =
      +           amax1(sgn*wflx_u,0.)*(t(i,j,iscl,k) +
      +           rlim(t(i,j,iscl,kp1),t(i,j,iscl,k),
      +                t(i,j,iscl,km1))) +
      +           amin1(sgn*wflx_u,0.)*(t(i,j,iscl,kp1) +
      +           rlim(t(i,j,iscl,k),t(i,j,iscl,kp1),
      +                t(i,j,iscl,kp2)))
-                 flux_l(i,j) = 
+                 flux_l(i,j) =
      +           amax1(sgn*wflx_l,0.)*(t(i,j,iscl,km1) +
      +           rlim(t(i,j,iscl,k),t(i,j,iscl,km1),
      +                t(i,j,iscl,km2))) +
@@ -4630,7 +4256,7 @@ c -------- at upper face
 c
       do j=iys,iye
       do i=1,nnx
-         tzet  = (t(i,j,iscl,kp1) - t(i,j,iscl,k))*dzu_i(kp1) 
+         tzet  = (t(i,j,iscl,kp1) - t(i,j,iscl,k))*dzu_i(kp1)
          txi   = w1*tx(i,j,kp1) + w1m*tx(i,j,k)
          teta  = w1*ty(i,j,kp1) + w1m*ty(i,j,k)
          gm_x  = w1*gm(i,j,kp1,2) + w1m*gm(i,j,k,2)
@@ -4646,7 +4272,7 @@ c
       end
       subroutine grads_c_dns(scl_c,k,tx,ty,iscl)
 c
-c ---------- get scalar gradient at the cell center 
+c ---------- get scalar gradient at the cell center
 c
 c        gradient definitions
 c
@@ -4687,7 +4313,7 @@ c
       do i=1,nnx
          tup   = w1*t(i,j,iscl,kp1) + w1m*t(i,j,iscl,k)
          tlo   = w2*t(i,j,iscl,k) + w2m*t(i,j,iscl,km1)
-         tzet  = (tup - tlo)*dzw_i(k) 
+         tzet  = (tup - tlo)*dzw_i(k)
          scl_c(i,j,1) = tx(i,j,k) + tzet*gm(i,j,k,2)
          scl_c(i,j,2) = ty(i,j,k) + tzet*gm(i,j,k,3)
          scl_c(i,j,3) = tzet*gm(i,j,k,4)
@@ -4700,7 +4326,7 @@ c
       end
       subroutine grads_c(scl_c,k,tx,ty,iscl)
 c
-c ---------- get scalar gradient at the cell center 
+c ---------- get scalar gradient at the cell center
 c
 c        gradient definitions
 c
@@ -4741,7 +4367,7 @@ c
       do i=1,nnx
          tup   = w1*t(i,j,iscl,kp1) + w1m*t(i,j,iscl,k)
          tlo   = w2*t(i,j,iscl,k) + w2m*t(i,j,iscl,km1)
-         tzet  = (tup - tlo)*dzw_i(k) 
+         tzet  = (tup - tlo)*dzw_i(k)
          scl_c(i,j,1) = tx(i,j,k) + tzet*gm(i,j,k,2)
          scl_c(i,j,2) = ty(i,j,k) + tzet*gm(i,j,k,3)
          scl_c(i,j,3) = tzet*gm(i,j,k,4)
@@ -4765,7 +4391,7 @@ c
       vis_m = nuf
       !Use Prantdl number for thermal diffusivity:
       !NOTE: ASSUMING Sc = Pr since vis_s only has 1 field!
-      vis_s(1:nnx,iys:iye,izs-1:ize+1) = nuf/Pra 
+      vis_s(1:nnx,iys:iye,izs-1:ize+1) = nuf/Pra
 
       r5 = 0.0
       e = 0.0
@@ -4774,13 +4400,13 @@ c
       subroutine tke_vis(istep)
 c
 c ------ get viscosity using deardorff tke model with
-c        stability correction. fixes for surface layer. 
+c        stability correction. fixes for surface layer.
 c        get rhs of e-equation/J. field variables are
 c        (u,v,w,e,theta) all at cell center. get viscosity
 c        at cell center also.
 c        "length scale" based on the volume in physical space
 c
-c        volume = gm(.,.,.,1)*d_zeta*d_eta*d_xi 
+c        volume = gm(.,.,.,1)*d_zeta*d_eta*d_xi
 c        (fletcher, vol2 1988, p. 51)
 c
       use pars
@@ -4882,7 +4508,7 @@ c
       if(k .eq. 1) then
          do j=iys,iye
          do i=1,nnx
-            fac       = 2.0*(weit(k)*vis_m(i,j,k+1) + 
+            fac       = 2.0*(weit(k)*vis_m(i,j,k+1) +
      +                       weitm(k)*vis_m(i,j,k))
             tau11_s11 = 0.5*(fac*sij(i,j,1) - t11bc(i,j))*sij(i,j,1)
             tau12_s12 = 0.5*(fac*sij(i,j,2) - t12bc(i,j))*sij(i,j,2)
@@ -4898,7 +4524,7 @@ c
          do j=iys,iye
          do i=1,nnx
             fnt1(i,j)  = 2.0*vis_m(i,j,k)*(
-     +            sij(i,j,1)**2 + sij(i,j,4)**2 + sij(i,j,6)**2 + 
+     +            sij(i,j,1)**2 + sij(i,j,4)**2 + sij(i,j,6)**2 +
      +            2.0*(sij(i,j,2)**2 + sij(i,j,3)**2 + sij(i,j,5)**2))
          enddo
          enddo
@@ -4944,7 +4570,7 @@ c        if(ivis .eq. 1 .and. k .le. nmatch) then
 c           if(k .le. 1) then
 c             vis_mean(k) = xksurf
 c           else
-c             stravg = sqrt((u_mn(kp1)-u_mn(k))**2 + 
+c             stravg = sqrt((u_mn(kp1)-u_mn(k))**2 +
 c    +              (v_mn(kp1)-v_mn(k))**2)*abs(dzu_i(kp1))
 c             vis_mean(k) = xksurf*viscon*stravg
 c           endif
@@ -5078,7 +4704,7 @@ c
          enddo
          enddo
 c
-c --------- get buoyancy term/J in sgs e equation 
+c --------- get buoyancy term/J in sgs e equation
 c
       if(k .eq. 1) then
          do j=iys,iye
@@ -5127,13 +4753,13 @@ c
       subroutine tke_vis_old(istep)
 c
 c ------ get viscosity using deardorff tke model with
-c        stability correction. fixes for surface layer. 
+c        stability correction. fixes for surface layer.
 c        get rhs of e-equation/J. field variables are
 c        (u,v,w,e,theta) all at cell center. get viscosity
 c        at cell center also.
 c        "length scale" based on the volume in physical space
 c
-c        volume = gm(.,.,.,1)*d_zeta*d_eta*d_xi 
+c        volume = gm(.,.,.,1)*d_zeta*d_eta*d_xi
 c        (fletcher, vol2 1988, p. 51)
 c
       use pars
@@ -5228,7 +4854,7 @@ c
          dissp(i,j) = (0.19 + 0.74*alk(i,j)/(dslk*gm(i,j,k,1)))*
      +                 e(i,j,k)*sqrt(e(i,j,k))/alk(i,j)
          fnt1(i,j)  = 2.0*vis_m(i,j,k)*(
-     +            sij(i,j,1)**2 + sij(i,j,4)**2 + sij(i,j,6)**2 + 
+     +            sij(i,j,1)**2 + sij(i,j,4)**2 + sij(i,j,6)**2 +
      +            2.0*(sij(i,j,2)**2 + sij(i,j,3)**2 + sij(i,j,5)**2))
          r5(i,j,k) = (fnt1(i,j) - dissp(i,j))*gm(i,j,k,1)
       enddo
@@ -5266,7 +4892,7 @@ c        if(ivis .eq. 1 .and. k .le. nmatch) then
 c           if(k .le. 1) then
 c             vis_mean(k) = xksurf
 c           else
-c             stravg = sqrt((u_mn(kp1)-u_mn(k))**2 + 
+c             stravg = sqrt((u_mn(kp1)-u_mn(k))**2 +
 c    +              (v_mn(kp1)-v_mn(k))**2)*abs(dzu_i(kp1))
 c             vis_mean(k) = xksurf*viscon*stravg
 c           endif
@@ -5400,7 +5026,7 @@ c
          enddo
          enddo
 c
-c --------- get buoyancy term/J in sgs e equation 
+c --------- get buoyancy term/J in sgs e equation
 c
       if(k .eq. 1) then
          do j=iys,iye
@@ -5475,7 +5101,7 @@ c -------- at upper face
 c
       do j=iys,iye
       do i=1,nnx
-         ezet  = (e(i,j,kp1) - e(i,j,k))*dzu_i(kp1) 
+         ezet  = (e(i,j,kp1) - e(i,j,k))*dzu_i(kp1)
          exi   = w1*ex(i,j,kp1) + w1m*ex(i,j,k)
          eeta  = w1*ey(i,j,kp1) + w1m*ey(i,j,k)
          gm_x  = w1*gm(i,j,kp1,2) + w1m*gm(i,j,k,2)
@@ -5491,7 +5117,7 @@ c
       end
       subroutine grd_e_c(scl_c,k,ex,ey)
 c
-c ---------- get scalar gradient at the cell center 
+c ---------- get scalar gradient at the cell center
 c
 c        gradient definitions
 c
@@ -5532,7 +5158,7 @@ c
       do i=1,nnx
          eup   = w1*e(i,j,kp1) + w1m*e(i,j,k)
          elo   = w2*e(i,j,k) + w2m*e(i,j,km1)
-         ezet  = (eup - elo)*dzw_i(k) 
+         ezet  = (eup - elo)*dzw_i(k)
          scl_c(i,j,1) = ex(i,j,k) + ezet*gm(i,j,k,2)
          scl_c(i,j,2) = ey(i,j,k) + ezet*gm(i,j,k,3)
          scl_c(i,j,3) = ezet*gm(i,j,k,4)
@@ -5547,7 +5173,7 @@ c
 c
 c ------ setup lower boundary condition for entire plane at (k = 1)
 c        using either businger or large formulas with wind.
-c        index f(.,.,2)  indicates lower. 
+c        index f(.,.,2)  indicates lower.
 c
       use pars
       use fields
@@ -5992,11 +5618,11 @@ c
 c
 c -------- subtract off surface movement when applying the drag law
 c          plus the orbital velocity of the wave.
-c          w at the boundary is close to grid speed. 
+c          w at the boundary is close to grid speed.
 c          Note for iz_space = 4 grid speed is constant across
 c          the first grid cell and thus z_t at w point = z_t at
 c          the boundary. Can improve the surface estimate FIX
-c          and couple it to the underlying water using the 
+c          and couple it to the underlying water using the
 c          fuller definition
 c
 c           u_level1(i,j,1) = u(i,j,k)
@@ -6027,8 +5653,8 @@ c3001  format(' i ',10x,' h ',10x,' 1/J',10x,' gm5 ',10x,' gm5',10x,
 c    +        ' w ',10x,' u ',10x,' u orb ',10x,' du ',5x,' dw ',/,
 c    +        (i5,9e15.6))
 c
-c          write(nprt,3003) (i,gm(i,j,km1,5),wf(i,j,km1), w(i,j,km1), 
-c    +                          gm(i,j,k,5), wf(i,j,k), w(i,j,k), 
+c          write(nprt,3003) (i,gm(i,j,km1,5),wf(i,j,km1), w(i,j,km1),
+c    +                          gm(i,j,k,5), wf(i,j,k), w(i,j,k),
 c    +                          gm(i,j,k+1,5), wf(i,j,k+1),w(i,j,k+1),
 c    +                          i=1,nnx)
 c3003  format(' 3003 debug',/,
@@ -6063,7 +5689,7 @@ c        t_grnd(i,j,1) = -999999.99
       enddo
       enddo
 c
-      
+
       call drglaw_l(u_level1,mvar,it)
 c
 c     j = iys
@@ -6127,7 +5753,7 @@ c    +                  ustar(i,j),i=1,nnx)
 c7201 format(' 7201 debug tau',/,
 c    +   ' i ',5x,' t11 ',5x,' t12 ',5x,' t13 ',5x,' t22',5x,
 c    +   ' t23 ',5x,' t33',5x,' ustar ',/,(i5,7e15.6))
-c     write(nprt,8202) (i, -gm(i,j,k,2)*gm(i,j,k,1), 
+c     write(nprt,8202) (i, -gm(i,j,k,2)*gm(i,j,k,1),
 c    +                  u(i,j,k), u_orbit(i,j),
 c    +                  w(i,j,k), w_orbit(i,j),
 c    +                  (u(i,j,k) - u_orbit(i,j)),
@@ -6157,12 +5783,12 @@ c
             fac2   = gm(i,j,k,1)*gm(i,j,k,3)
             buf(1) = buf(1) + t11bc(i,j)
             buf(2) = buf(2) + t12bc(i,j)
-            buf(3) = buf(3) + t13bc(i,j) + 
+            buf(3) = buf(3) + t13bc(i,j) +
      +               fac1*t11bc(i,j) + fac2*t12bc(i,j)
             buf(4) = buf(4) + t22bc(i,j)
-            buf(5) = buf(5) + t23bc(i,j) + 
+            buf(5) = buf(5) + t23bc(i,j) +
      +               fac1*t12bc(i,j) + fac2*t22bc(i,j)
-            buf(6) = buf(6) + t33bc(i,j) + 
+            buf(6) = buf(6) + t33bc(i,j) +
      +               fac1*t13bc(i,j) + fac2*t23bc(i,j)
             buf(7) = buf(7) + ustar(i,j)**2
             buf(8) = buf(8) + amol(i,j)
@@ -6172,7 +5798,7 @@ c
             do j=iys,iye
             do i=1,nnx
                buf(8+iscl)      = buf(8+iscl) + t3tbc(i,j,iscl)
-               buf(8+nscl+iscl) = buf(8+nscl+iscl) + 
+               buf(8+nscl+iscl) = buf(8+nscl+iscl) +
      +                            t_grnd(i,j,iscl)
             enddo
             enddo
@@ -6216,7 +5842,7 @@ c
 c
             ufbc(i,j,2)  = -uf(i,j,k)
             vfbc(i,j,2)  = -vf(i,j,k)
-c 
+c
 c ------- no flow through the surface at t = t_stage
 c
             wfbc(i,j,2)  = gm(i,j,km1,5)
@@ -6226,7 +5852,7 @@ c
          do iscl=1,nscl
             do j=iys,iye
             do i=1,nnx
-               tbc(i,j,iscl,2) = 2.0*t_grnd(i,j,iscl) - t(i,j,iscl,k) 
+               tbc(i,j,iscl,2) = 2.0*t_grnd(i,j,iscl) - t(i,j,iscl,k)
             enddo
             enddo
          enddo
@@ -6326,12 +5952,12 @@ c
 !            fac2   = gm(i,j,k,1)*gm(i,j,k,3)
 !            buf(1) = buf(1) + t11bc(i,j)
 !            buf(2) = buf(2) + t12bc(i,j)
-!            buf(3) = buf(3) + t13bc(i,j) + 
+!            buf(3) = buf(3) + t13bc(i,j) +
 !     +               fac1*t11bc(i,j) + fac2*t12bc(i,j)
 !            buf(4) = buf(4) + t22bc(i,j)
-!            buf(5) = buf(5) + t23bc(i,j) + 
+!            buf(5) = buf(5) + t23bc(i,j) +
 !     +               fac1*t12bc(i,j) + fac2*t22bc(i,j)
-!            buf(6) = buf(6) + t33bc(i,j) + 
+!            buf(6) = buf(6) + t33bc(i,j) +
 !     +               fac1*t13bc(i,j) + fac2*t23bc(i,j)
 !            buf(7) = buf(7) + ustar(i,j)**2
 !            buf(8) = buf(8) + amol(i,j)
@@ -6341,7 +5967,7 @@ c
 !            do j=iys,iye
 !            do i=1,nnx
 !               buf(8+iscl)      = buf(8+iscl) + t3tbc(i,j,iscl)
-!               buf(8+nscl+iscl) = buf(8+nscl+iscl) + 
+!               buf(8+nscl+iscl) = buf(8+nscl+iscl) +
 !     +                            t_grnd(i,j,iscl)
 !            enddo
 !            enddo
@@ -6385,7 +6011,7 @@ c           wbc(i,j,2)  = -w(i,j,k)
 c
             ufbc(i,j,2)  = -uf(i,j,k)
             vfbc(i,j,2)  = -vf(i,j,k)
-c 
+c
 c ------- no flow through the surface at t = t_stage
 c
             wfbc(i,j,2)  = gm(i,j,km1,5)
@@ -6399,10 +6025,10 @@ c
                   tbc(i,j,iscl,2) = 2.0*Tbot(iscl) - t(i,j,iscl,k)
                end if
                if (isfc(iscl)==0) then
-                  tbc(i,j,iscl,2) = t(i,j,iscl,k) + 
+                  tbc(i,j,iscl,2) = t(i,j,iscl,k) +
      +           dzu(0)*wtsfc(1)/vis_s(i,j,k)
                end if
-               !tbc(i,j,iscl,2) = 2.0*t_grnd(i,j,iscl) - t(i,j,iscl,k) 
+               !tbc(i,j,iscl,2) = 2.0*t_grnd(i,j,iscl) - t(i,j,iscl,k)
             enddo
             enddo
          enddo
@@ -6511,7 +6137,7 @@ c         and compute surface fluxes for a set of gridpoints [mxs:mxe,iys:iye]
 c
       do j=iys,iye
       do i=mxs,mxe
-c 
+c
 c -------- vector aligned with \xi (t1)
 c
          e1   = 1.0
@@ -6519,7 +6145,7 @@ c
          emag = sqrt(e1*e1 + e3*e3)
          e1   = e1/emag
          e3   = e3/emag
-c 
+c
 c -------- vector aligned with \eta (t2)
 c
          f2   = 1.0
@@ -6527,22 +6153,22 @@ c
          fmag = sqrt(f2*f2 + f3*f3)
          f2   = f2/fmag
          f3   = f3/fmag
-c 
+c
 c -------- surface normal n
 c
          g1   = -e3*f2
          g2   = -e1*f3
-         g3   = e1*f2 
+         g3   = e1*f2
          gmag = sqrt(g1*g1 + g2*g2 + g3*g3)
          g1   = g1/gmag
          g2   = g2/gmag
          g3   = g3/gmag
-c 
+c
 c -------- surface wind (2 vectors, us_1 and us_2)
 c
          us1a      = u_level1(i,j,1)*e1 + u_level1(i,j,3)*e3
          us2a      = u_level1(i,j,2)*f2 + u_level1(i,j,3)*f3
-         us(1)     = us1a*e1 
+         us(1)     = us1a*e1
          us(2)     = us2a*f2
          us(3)     = us1a*e3 + us2a*f3
          wind(i,j) = sqrt(us(1)**2 + us(2)**2 + us(3)**2)
@@ -6593,15 +6219,15 @@ c
 c ------------ build the momentum fluxes
 c
          utau2      = -ustar(i,j)**2
-         t11bc(i,j) = utau2*2.0*aij(1,1)*aij(3,1) 
-         t12bc(i,j) = utau2*(aij(1,1)*aij(3,2) + 
+         t11bc(i,j) = utau2*2.0*aij(1,1)*aij(3,1)
+         t12bc(i,j) = utau2*(aij(1,1)*aij(3,2) +
      +                        aij(3,1)*aij(1,2))
-         t13bc(i,j) = utau2*(aij(1,1)*aij(3,3) +  
-     +                        aij(1,3)*aij(3,1))   
-         t22bc(i,j) = utau2*2.0*aij(1,2)*aij(3,2) 
-         t23bc(i,j) = utau2*(aij(1,2)*aij(3,3) +  
-     +                        aij(1,3)*aij(3,2))   
-         t33bc(i,j) = utau2*2.0*aij(1,3)*aij(3,3) 
+         t13bc(i,j) = utau2*(aij(1,1)*aij(3,3) +
+     +                        aij(1,3)*aij(3,1))
+         t22bc(i,j) = utau2*2.0*aij(1,2)*aij(3,2)
+         t23bc(i,j) = utau2*(aij(1,2)*aij(3,3) +
+     +                        aij(1,3)*aij(3,2))
+         t33bc(i,j) = utau2*2.0*aij(1,3)*aij(3,3)
 c
          do iscl=1,nscl
             t1tbc(i,j,iscl)  = 0.0
@@ -6719,11 +6345,11 @@ c
          RHB = RHbot/100.0
          tsfcc(2) =  RHB*Mw/Ru/tsfcc(1)*610.94*
      +               EXP(17.6257*botC/(botC+243.04))/rhoa
-        
+
          thstar = (t1xy(2) - tsfcc(2))/dnom
          qstar(2) = -utau*thstar
       end if
-         
+
 c
 c ------ example of other scalars (specified surface value and source)
 c
@@ -6738,7 +6364,7 @@ c
 c
 c ---- set boundary condition on upper boundary iz=nnz
 c      option for special radiation boundary condition
-c                 index f(.,.,1)  indicates upper. 
+c                 index f(.,.,1)  indicates upper.
 c
       use pars
       use fields
@@ -6782,7 +6408,7 @@ c          ebc(ix,iy,1) = 0.0
            ufbc(ix,iy,1) = uf(ix,iy,iz)
            vfbc(ix,iy,1) = vf(ix,iy,iz)
 c
-c --------- upper boundary = grid speed 
+c --------- upper boundary = grid speed
 c
            wfbc(ix,iy,1) = gm(ix,iy,iz,5)
         enddo
@@ -6799,7 +6425,7 @@ c
         do iscl=1,nscl
            do iy=iys,iye
            do ix=1,nnx
-              tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) + 
+              tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) +
      +                            dtdzf(iscl)*dzu(nnzp1)
            enddo
            enddo
@@ -6852,7 +6478,7 @@ c
         do iscl=1,nscl
            do iy=iys,iye
            do ix=1,nnx
-              tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) + 
+              tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) +
      +                            dtdzf(iscl)*dzu(nnzp1)
            enddo
            enddo
@@ -6896,7 +6522,7 @@ c
         do iscl=1,nscl
            do iy=iys,iye
            do ix=1,nnx
-              tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) + 
+              tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) +
      +                            dtdzf(iscl)*dzu(nnzp1)
            enddo
            enddo
@@ -6904,7 +6530,7 @@ c
       else if(ibcu .eq. 1) then
 c
 c ------------- special if iradup boundary condition
-c               get estimate of w from continuity and 
+c               get estimate of w from continuity and
 c               linearized relation for pressure
 c
       xmeanp = 0.0
@@ -6933,7 +6559,7 @@ c        wfbc(ix,iy,1) = wbc(ix,iy,1)
       do iscl=1,nscl
          do iy=iys,iye
          do ix=1,nnx
-            tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) + 
+            tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) +
      +                          dtdzf(iscl)*dzu(nnzp1)
          enddo
          enddo
@@ -7041,7 +6667,7 @@ c
               tbc(ix,iy,iscl,1) = 2.0*Ttop(iscl)-t(ix,iy,iscl,iz)
               end if
               if (isfc(iscl)==0) then
-              tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) + 
+              tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) +
      +           dzu(izp1)*wtsfc(iscl)/vis_s(ix,iy,izp1)
               end if
            enddo
@@ -7095,11 +6721,11 @@ c -------- solver poisson equation for the pressure
 c
 c          iflat == 0 ; no iteration flat bottom
 c          iflat /= 0 ; iterate using diagonal preconditioner
-c                       set max number of iterations ip_max 
-c                       and convergence tolerance p_tol 
+c                       set max number of iterations ip_max
+c                       and convergence tolerance p_tol
 c          solve for fluctuating pressure then mean value.
 c          array p(.,.,.) is p' array pm(.) is the mean value
-c     
+c
       use pars
       use fields
       use fftwk
@@ -7207,7 +6833,7 @@ c
          enddo
       endif
 c
-c --------- get bottom ghost point for fluctuating pressure 
+c --------- get bottom ghost point for fluctuating pressure
 c
       if(izs == 1) then
 c
@@ -7237,7 +6863,7 @@ c
      +            iys,iye,iy_s,iy_e,izs,izs,myid,ncpu_s,numprocs)
         do j=iys,iye
         do i=1,nnx
-            fac   = gm2(i,j,k,1)*(gm2(i,j,k,2)**2 + 
+            fac   = gm2(i,j,k,1)*(gm2(i,j,k,2)**2 +
      +              gm2(i,j,k,3)**2 + gm2(i,j,k,4)**2)
             wbndy = (wfi(i,j,km1) - wf(i,j,km1))*gami
             facx  = gm2(i,j,k,1)*gm2(i,j,k,2)*fnt2(i,j)
@@ -7280,7 +6906,7 @@ c       k = 1
 c       km1 = k - 1
 c       kp1 = k + 1
 c       j   = iys
-c       write(nprt,8200) (i,p_old(i,j,km1), p(i,j,km1), 
+c       write(nprt,8200) (i,p_old(i,j,km1), p(i,j,km1),
 c    +                    p_old(i,j,k), p(i,j,k),
 c    +                    i = 1,5)
 c8200   format(' build rhs',/,
@@ -7314,7 +6940,7 @@ c
          do j=iys,iye
          do i=1,nnx
             pu_zeta   = weit(k)*p_old(i,j,kp1) + weitm(k)*p_old(i,j,k)
-            pl_zeta   = weit(km1)*p_old(i,j,k) + 
+            pl_zeta   = weit(km1)*p_old(i,j,k) +
      +                  weitm(km1)*p_old(i,j,km1)
             dpdz_c    = (pu_zeta - pl_zeta)*dzw_i(k)
             uf(i,j,k) = ufi(i,j,k) - dtgama*dpdz_c*
@@ -7323,11 +6949,11 @@ c
      +                  gm2(i,j,k,3)*gm2(i,j,k,1)
             dpdz      = (p_old(i,j,kp1) - p_old(i,j,k))*dzu_i(kp1)
 c
-            facu      = gm2(i,j,kp1,1)*(gm2(i,j,kp1,2)**2 + 
+            facu      = gm2(i,j,kp1,1)*(gm2(i,j,kp1,2)**2 +
      +                  gm2(i,j,kp1,3)**2 + gm2(i,j,kp1,4)**2)
-            facl      = gm2(i,j,k,1)*(gm2(i,j,k,2)**2 + 
+            facl      = gm2(i,j,k,1)*(gm2(i,j,k,2)**2 +
      +                  gm2(i,j,k,3)**2 + gm2(i,j,k,4)**2)
-            wf(i,j,k) = wfi(i,j,k) - dtgama*(weit(k)*facu + 
+            wf(i,j,k) = wfi(i,j,k) - dtgama*(weit(k)*facu +
      +                     weitm(k)*facl)*dpdz
          enddo
          enddo
@@ -7394,7 +7020,7 @@ c
          wf_sum(k) = wf_sum(k)*fnxy
       enddo
 c
-c ---------- gather partial sums 
+c ---------- gather partial sums
 c
       call mpi_sum_z(wf_sum(1),i_root,myid,nnz,1)
 c
@@ -7566,7 +7192,7 @@ c
       subroutine precon_p(ip_iter)
 c
 c -------- evaluate the preconditioner at the last iteration
-c          for p, p_old has last iteration 
+c          for p, p_old has last iteration
 c          new weight for pressure
 c
       use pars
@@ -7656,7 +7282,7 @@ c       k = 1
 c       km1 = k - 1
 c       kp1 = k + 1
 c       j   = iys
-c       write(nprt,8020) (i, p(i,j,km1), p(i,j,k), p(i,j,k+1), 
+c       write(nprt,8020) (i, p(i,j,km1), p(i,j,k), p(i,j,k+1),
 c    +                    i = 1,5)
 c8020   format(' 8020 precon',/,
 c    +         ' i ',5x,' p source  0 ',5x,' p 1',5x,
@@ -7783,7 +7409,7 @@ c ------- add p gradients to rhs of (u,v,w). Use already defined p
 c         at izs-1 and ize+1 to get (u,v,w). see build_rhs
 c
 c         multiplied by gm2 to get (u,v,w,e,theta) at the new time
-c         pressure gradient is at new time and is weighted by dtgama          
+c         pressure gradient is at new time and is weighted by dtgama
 c
 c         included mean pressure in vertical gradients in sr. rhs_uvw
 c
@@ -7826,9 +7452,9 @@ c
 c ------- u equation
 c
             pu_zeta   = weit(k)*p_kp1*gm2(i,j,kp1,2)*
-     +                  gm2(i,j,kp1,1) + 
+     +                  gm2(i,j,kp1,1) +
      +                  weitm(k)*p_k*gm2(i,j,k,2)*gm2(i,j,k,1)
-            pl_zeta   = weit(km1)*p_k*gm2(i,j,k,2)*gm2(i,j,k,1) + 
+            pl_zeta   = weit(km1)*p_k*gm2(i,j,k,2)*gm2(i,j,k,1) +
      +                  weitm(km1)*p_km1*gm2(i,j,km1,2)*
      +                  gm2(i,j,km1,1)
 c
@@ -7879,11 +7505,11 @@ c
             p_k       = p(i,j,k)
             p_km1     = p(i,j,km1)
             pu_zeta   = weit(k)*p_kp1*gm2(i,j,kp1,3)*
-     +                  gm2(i,j,kp1,1) + 
+     +                  gm2(i,j,kp1,1) +
      +                  weitm(k)*p_k*gm2(i,j,k,3)*
      +                  gm2(i,j,k,1)
             pl_zeta   = weit(km1)*p_k*gm2(i,j,k,3)*
-     +                  gm2(i,j,k,1) + 
+     +                  gm2(i,j,k,1) +
      +                  weitm(km1)*p_km1*gm2(i,j,km1,3)*
      +                  gm2(i,j,km1,1)
             dpdz_c    = (pu_zeta - pl_zeta)*dzw_i(k)
@@ -7914,10 +7540,10 @@ c
       subroutine pressure
 c
 c -------- solve for fluctuating pressure using a matrix transpose
-c          across mpi tasks and tridiagonal solver. 
+c          across mpi tasks and tridiagonal solver.
 c          The transposed array
-c          is dimensioned (0:nnz+1). Values 
-c          (0 & nnz+1) are not needed but are useful in the 
+c          is dimensioned (0:nnz+1). Values
+c          (0 & nnz+1) are not needed but are useful in the
 c          matrix transpose when we return (see send_ztox).
 c          On exit p is defined at all [izs-1:ize+1].
 c
@@ -8003,7 +7629,7 @@ c
       return
       end
       subroutine solve_trid(pt, ptop)
-c 
+c
 c --------- tridiagonal solver. odd order for ptop, ptop2
 c           because of 2d-fft
 c
@@ -8023,7 +7649,7 @@ c
          fac_a(iz) = fac_l(iz) + fac_u(iz)
       enddo
 c
-      do kp=jys,jye    
+      do kp=jys,jye
          do lp=jxs,jxe
          do iz=2,nnz-1
             bb(iz,lp)  = fac_l(iz)
@@ -8092,7 +7718,7 @@ c
       return
       end
       subroutine solve_mean_p(wf_sum,sum_fz)
-c 
+c
 c --------- tridiagonal solver for mean pressure from wf equation
 c           set ghost values of pm also
 c
@@ -8108,7 +7734,7 @@ c     tiny = 1.0e-20
       tiny = 0.0
 c
       do k=2,nnz-1
-         fac_l  = sum_fz(k-1)*dzu_i(k) 
+         fac_l  = sum_fz(k-1)*dzu_i(k)
          fac_u  = sum_fz(k)*dzu_i(k+1)
          bb(k)  = fac_l
          aa(k)  = fac_u
@@ -8156,7 +7782,7 @@ c
       return
       end
       subroutine solve_mean_p_old(wf_sum,sum_fz)
-c 
+c
 c --------- tridiagonal solver for mean pressure from wf equation
 c           set ghost values of pm also
 c
@@ -8310,7 +7936,7 @@ c
       iz_ss = izs-1
       iz_ee = ize+1
       if(iss .eq. 0) then
-         iz_ss = izs 
+         iz_ss = izs
       endif
       if(ise .eq. numprocs-1) then
          iz_ee = ize
@@ -8401,7 +8027,7 @@ c
            km1 = k - 1
            do j=iys,iye
            do i=1,nnx
-              div_c(k) = div_c(k) + 
+              div_c(k) = div_c(k) +
      +                  (fnt2(i,j) + fnt1(i,j,k) +
      +                  (wf(i,j,k) - wf(i,j,km1))*dzw_i(k))**2
            enddo
@@ -8420,7 +8046,7 @@ c
 c
 c ------------ get means for all variables
 c              for use in iso, surfvis, comp1, tke_stats.
-c              simple average along coordinate lines 
+c              simple average along coordinate lines
 c
       use pars
       use fields
@@ -8473,7 +8099,7 @@ c
          call mpi_sum_z(t_mn(1,iscl),i_root,myid,nnzp1,1)
       enddo
 c
-c -------- set e to minimum value 
+c -------- set e to minimum value
 c
       do iz=izs-1,ize+1
          do iy=iys,iye
@@ -8531,7 +8157,7 @@ c
            km1 = k - 1
            do j=iys,iye
            do i=1,nnx
-              divz(k) = divz(k) + 
+              divz(k) = divz(k) +
      +                  (fnt2(i,j) + fnt1(i,j,k) +
      +                  (wf(i,j,k) - wf(i,j,km1))*dzw_i(k))**2
            enddo
@@ -8644,12 +8270,13 @@ c
 c
       return
       end
-      subroutine gal_interp(f,trigx,nnx,xk,dx,fi)
+      subroutine gal_interp(f,trigx,nnx,xk,tb,grav,fi)
+
 c
 c ---------- propagate array f forward in space by distance dx
 c            input is fourier coefficients in fftpack order
-c 
-      real f(nnx), trigx(15+4*nnx), fi(nnx), xk(nnx)
+c
+      real f(nnx), trigx(15+4*nnx), fi(nnx), xk(nnx), c_wav
 c
       ncx = nnx/2 + 1
 c
@@ -8661,14 +8288,16 @@ c
       kk    = 1
       do i=2,nnx-1,2
          kk = kk + 1
-         cc = cos(xk(kk)*dx)
-         ss = sin(xk(kk)*dx)
+         c_wav  = sqrt(grav/xk(i))
+         if(i.gt.ncx) c_wav = sqrt(-grav/xk(i))
+         cc = cos(xk(kk)*-c_wav*tb)
+         ss = sin(xk(kk)*-c_wav*tb)
          aa = f(i)
          bb = f(i+1)
          fi(i)   = aa*cc - bb*ss
          fi(i+1) = bb*cc + aa*ss
       enddo
-      cc      = cos(xk(ncx)*dx)
+      cc      = cos(xk(ncx)*-c_wav*tb)
       ss      = 0.0
       aa      = f(nnx)
       fi(nnx) = aa*cc
@@ -8679,27 +8308,27 @@ c
 c
       return
       end
-      subroutine hdot_interp(f,trigx,nnx,xk,dx,cs,fi)
+      subroutine hdot_interp(f,trigx,nnx,xk,tb,grav,fi)
 c
 c ----------- get hdot assuming packet moves with speed cs
 c
-      real f(nnx), trigx(15+4*nnx), fi(nnx), xk(nnx)
+      real f(nnx), trigx(15+4*nnx), fi(nnx), xk(nnx), c_wav
 c
       ncx = nnx/2 + 1
 c
 c --------- generate modified fourier coefficients
 c
-c     uu    = -cs
-      uu    = cs
       fi(1) = 0.0
       kk    = 1
       do i=2,nnx-1,2
          kk = kk + 1
-         uk = xk(kk)*uu
-         cc = cos(xk(kk)*dx)
-         ss = sin(xk(kk)*dx)
+         c_wav  = sqrt(grav/xk(i))
+         if(i.gt.ncx) c_wav = sqrt(-grav/xk(i))
+         cc = cos(xk(kk)*-c_wav*tb)
+         ss = sin(xk(kk)*-c_wav*tb)
          aa = f(i)
          bb = f(i+1)
+         uk = xk(kk)*c_wav
          fi(i)     = uk*(aa*ss + bb*cc)
          fi(i+1)   = uk*(bb*ss - aa*cc)
       enddo
@@ -9080,7 +8709,7 @@ c        stokesa = 1.0
 c
       else
 c
-c ----------------- set stokes velocity = 0 for atmos. pbls 
+c ----------------- set stokes velocity = 0 for atmos. pbls
 c
          do iz=1,nnzp1
             stokes(iz) = 0.0
@@ -9102,7 +8731,7 @@ c
       if(zeta .lt. 0.) then
          x=(1.0 - 15.0*zeta)**0.25
          phim = 1.0/x
-         psim = 2.0*alog((1.0+x)/2.0) + alog((1.0+x*x)/2.0) - 
+         psim = 2.0*alog((1.0+x)/2.0) + alog((1.0+x*x)/2.0) -
      +          2.0*atan(x)+pih
          if(psim.gt.2.0)psim=2.0
          y = sqrt(1.0-9.0*zeta)
@@ -9131,12 +8760,12 @@ c        from input of the stability parameter zeta = z/L
       data zetam,zetas/-0.2,-1.0/
       save c1, a3, b3, a4, b4, zetam, zetas
 c
-      psimu(Y)  = 1.571 + 2.0*(alog(0.5*(1.0 + Y)) - atan(Y)) + 
+      psimu(Y)  = 1.571 + 2.0*(alog(0.5*(1.0 + Y)) - atan(Y)) +
      +            alog(0.5 + 0.5*Y**2)
       psisu(Y)  = 2.0*alog(0.5 + 0.5*Y)
       psicu(Y,G)= (1.0 - G)*alog(abs(Y - 1.0))
      +          + 0.5*(G + 2.0)*alog(abs(Y**2 + Y + 1.0))
-     +          - (2.0*G + 1.0) / sqrt(3.0) * 
+     +          - (2.0*G + 1.0) / sqrt(3.0) *
      +            atan((Y + 0.5)*2.0/sqrt(3.0))
       Xm(zol)   = (1.0 - 16.0*zol)**0.25
       Xs(zol)   = sqrt(1.0 - 16.0*zol)
@@ -9159,7 +8788,7 @@ c                                   use limiting form
 
                             else
 c                                         UNSTABLE
-c                                                  momentum         
+c                                                  momentum
        if(zeta.ge.zetam) then
          phim = 1.0 / Xm(zeta)
          psim = psimu(Xm(zeta))
@@ -9168,12 +8797,12 @@ c                            use convective limit for momentum
          X = (1.0 - b3/a3 * zeta)**(1.0/3.0)
 
          fm = a3**(-1.0/3.0)
-         phim = fm / Xc(zeta,b3/a3) 
+         phim = fm / Xc(zeta,b3/a3)
          psim = psimu(Xm(zetam))
      *        + psicu(Xc(zeta,b3/a3),fm)
      *        - psicu(Xc(zetam,b3/a3),fm)
                          endif
-      
+
 c                                         UNSTABLE scalars
        if(zeta.ge.zetas) then
          phis = 1.0/Xs(zeta)
@@ -9186,7 +8815,7 @@ c                              use convective limit for scalars
      *        + psicu(Xc(zeta,b4/a4),fs)
      *        - psicu(Xc(zetas,b4/a4),fs)
                          endif
-               
+
                             endif
        return
        end
@@ -9463,7 +9092,7 @@ c     if(vsfc .le.0.01)vsfc =0.01
 c
 c ----------- input surface wind stress (tau = 0.0184n/m*m)
 c             density rho = 1000kg/m^3
-c          
+c
 c     utau = 4.29e-03
 c     utau = 6.10e-03
       utau = 7.00e-03
@@ -9749,8 +9378,8 @@ c
          dtdzf(1)=0.000
          dtdzf(2)=0.000
 c
-c 
-c ---------- 
+c
+c ----------
 c
          dtjump  = 0.0
          divgls  = 0.0
@@ -9776,7 +9405,7 @@ c
 c ---------- set mesh stationary flag
 c
       imesh = 0
-c 
+c
 c ---------- outermost coarse grid  indicies are bounds of grid
 c
       izlow = 1
@@ -9842,7 +9471,7 @@ c
          vk74   = vk*0.74
          vk74in = 0.74/vk
          zody74 = zody*0.74
-      else 
+      else
 c
 c ---- set constants for large similarity functions
 c
@@ -10004,7 +9633,7 @@ c
 c
 c --------- allocate surface arrays
 c
-      allocate(omega(nnx,nny), 
+      allocate(omega(nnx,nny),
      +         eta0(2,nnx,nny),
      +         s_wrk(2,nnx,iys:iye),
      +         v_wrk(2,nnx,iys:iye),
@@ -10194,7 +9823,7 @@ c
 c
       real xx(nx_tank), zz_tank(nx_tank), us(nx_tank), ws(nx_tank),
      +     y2(nx_tank), u2(nx_tank), w2(nx_tank), xles(nnx)
-     
+
 c
 c --------- allocate surface arrays
 c
@@ -10256,18 +9885,19 @@ c
          ustar_tank = 0.4928 ! from table 2 of banner 1990
       elseif(i_tank == 10) then !7/12/18: Particle-laden monochromatic turbulence
          open(lut,file='./monochromatic.dat')
-         !wave_l and c_speed now in the params.in file!
          npts_t  = 1000
          wave_k  = pi2/wave_l
       elseif(i_tank == 11) then !7/12/18: Particle-laden monochromatic turbulence with ak=0.2
          open(lut,file='./monochromatic_ak2.dat')
-         !wave_l and c_speed now in the params.in file!
          npts_t  = 1000
          wave_k  = pi2/wave_l
       elseif(i_tank == 12) then !7/12/18: Particle-laden monochromatic turbulence with ak=0.2
          open(lut,file='./flat.dat')
-         !wave_l and c_speed now in the params.in file!
          npts_t  = 1000
+         wave_k  = pi2/wave_l
+      elseif(i_tank == 13) then !7/12/18: Particle-laden real wave
+         open(lut,file='./polychromatic.dat')
+         npts_t  = maxnx
          wave_k  = pi2/wave_l
       endif
 c
@@ -10304,18 +9934,21 @@ c ---------- fit a spline to the data
 c
       yp1 = 2.0e+30
       ypn = yp1
-      call spline(xx,zz_tank,npts_t,yp1,ypn,y2)
-      call spline(xx,us,npts_t,yp1,ypn,u2)
-      call spline(xx,ws,npts_t,yp1,ypn,w2)
+      ! call spline(xx,zz_tank,npts_t,yp1,ypn,y2)
+      ! call spline(xx,us,npts_t,yp1,ypn,u2)
+      ! call spline(xx,ws,npts_t,yp1,ypn,w2)
 c
 c ---------- interpolate into the spline function at les points
 c
       ddx = xl/float(nnx)
       do i=1,nnx
          xles(i) = float(i-1)*ddx
-         call splint(xx,zz_tank,y2,npts_t,xles(i),z_tank(i))
-         call splint(xx,us,u2,npts_t,xles(i),u_tank(i))
-         call splint(xx,ws,w2,npts_t,xles(i),w_tank(i))
+         ! call splint(xx,zz_tank,y2,npts_t,xles(i),z_tank(i))
+         ! call splint(xx,us,u2,npts_t,xles(i),u_tank(i))
+         ! call splint(xx,ws,w2,npts_t,xles(i),w_tank(i))
+         z_tank(i) = zz_tank(i)
+         u_tank(i) = us(i)
+         w_tank(i) = ws(i)
       enddo
 c
 c     write(nprt,4002) (xx(i),zz_tank(i),i=1,npts_t)
@@ -10336,7 +9969,7 @@ c
          z_tank(i) = z_tank(i) - sum
       enddo
 c
-c --------- force mean w = 0 from the data 
+c --------- force mean w = 0 from the data
 c
       sum_w = 0.0
       do i=1,nnx
@@ -10572,7 +10205,7 @@ c
      +            iys,iye,iy_s,iy_e,izs,izs,myid,ncpu_s,numprocs)
       do j=iys,iye
       do i=1,nnx
-         w_orbit(i,j) = hdot(i,j) + u_orbit(i,j)*bndyx(i,j) + 
+         w_orbit(i,j) = hdot(i,j) + u_orbit(i,j)*bndyx(i,j) +
      +                  v_orbit(i,j)*bndyy(i,j,izs)
       enddo
       enddo
@@ -10607,8 +10240,7 @@ c
       subroutine get_surf_tank(t_bndy)
 c
 c ------- generate new surface at t = t_bndy
-c         for the laboratory wave. Assume the shape moves
-c         with uniform phase speed. Build w_o and hdot so
+c         for the laboratory wave. Build w_o and hdot so
 c         that they satisfy the inputs for u_o and h
 c         with fix sr. hx_deriv
 c
@@ -10646,14 +10278,16 @@ c
          ampl_rate = 0.0
       endif
 c
-c ------------ get (u,w) components of surface velocity and wave 
+c ------------ get (u,w) components of surface velocity and wave
 c              height. Make h, hdot, uo, wo match
 c
-      dist = -c_speed*t_bndy
-c     dist = 0.0
-      call gal_interp(u_tank_f,trigx(1,1),nnx,xkn,dist,u_tank_i)
-      call gal_interp(z_tank_f,trigx(1,1),nnx,xkn,dist,z_tank_i)
-      call hdot_interp(z_tank_f,trigx(1,1),nnx,xkn,dist,c_speed,hdot_i)
+c     dist = -c_speed*t_bndy
+c     dist = 0
+      call gal_interp(u_tank_f,trigx(1,1),nnx,xkn,t_bndy,grav,u_tank_i)
+      !call gal_interp(w_tank_f,trigx(1,1),nnx,xkn,t_bndy,grav,w_tank_i)
+      call gal_interp(z_tank_f,trigx(1,1),nnx,xkn,t_bndy,grav,z_tank_i)
+      call hdot_interp(z_tank_f,trigx(1,1),nnx,xkn,t_bndy,grav,
+     +    hdot_i)
       call hx_deriv(z_tank_i,trigx(1,1),xkn,nnx,hx_i)
 c
 c     write(nprt,1012) c_speed, t_bndy
@@ -10704,7 +10338,7 @@ c
 c     write(6,8102) sumb, varb
 c8102 format(' 8102: sum bndy = ',e15.6,' variance bndy = ',e15.6)
 c
-c -------- use w_o = hdot + u_o*h_x + v_o*h_y 
+c -------- use w_o = hdot + u_o*h_x + v_o*h_y
 c
       do j=iys,iye
       do i=1,nnx
@@ -10785,7 +10419,7 @@ c
             endif
             if(angle .lt. -pi2/4.0 .or. angle .gt. pi2/4.0) then
               fac = 0.0
-            else 
+            else
               fac1     = cos(angle)
               fac      = fac1**8
             endif
@@ -10932,7 +10566,7 @@ c
      +       ' Sum spectrum = ',e15.6,/,
      +       ' Sum directional spectrum = ',e15.6)
 c
-c ---------- rescale the directional 
+c ---------- rescale the directional
 c            spectrum to make sure its integral = 1
 c
       sum_dir_i = 1.0/sum_dir
@@ -11002,7 +10636,7 @@ c
          phase = 0.0
          do j=iys,iye
          do i=1,nnx
-            bndy(i,j) = ampl*cos(fac*xgrid(i) + phase) + 
+            bndy(i,j) = ampl*cos(fac*xgrid(i) + phase) +
      +                  ampl2*sin(fac2*xgrid(i))
             hdot(i,j) = 0.0
             u_orbit(i,j) = 0.0
@@ -11193,8 +10827,8 @@ c
       end
       subroutine mesh
 c
-c ---------- get the mesh of the terrain following or flat grid 
-c            metrics stored at cell centers 
+c ---------- get the mesh of the terrain following or flat grid
+c            metrics stored at cell centers
 c            should be made more general to avoid grid generation
 c            by every processor
 c
@@ -11262,7 +10896,7 @@ c
          if(l_debug) then
             ix = nnx/2
             iy = iys
-            write(nprt,1020) (k,xgrid(ix),zgrid_u(ix,iy,k), 
+            write(nprt,1020) (k,xgrid(ix),zgrid_u(ix,iy,k),
      +                  zgrid_w(ix,iy,k,1), k=izs-1,ize+1)
          endif
 c
@@ -11322,10 +10956,10 @@ c
                zgrid_u(i,j,k) = bndy(i,j) + 0.5*(ztemp(k) + ztemp(k-1))
             enddo
             if(izs == 1) then
-               zgrid_u(i,j,izs-1) = 2.0*zgrid_w(i,j,izs-1,1) - 
+               zgrid_u(i,j,izs-1) = 2.0*zgrid_w(i,j,izs-1,1) -
      +                              zgrid_u(i,j,izs)
             else
-               zgrid_u(i,j,izs-1) = bndy(i,j) + 
+               zgrid_u(i,j,izs-1) = bndy(i,j) +
      +                              0.5*(ztemp(izs-1) + ztemp(izs-2))
             endif
 c
@@ -11340,7 +10974,7 @@ c
          if(l_debug) then
             ix = nnx/2
             iy = iys
-            write(nprt,1020) (k,xgrid(ix),zgrid_u(ix,iy,k), 
+            write(nprt,1020) (k,xgrid(ix),zgrid_u(ix,iy,k),
      +                     zgrid_w(ix,iy,k,1),
      +                     k=izs-1,ize+1)
          endif
@@ -11508,7 +11142,7 @@ c
          call mpi_file_write_at(ngrd,offset,temp,n_write,
      +                              mpi_real8,status,ierr)
          if (ierr /= 0) goto 9991
- 
+
       enddo
 c
 c ---- close file
@@ -11570,7 +11204,7 @@ c --------------------
       end
       subroutine new_mesh(it,istage)
 c
-c ---------- get a new mesh at time step t_stage3 
+c ---------- get a new mesh at time step t_stage3
 c
       use pars
       use fields
@@ -11628,7 +11262,7 @@ c
          enddo
 c
 c --------- get the new boundary shape
-c           at t = t_stage3 
+c           at t = t_stage3
 c
          t_bndy = t_stage3 - t_zero
 c
@@ -11676,10 +11310,10 @@ c
                zgrid_u(i,j,k) = bndy(i,j) + 0.5*(ztemp(k) + ztemp(k-1))
             enddo
             if(izs == 1) then
-               zgrid_u(i,j,izs-1) = 2.0*zgrid_w(i,j,izs-1,3) - 
+               zgrid_u(i,j,izs-1) = 2.0*zgrid_w(i,j,izs-1,3) -
      +                              zgrid_u(i,j,izs)
             else
-               zgrid_u(i,j,izs-1) = bndy(i,j) + 
+               zgrid_u(i,j,izs-1) = bndy(i,j) +
      +                              0.5*(ztemp(izs-1) + ztemp(izs-2))
             endif
 c
@@ -11693,7 +11327,7 @@ c
 c
 c        j = iys
 c        k = 1
-c        write(nprt,6501) (i, bndy(i,j), zgrid_w(i,j,k,3), 
+c        write(nprt,6501) (i, bndy(i,j), zgrid_w(i,j,k,3),
 c    +                     z1b(i,j),z1b_2(i,j),
 c    +                     z1b_3(i,j),i=1,nnx)
 c6501    format(' 6501 new mesh:',/,
@@ -11831,7 +11465,7 @@ c
       enddo
 c
 c --------- get the new boundary shape
-c           at t = t_stage2 
+c           at t = t_stage2
 c
          t_bndy = t_stage2 - t_zero
 c
@@ -11874,10 +11508,10 @@ c
                zgrid_u(i,j,k) = bndy(i,j) + 0.5*(ztemp(k) + ztemp(k-1))
             enddo
             if(izs == 1) then
-               zgrid_u(i,j,izs-1) = 2.0*zgrid_w(i,j,izs-1,3) - 
+               zgrid_u(i,j,izs-1) = 2.0*zgrid_w(i,j,izs-1,3) -
      +                              zgrid_u(i,j,izs)
             else
-               zgrid_u(i,j,izs-1) = bndy(i,j) + 
+               zgrid_u(i,j,izs-1) = bndy(i,j) +
      +                              0.5*(ztemp(izs-1) + ztemp(izs-2))
             endif
 c
@@ -12037,7 +11671,7 @@ c
      +                iys,iye,izs,ize,iz_s,iz_e,myid,ncpu_s,
      +                numprocs)
 c
-c ------- get the new rhs of the 1/J equation 
+c ------- get the new rhs of the 1/J equation
 c
       do k=izs,ize
          do j=iys,iye
@@ -12128,7 +11762,7 @@ c
 c
 c ----------- simple decaying exponential grid
 c             but with first grid z(1) = zeta(1)
-c             works best to pick box height 
+c             works best to pick box height
 c             zl(code) = zl(desired) + zeta(1)
 c             otherwise top of box in physical space
 c             will be shorter by first grid point off the
@@ -12361,7 +11995,7 @@ c
       rad2sum_t = 0.0
       qstarsum = 0.0
       qstarsum_t = 0.0
-      
+
 
 c
 c ------------ note set nmatch in sr. iso so that
@@ -12407,7 +12041,7 @@ c           u(ix,iy,iz) = ug(iz) - ugal
 !            if(zgrid_w(ix,iy,iz,1) .le. z_lower) then
 !              t(ix,iy,1,iz) = t_lower
 !            else
-!              t(ix,iy,1,iz) = t_lower + 
+!              t(ix,iy,1,iz) = t_lower +
 !     +                        (zgrid_u(ix,iy,iz+1) - z_lower)*dtdzf(1)
 !            endif
              t(ix,iy,1,iz) = 300.0
@@ -12429,13 +12063,13 @@ c ---------- flux velocities simple guess
 c
 c           uf(ix,iy,iz)  = u(ix,iy,iz)*gm(ix,iy,iz,1)
 c           vf(ix,iy,iz)  = v(ix,iy,iz)*gm(ix,iy,iz,1)
-c           wf(ix,iy,iz)  = u(ix,iy,iz)*gm(ix,iy,iz,2) + 
+c           wf(ix,iy,iz)  = u(ix,iy,iz)*gm(ix,iy,iz,2) +
 c    +                      v(ix,iy,iz)*gm(ix,iy,iz,3)
             uf(ix,iy,iz)  = u(ix,iy,iz)
             vf(ix,iy,iz)  = v(ix,iy,iz)
             wf(ix,iy,iz)  = 0.0
-         enddo 
-         enddo 
+         enddo
+         enddo
       enddo
 c
 c ------------- set initial random field to be
@@ -12444,14 +12078,14 @@ c
       idum = -1 - myid
       do iz=izs,ize
 c
-c ----------- ampv and ampt are max amplitudes of random 
+c ----------- ampv and ampt are max amplitudes of random
 c             velocity and temperature fields
 c             make sure ampv is set if free convection so
 c             that we have motions at first time step
 c
          ampv = 0.0
          ampt = 0.10
-c  
+c
 c ------- simple random field scaled between -0.5 and 0.5
 c
          sum_psi = 0.0
@@ -12620,13 +12254,13 @@ c ---------- flux velocities simple guess
 c
 c           uf(ix,iy,iz)  = u(ix,iy,iz)*gm(ix,iy,iz,1)
 c           vf(ix,iy,iz)  = v(ix,iy,iz)*gm(ix,iy,iz,1)
-c           wf(ix,iy,iz)  = u(ix,iy,iz)*gm(ix,iy,iz,2) + 
+c           wf(ix,iy,iz)  = u(ix,iy,iz)*gm(ix,iy,iz,2) +
 c    +                      v(ix,iy,iz)*gm(ix,iy,iz,3)
             uf(ix,iy,iz)  = u(ix,iy,iz)
             vf(ix,iy,iz)  = v(ix,iy,iz)
             wf(ix,iy,iz)  = 0.0
-         enddo 
-         enddo 
+         enddo
+         enddo
       enddo
 c
 c ------------- set initial random field to be
@@ -12635,7 +12269,7 @@ c
       idum = -1 - myid
       do iz=izs,ize
 c
-c ----------- ampv and ampt are max amplitudes of random 
+c ----------- ampv and ampt are max amplitudes of random
 c             velocity and temperature fields
 c             make sure ampv is set if free convection so
 c             that we have motions at first time step
@@ -12643,7 +12277,7 @@ c             made dimensionless by ustar
 c
          ampv = 0.01
          ampt = 0.01
-c  
+c
 c ------- simple random field scaled between -0.5 and 0.5
 c
          sum_psi = 0.0
@@ -12729,9 +12363,9 @@ c
       end
       subroutine random_f
 c
-c ---------- example of using given (sparse) initial 
+c ---------- example of using given (sparse) initial
 c            sounding profiles (FIX for ncpu_s).
-c            
+c
       use pars
       use fields
       use fftwk
@@ -12873,7 +12507,7 @@ c
 c
       save time_g, zg, u_i, v_i, theta_i
 c
-c --------- find time location of initial profiles 
+c --------- find time location of initial profiles
 c
       call lterp(nt,time_g,t_factor,jt,jtp1,t_weit)
 c
@@ -12908,8 +12542,8 @@ c
             r3(ix,iy,iz)  = 0.
             r4(ix,iy,1,iz)= 0.
             r5(ix,iy,iz)  = 0.
-         enddo 
-         enddo 
+         enddo
+         enddo
       enddo
 c
 c ------------- set initial random field to be
@@ -12919,12 +12553,12 @@ c
       do iz=izs,ize
          if (iz.le.8) then
 c
-c ----------- ampv and ampt are max amplitudes of random 
+c ----------- ampv and ampt are max amplitudes of random
 c             velocity and temperature fields
 c
          ampv = 0.5
          ampt = 0.1
-c  
+c
 c ------- simple random field scaled between 0 and 1
 c
          do iy=iys,iye
@@ -13076,13 +12710,13 @@ c
       do iz=izs,ize
       if (iz.le.4) then
 c
-c ----------- ampv and ampt are max amplitudes of random 
+c ----------- ampv and ampt are max amplitudes of random
 c             velocity and temperature fields
 c
          ampv = 0.01
 c        ampt = 0.00
          ampt = 0.0001
-c  
+c
 c ------- simple random field scaled between 0 and 1
 c
          do iy=iys,iye
@@ -13289,7 +12923,7 @@ c ---------------------
       end
       subroutine forcing
 c
-c ----------- update surface temperature based on a 
+c ----------- update surface temperature based on a
 c             constant cooling rate
 c
       use pars
@@ -13323,15 +12957,15 @@ c ----------------------------------------------------------------------
 c
 c                it-1 = 1 ---------> it=2           3
 c                     *               *             *
-c                         dt = dt1       dt1 = dt_new 
-c                                                update dt_new from it = 1  
+c                         dt = dt1       dt1 = dt_new
+c                                                update dt_new from it = 1
 c                    time
 c ----------------------------------------------------------------------
 c
 c --------- dt  = current increment between [it-1,it]
 c           dt1 = next increment between [it,it+1]
 c           dt_new from flow field at end of current it+1 step
-c 
+c
       use pars
       use fields
       use con_data
@@ -13438,7 +13072,7 @@ c             wf(i,j,k) = gm2(i,j,k,5)
            enddo
         enddo
 c
-      elseif(it .gt. i_move_step .and. imesh .eq. 0) then 
+      elseif(it .gt. i_move_step .and. imesh .eq. 0) then
 c
 c ---------- restart with moving grid
 c
@@ -13737,8 +13371,8 @@ c
 c ------------ get statistics.
 c              fluxes that appear in transformed equations
 c              are based on (UF,VF,WF-Z_t) located at cell centers
-c              and upper cell face. 
-c              
+c              and upper cell face.
+c
 c              f_avg = [\int \int f * fac dx dy]/area
 c              fac   = [sqrt(zeta_x^2 + zeta_y^2 + zeta_z^2]/J
 c
@@ -13835,7 +13469,7 @@ c
          stat(k,3) = stat(k,3) + (w(i,j,k) - wxym(k))**2
          stat(k,4) = stat(k,4) + (w(i,j,k) - wxym(k))**3
          stat(k,5) = stat(k,5) + (w(i,j,k) - wxym(k))**4
-         stat(k,6) = stat(k,6) + 
+         stat(k,6) = stat(k,6) +
      +                ((w(i,j,k)- wxym(k))**2 +
      +                 (u(i,j,k)- uxym(k))**2 +
      +                 (v(i,j,k)- vxym(k))**2)*0.5
@@ -13923,14 +13557,14 @@ c
            enddo
            enddo
 c
-c ------------ get horizontal scalar resolved fluxes 
+c ------------ get horizontal scalar resolved fluxes
 c
          do j=iys,iye
          do i=1,nnx
             stat(k,m2+l) = stat(k,m2+l)+
-     +               uf(i,j,k)*(t(i,j,l,k)-txym(k,l)) 
+     +               uf(i,j,k)*(t(i,j,l,k)-txym(k,l))
             stat(k,m3+l) = stat(k,m3+l)+
-     +               vf(i,j,k)*(t(i,j,l,k)-txym(k,l)) 
+     +               vf(i,j,k)*(t(i,j,l,k)-txym(k,l))
          enddo
          enddo
 c
@@ -13938,9 +13572,9 @@ c ------------------- scalar variances & higher moments
 c
          do j=iys,iye
          do i=1,nnx
-            stat(k,m4+l) = stat(k,m4+l) + 
+            stat(k,m4+l) = stat(k,m4+l) +
      +                (t(i,j,l,k) - txym(k,l))**2
-            stat(k,m5+l) = stat(k,m5+l) + 
+            stat(k,m5+l) = stat(k,m5+l) +
      +                (t(i,j,l,k) - txym(k,l))**3
          enddo
          enddo
@@ -13960,7 +13594,7 @@ c
 c ------ fill arrays for printout and constant file
 c
       do k=1,nnz
-c 
+c
       ups(k)      =   stat(k,1)*fnxy
       vps(k)      =   stat(k,2)*fnxy
       wps(k)      =   stat(k,3)*fnxy
@@ -14026,7 +13660,7 @@ c
 c
 c -------- get terms in resolved scale tke budget
 c          as in gabls writeup at w-points
-c          at istage = 1. 
+c          at istage = 1.
 c          t_diss and tr_tau are in comp1, pxym is in get_means
 c
       use pars
@@ -14554,11 +14188,11 @@ c ------------- allocate solution arrays
 c               account for nnxp2 for fields but not in rhs
 c               and possible monotone for scalars
 c
-      allocate(u(nnxp2,iys:iye,izs-1:ize+1), 
-     +         v(nnxp2,iys:iye,izs-1:ize+1), 
-     +         w(nnxp2,iys:iye,izs-1:ize+1), 
-     +         t(nnxp2,iys:iye,nscl,izs-2:ize+2), 
-     +         e(nnxp2,iys:iye,izs-1:ize+1), 
+      allocate(u(nnxp2,iys:iye,izs-1:ize+1),
+     +         v(nnxp2,iys:iye,izs-1:ize+1),
+     +         w(nnxp2,iys:iye,izs-1:ize+1),
+     +         t(nnxp2,iys:iye,nscl,izs-2:ize+2),
+     +         e(nnxp2,iys:iye,izs-1:ize+1),
      +         r1(nnx,iys:iye,izs-1:ize+1),
      +         r2(nnx,iys:iye,izs-1:ize+1),
      +         r3(nnx,iys:iye,izs-1:ize+1),
@@ -14584,12 +14218,12 @@ c
      +         gms(nnx,iys:iye,3),
      +         bndy(nnxp2,iys:iye),
      +         hdot(nnxp2,iys:iye),
-     +         u_orbit(nnxp2,iys:iye), 
+     +         u_orbit(nnxp2,iys:iye),
      +         v_orbit(nnxp2,iys:iye),
      +         w_orbit(nnxp2,iys:iye),
      +         bndy_t(nnx,iys:iye,3),
      +         hdot_t(nnx,iys:iye,3),
-     +         z1b(nnx,iys:iye), 
+     +         z1b(nnx,iys:iye),
      +         z1b_2(nnx,iys:iye),
      +         z1b_3(nnx,iys:iye))
 
@@ -14598,11 +14232,11 @@ c ------------- allocate extended arrays for interpolation of
 c               particle/spray location
 c
       if (ispray==1) then
-      allocate(uext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3), 
-     +         vext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3), 
+      allocate(uext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3),
+     +         vext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3),
      +         wext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3),
-     +         Text(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3), 
-     +         T2ext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3)) 
+     +         Text(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3),
+     +         T2ext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3))
       !Transposed velocities to do the uf interpolation:
       allocate(u_t(0:nnz+1,iys:iye,mxs:mxe),
      +         v_t(0:nnz+1,iys:iye,mxs:mxe),
@@ -14666,10 +14300,10 @@ c
 c
 c ------------ allocate space for wind and surface arrays
 c
-      allocate(wind(nnx,iys:iye), 
-     +         tau13m(nnx,iys:iye), 
-     +         tau23m(nnx,iys:iye), 
-     +         taut3m(nnx,iys:iye,nscl), 
+      allocate(wind(nnx,iys:iye),
+     +         tau13m(nnx,iys:iye),
+     +         tau23m(nnx,iys:iye),
+     +         taut3m(nnx,iys:iye,nscl),
      +         t_grnd(nnx,iys:iye,nscl))
 c
 c ------------------- allocate space for derivative arrays
@@ -14829,10 +14463,10 @@ c
 #endif
          do j=iys,iye
          do i=1,nnx
-            u(i,j,k)    = temp(1,i,j) 
+            u(i,j,k)    = temp(1,i,j)
             v(i,j,k)    = temp(2,i,j)
             w(i,j,k)    = temp(3,i,j)
-            uf(i,j,k)   = temp(4,i,j) 
+            uf(i,j,k)   = temp(4,i,j)
             vf(i,j,k)   = temp(5,i,j)
             wf(i,j,k)   = temp(6,i,j)
             e(i,j,k)    = temp(nvar+3,i,j)
@@ -14941,7 +14575,7 @@ c ---------------------
 c
 c --------------- save multiple (x-y), (x-z), (y-z), planes of data .
 c                 modify recl in all open statements for more or less
-c                 variables. 
+c                 variables.
 c                 Constant - x, implies yz planes
 c                 Constant - y, implies xz planes
 c                 Constant - z, implies xy planes
@@ -14962,7 +14596,7 @@ c ------ for xz and yz planes output z grid also
 c
       parameter(nvar_o = 6, nvar_o1 = nvar_o + 1)
 c
-      integer ix_pick(maxnx),  iy_pick(maxny),  iz_pick(maxnz), 
+      integer ix_pick(maxnx),  iy_pick(maxny),  iz_pick(maxnz),
      +        ix_order(maxnx), iy_order(maxny), iz_order(maxnz)
 c
       integer istatus(mpi_status_size), ierr
@@ -14982,8 +14616,8 @@ c
       data ionce_x, ionce_y, ionce_z, istuff /0, 0, 0, 0/
       data ix_pick, iy_pick, iz_pick /maxnx*0, maxny*0, maxnz*0/
       data ix_order, iy_order, iz_order /maxnx*0, maxny*0, maxnz*0/
-      save iviz_x,  iviz_y,  iviz_z, 
-     +     ix_pick, iy_pick, iz_pick, 
+      save iviz_x,  iviz_y,  iviz_z,
+     +     ix_pick, iy_pick, iz_pick,
      +     ix_order, iy_order, iz_order,
      +     ionce_x, ionce_y, ionce_z, istuff,
      +     npln_x, npln_y, npln_z
@@ -15150,7 +14784,7 @@ c
 c
 c ---------- the shape of the gridlines
 c
-               temp_y(7,i,k) =  0.5*(zgrid_w(i,j,km1,1) + 
+               temp_y(7,i,k) =  0.5*(zgrid_w(i,j,km1,1) +
      +                               zgrid_w(i,j,k,1))
             enddo
             enddo
@@ -15195,7 +14829,7 @@ c
 c
 c ---------- shape of the gridlines
 c
-               buf_send(7,j,k) = 0.5*(zgrid_w(i,j,km1,1) + 
+               buf_send(7,j,k) = 0.5*(zgrid_w(i,j,km1,1) +
      +                                zgrid_w(i,j,k,1))
             enddo
             enddo
@@ -15619,7 +15253,7 @@ c
 c
 c -------------- unit numbers for files
 c
-      nvel   = 20 
+      nvel   = 20
       npre   = 30
       nhis1  = 40
       nvelc  = 50
@@ -15627,14 +15261,14 @@ c
       nviz_z = 80
       nviz_y = 82
       nviz_x = 84
-      nviz_s = 90 
-      nbndy  = 91 
-      ngrd   = 25 
+      nviz_s = 90
+      nbndy  = 91
+      ngrd   = 25
 c
 c ------------- unit number for standard print out
 c               for each mpi task
 c
-      nprt = 1 
+      nprt = 1
 c
 c ------------- open unit for standard printout
 c
@@ -15812,7 +15446,7 @@ c      [kx_s:kx_e] x-range for pressure solver transpose (nx+2)-pts/ncpu_z
 c                  nx+2 fourier coefficients for xtoz and ztox transposes
 c
 c      [mx_s:mx_e] x-range split across z cpus as nx-pts/ncpu_z
-c                  for use in surface layer routines 
+c                  for use in surface layer routines
 c
 c      [is_s:is_e] starting and ending processor id's for a
 c                  particular z-level
@@ -15820,7 +15454,7 @@ c
 c      [iy_s:iy_e] y-range for computing y-derivatives ny-pts/ncpu_s
 c                  in xtoy and ytox tranposes
 c
-c      [jy_s:jy_e] y-range for use in xtoz and ztox transposes 
+c      [jy_s:jy_e] y-range for use in xtoz and ztox transposes
 c                  in pressure solution
 c
 c      [iz_s:iz_e] z-range for a particular vertical slab
@@ -15887,7 +15521,7 @@ c
       iss = is_s(myid)
       ise = is_e(myid)
 c
-c ------------ debug ranges 
+c ------------ debug ranges
 c
       if(l_debug) then
          write(nprt,1200) myid, (nn, ix_s(nn), ix_e(nn), jx_s(nn),
@@ -16062,13 +15696,13 @@ c
       subroutine xtoy_trans(f,g,nx,ny,ixs,ixe,ix_s,ix_e,
      +           iys,iye,iy_s,iy_e,iz1,iz2,
      +           myid,ncpu_s,np)
-c 
+c
 c ------- transpose array  f(nx,iys:iye,iz1:iz2) ---> g(ny,ixs:ixe,iz1:iz2)
 c
       include 'mpif.h'
       integer istatus(mpi_status_size)
 c
-      real f(nx,iys:iye,iz1:iz2), 
+      real f(nx,iys:iye,iz1:iz2),
      +     g(ny,ixs:ixe,iz1:iz2)
       real ft(nx*(iye+1-iys)*(iz2 - iz1 + 1)),
      +     gt(ny*(ixe+1-ixs)*(iz2 - iz1 + 1))
@@ -16136,13 +15770,13 @@ c
       subroutine ytox_trans(g,f,nx,ny,ixs,ixe,ix_s,ix_e,
      +           iys,iye,iy_s,iy_e,iz1,iz2,
      +           myid,ncpu_s,np)
-c 
+c
 c ------- transpose array g(ny,ixs:ixe,iz1:iz2) ---> f(nx,iys:iye,iz1:iz2)
 c
       include 'mpif.h'
       integer istatus(mpi_status_size)
 c
-      real f(nx,iys:iye,iz1:iz2), 
+      real f(nx,iys:iye,iz1:iz2),
      +     g(ny,ixs:ixe,iz1:iz2)
       real ft(nx*(iye+1-iys)*(iz2 - iz1 + 1)),
      +     gt(ny*(ixe+1-ixs)*(iz2 - iz1 + 1))
@@ -16211,7 +15845,7 @@ c
      +           iys,iye,izs,ize,iz_s,iz_e,
      +           myid,ncpu_s,numprocs)
 c
-c ------- transpose array  f(nx,iys:iye,izs-1:ize+1) 
+c ------- transpose array  f(nx,iys:iye,izs-1:ize+1)
 c                     ---> g(0:nz+1,iys:iye,ixs:ixe)
 c
       include 'mpif.h'
@@ -16283,7 +15917,7 @@ c
      +           iys,iye,izs,ize,iz_s,iz_e,
      +           myid,ncpu_s,numprocs)
 c
-c ------- transpose array g(0:nz+1,iys:iye,ixs:ixe) 
+c ------- transpose array g(0:nz+1,iys:iye,ixs:ixe)
 c                    ---> f(nx,iys:iye,izs-1:ize+1)
 c
       include 'mpif.h'
@@ -16473,7 +16107,7 @@ c
          enddo
       endif
 c
-c --------------- send extra scalar points 
+c --------------- send extra scalar points
 c
       nsend = nnx*(iye + 1 - iys)*nscl
       nrecv = nsend
@@ -16536,7 +16170,7 @@ c
       end
       subroutine bcast_pbc
 c
-c ---- send upper boundary conditions to other processors 
+c ---- send upper boundary conditions to other processors
 c      for fft solution of pressure
 c
       use pars
@@ -16592,7 +16226,7 @@ c
       end
       subroutine bcast_surf
 c
-c ---- send bottom geometry to all other processors 
+c ---- send bottom geometry to all other processors
 c      for computation of pressure drag at all z
 c
       use pars
@@ -16675,2136 +16309,6 @@ c
       return
       end
 
-!!!!! ----- D. Richter, 3/11/14 ---
-!!!!! ----- Adding particles to Peter's wavy code
-
-      subroutine particle_init
-      use particles
-      use pars
-      use con_data
-      use tank_pars
-      implicit none
-      include 'mpif.h' 
-      integer :: values(8)
-      integer :: idx,ix
-      real :: xv,yv,zv,ran2,xp_init(3)
-      real :: yp1,ypn,xpart(nnx),y2part(nnx),ddx
-
-      !Create the seed for the random number generator:
-      call date_and_time(VALUES=values)
-      iseed = -(myid+values(8)+values(7)+values(6))
-
-
-      !Initialize ngidx, the particle global index
-      ngidx = 1
-      
-      !For the channel case, set the total number of particles:
-      numpart = tnumpart/numprocs
-      if (myid==0) then
-         numpart = numpart + mod(tnumpart,numprocs)
-      end if
-
-      !Initialize the linked list of particles:
-      nullify(part,first_particle)
-
-      yp1 = 2.0e+30
-      ypn = yp1
-      !Set up xpart for interpolation of h:
-      ddx = xl/float(nnx)
-      do ix=1,nnx
-         xpart(ix) = float(ix-1)*ddx
-      end do
-      call spline(xpart,z_tank_i,nnx,yp1,ypn,y2part)
-      
-      !Now initialize all particles with a random location on that processor
-      do idx=1,numpart
-         xv = ran2(iseed)*(xmax-xmin) + xmin
-         yv = ran2(iseed)*(ymax-ymin) + ymin
-         zv = ran2(iseed)*zl
-         xp_init = (/xv,yv,zv/)
-         call create_particle(xp_init,vp_init,Tp_init,radius_init,idx,
-     +       z_tank_i(1:nnx),xpart(1:nnx),y2part(1:nnx),0.0)
-      end do
-
-      partTsrc = 0.0
-      partTsrc_t = 0.0
-
-      end subroutine particle_init
-      subroutine particle_setup
-
-      use particles
-      use pars
-      use tank_pars
-      use con_data
-      implicit none 
-      include 'mpif.h'
-
-      integer :: blcts(3),types(3)
-      integer :: ierr
-      integer(kind=MPI_ADDRESS_KIND) :: extent,lb
-      integer(kind=MPI_ADDRESS_KIND) :: extent2,lb2,displs(3)
-      real :: ddx
-      integer :: ix
-      integer :: num_reals
-
-      !First set up the neighbors for the interpolation stage:
-      call assign_nbrs
-
-      !Also assign the x,y,z max and mins to track particles leaving
-      call set_bounds
-
-      num_reintro = 0
-      tot_reintro = 0
-      his_reintro = 0
-
-      !Recall that these are the bin centers
-      !Setting the dimensional maximum time:
-!      call set_binsdata(bins,histbins+2,numhistvars,
-!     +                  log10(0.001),log10(100.0),1)  !Residence time
-      !Setting the residence time based on NONDIMENSIONAL time
-      call set_binsdata(bins,histbins+2,numhistvars,
-     +                  log10(0.001),log10(100.0*zl/ustar_tank),1)  !Residence time
-      call set_binsdata(bins,histbins+2,numhistvars,0.0,1.0,2)  !wave-relative origin
-      call set_binsdata(bins,histbins+2,numhistvars,0.0,1.0,3)  !wave-relative death
-      call set_binsdata(bins,histbins+2,numhistvars,0.0,zl,4)  !max height
-      call set_binsdata(bins,histbins+2,numhistvars,-1.0,20.0,5)  !ufinal - u0
-
-      !Initialize the linked list of particles:
-      nullify(part,first_particle)
-
-      !Set up MPI datatypes for sending particle information
-      !MUST UPDATE IF THINGS ARE ADDED/REMOVED FROM PARTICLE STRUCTURE
-
-      num_reals = 3*10 + 9
-      
-      blcts(1:3) = (/2,num_reals,2/)
-      displs(1) = 0
-      types(1) = mpi_integer
-      call mpi_type_get_extent(mpi_integer,lb,extent,ierr)
-      
-      !Displace 2*size of mpi_integer (2 integer: pidx,procidx)
-      displs(2) = extent*2
-      types(2) = mpi_real8
-      call mpi_type_get_extent(mpi_real8,lb,extent,ierr)
-      !Displace num_reals*size of mpi_real8 (6 3-vectors plus Tp,Tprhs,Tf)
-      displs(3) = displs(2) + extent*num_reals
-      types(3) = mpi_integer8
-
-      !Now define the type:
-      call mpi_type_create_struct(3,blcts,
-     +            displs,types,particletype,ierr)
-
-
-       call mpi_type_get_true_extent(particletype,lb2,extent2,ierr)
-       call mpi_type_get_extent(particletype,lb2,extent,ierr)
-       if (extent .NE. sizeof(part) ) then
-          if (myid==0) then
-          write(*,*) 'WARNING: extent of particletype not equal
-     +                  to sizeof(part):'
-          write(*,*) 'sizeof(part) = ', sizeof(part)
-!          write(*,*) 'sizeof(part%pidx) = ', sizeof(part%pidx)
-          write(*,*) 'mpi_type_get_true_extent(particletype) = ',extent2
-          write(*,*) 'mpi_type_get_extent(particletype) = ',extent
-          end if
-       end if
-      
-      !Need to compute any padding which may exist in particle struct:
-      pad_diff = extent-extent2 
-      if (myid==0) then
-      write(*,*) 'mpi_get_extent = ',extent
-      write(*,*) 'mpi_get_true_extent = ',extent2
-      write(*,*) 'sizeof(part) = ',sizeof(part)
-      write(*,*) 'DIFF = ',pad_diff
-      end if
-      if (pad_diff .LT. 0) then
-        write(*,*) 'WARNING: mpi_get_extent - mpi_get_true_extent LT 0!'
-        call mpi_finalize(ierr)
-        stop
-      end if
-
-
-      call mpi_type_commit(particletype,ierr)
-
-      end subroutine particle_setup
-      subroutine assign_nbrs
-        use pars
-        use particles
-        include 'mpif.h'
-      !Figure out which processors lie to all sides: 
-      !For the case where particles lie in columns not 
-      !aligning with the velocity, there will be no MPI_PROC_NULL since
-      !x and y are BOTH periodic
-     
-      !On right boundary:
-      if ( mod(myid+1,ncpu_s) == 0 ) then
-         !On the top:
-         if ( myid .GE. ncpu_s*(ncpu_z-1) ) then
-            rproc = myid-ncpu_s+1
-            trproc = 0 
-            tproc = ncpu_s-1 
-            tlproc = ncpu_s-2 
-            lproc = myid-1
-            blproc = myid-ncpu_s-1
-            bproc = myid-ncpu_s
-            brproc = myid-ncpu_s - ncpu_s+1
-         !On the bottom:
-         elseif ( myid .LT. ncpu_s ) then
-            rproc = myid-ncpu_s+1
-            trproc = myid+1
-            tproc = myid+ncpu_s
-            tlproc = myid+ncpu_s-1
-            lproc = myid-1
-            blproc = myid+ncpu_s*(ncpu_z-1)-1 
-            bproc = myid+ncpu_s*(ncpu_z-1) 
-            brproc = ncpu_s*(ncpu_z-1) 
-         !In the middle of right side:
-         else 
-            rproc = myid-ncpu_s+1
-            trproc = myid+1
-            tproc = myid+ncpu_s
-            tlproc = myid+ncpu_s-1
-            lproc = myid-1
-            blproc = myid-ncpu_s-1
-            bproc = myid-ncpu_s
-            brproc = myid-ncpu_s - ncpu_s+1
-         end if 
-
-      !On the left boundary:
-      elseif ( mod(myid,ncpu_s) == 0) then
-         !On the top:
-         if ( myid .GE. ncpu_s*(ncpu_z-1) ) then
-            rproc = myid+1
-            trproc = 1 
-            tproc = 0 
-            tlproc = ncpu_s-1
-            lproc = myid+ncpu_s-1
-            blproc = myid-1
-            bproc = myid-ncpu_s
-            brproc = myid-ncpu_s+1
-         !On the bottom:
-         elseif ( myid .LT. ncpu_s ) then
-            rproc = myid+1
-            trproc = myid+ncpu_s+1
-            tproc = myid+ncpu_s
-            tlproc = myid+ncpu_s+ncpu_s-1
-            lproc = myid+ncpu_s-1
-            blproc = numprocs-1 
-            bproc = ncpu_s*(ncpu_z-1) 
-            brproc = ncpu_s*(ncpu_z-1)+1 
-         !In the middle of left side:
-         else
-            rproc = myid+1
-            trproc = myid+ncpu_s+1
-            tproc = myid+ncpu_s
-            tlproc = myid+ncpu_s + ncpu_s-1
-            lproc = myid+ncpu_s-1
-            blproc = myid-1
-            bproc = myid-ncpu_s
-            brproc = myid-ncpu_s+1
-         end if
-      !On the top boundary
-      elseif ( myid .GE. ncpu_s*(ncpu_z-1) ) then
-         !Only check if in the middle:
-         if ( .NOT. ( mod(myid,ncpu_s) == 0) ) then
-            if ( .NOT. (mod(myid+1,ncpu_s) == 0) ) then
-               rproc = myid+1
-               trproc = myid-(ncpu_s*(ncpu_z-1))+1 
-               tproc = myid-(ncpu_s*(ncpu_z-1)) 
-               tlproc = myid-(ncpu_s*(ncpu_z-1))-1 
-               lproc = myid-1
-               blproc = myid-ncpu_s-1
-               bproc = myid-ncpu_s
-               brproc = myid-ncpu_s+1
-            end if
-         end if 
-      !On the bottom boundary
-      elseif ( myid .LT. ncpu_s) then
-         if ( .NOT. ( mod(myid,ncpu_s) == 0) ) then
-            if ( .NOT. (mod(myid+1,ncpu_s) == 0) ) then
-               rproc = myid+1
-               trproc = myid+ncpu_s+1
-               tproc = myid+ncpu_s
-               tlproc = myid+ncpu_s-1
-               lproc = myid-1
-               blproc = myid+ncpu_s*(ncpu_z-1)-1
-               bproc = myid+ncpu_s*(ncpu_z-1) 
-               brproc = myid+ncpu_s*(ncpu_z-1)+1 
-            end if
-         end if
-      !Everywhere else:
-      else 
-         rproc = myid+1
-         trproc = myid+ncpu_s+1
-         tproc = myid+ncpu_s
-         tlproc = myid+ncpu_s-1
-         lproc = myid-1
-         blproc = myid-ncpu_s-1
-         bproc = myid-ncpu_s
-         brproc = myid-ncpu_s+1
-      end if
-
-      return
-      end subroutine assign_nbrs
-      subroutine set_bounds  
-      use pars
-      use particles
-      use con_data
-      use con_stats
-      implicit none
-      include 'mpif.h'
-      
-      !Assign the bounds of each processor
-      !(this probably already exists in code, but this is for my sake)
-      ymin = dy*(iys-1)
-      ymax = dy*(iye)
-      zmin = z(izs-1)
-      zmax = z(ize)  
-      xmin = dx*(mxs-1)
-      xmax = dx*(mxe)
-
-      end subroutine set_bounds
-      subroutine create_particle(xp,vp,Tp,rad,idx,ztank,xles,y2,t_born)
-      use particles
-      use pars
-      implicit none
-
-      real :: xp(3),vp(3),Tp,hpart,rad,pi
-      real :: ztank(nnx),xles(nnx),y2(nnx),t_born
-      integer :: idx,ix
-
-      if (.NOT. associated(first_particle)) then
-         allocate(first_particle)
-         part => first_particle
-         nullify(part%next,part%prev)
-      else
-         !Add to beginning of list since it's more convenient
-         part => first_particle
-         allocate(part%prev)
-         first_particle => part%prev
-         part%prev%next => part
-         part => first_particle
-         nullify(part%prev)
-      end if
-
-      pi   = 4.0*atan(1.0)
-
-      part%xip(1:3) = xp(1:3)
-      call splint(xles,ztank,y2,nnx,part%xip(1),hpart)
-      part%xp(1:2) = part%xip(1:2)
-      part%xp(3) = part%xip(3) + 
-     +             hpart*(1.0-part%xip(3)/zl)**a_decay
-
-      part%xip_i(1:3) = part%xip(1:3)
-      part%xp_i(1:3) = part%xp(1:3)
-
-      part%vp(1:3) = vp(1:3)
-      part%u0 = vp(1)
-      part%Tp = Tp
-      part%Tf = Tp
-      part%uf(1:3) = 0.0
-      part%xrhs(1:3) = 0.0
-      part%vrhs(1:3) = 0.0 
-      part%Tprhs_s = 0.0
-      part%Tprhs_L = 0.0
-      part%radrhs = 0.0
-      part%qinf = 0.0
-      part%pidx = idx 
-      part%procidx = myid
-      part%radius = rad
-      part%m_s = Sal/1000.0*4.0/3.0*pi*rad**3*rhow
-      part%xp_0(1:3) = part%xp(1:3)
-      part%t0 = t_born
-      part%zpmax = 0.0
-      
-      end subroutine create_particle
-      subroutine save_particles
-      use particles
-      use pars
-      implicit none
-      include 'mpif.h'
-
-      integer :: istatus(mpi_status_size), ierr, fh
-      integer(kind=mpi_offset_kind) :: zoffset,offset
-      integer :: pnum_vec(numprocs)
-      integer :: iproc,i
-      type(particle) :: writebuf(numpart),tmp
-
-      !Do this with mpi_write_at_all
-      !Need to figure out the displacements - need numpart from each proc
-      call mpi_allgather(numpart,1,mpi_integer,pnum_vec,1,mpi_integer,
-     +                   mpi_comm_world,ierr)
-
-      !Package all the particles into writebuf:
-      i = 1
-      part => first_particle
-      do while (associated(part))
-      writebuf(i) = part
-      !write(*,'a5,3e15.6') 'xp:',part%xp(1:3)
-      part => part%next
-      i = i + 1
-      end do
-
-      !Now only write to the file if you actually have particles
-      !EXCEPTION: proc 0, which needs to write tnumpart regardless
-      call mpi_file_open(mpi_comm_world, path_sav_part,
-     +                   mpi_mode_create+mpi_mode_rdwr,
-     +                   mpi_info_null,fh,ierr)
-
-      zoffset = 0
-      !Write tnumpart first:
-      if (myid==0) then
-      call mpi_file_write_at(fh,zoffset,tnumpart,1,mpi_integer,
-     +                       istatus,ierr)
-      write(*,*) 'wrote tnumpart = ',tnumpart
-      end if
-
-      zoffset = zoffset + 4
-     
-      !Now compute the offset (in bytes!):
-      offset = zoffset 
-      do iproc = 0,myid-1
-         offset = offset + pnum_vec(iproc+1)*(sizeof(tmp)-pad_diff) 
-      end do
-
-      !Now everyone else write, ONLY if numpart > 0
-      if (numpart .GT. 0) then
-      call mpi_file_write_at(fh,offset,writebuf,numpart,
-     +                       particletype,istatus,ierr)
-!      write(*,*) 'wrote writebuf(1)%pidx = ',writebuf(1)%pidx
-!      write(*,'a30,3e15.6') 'wrote writebuf(1)%vp =',writebuf(1)%vp(1:3)
-!      write(*,'a30,3e15.6') 'wrote writebuf(1)%xp =',writebuf(1)%xp(1:3)
-!      write(*,*) 'wrote writebuf(2)%pidx = ',writebuf(2)%pidx
-!      write(*,'a30,3e15.6') 'wrote writebuf(2)%vp =',writebuf(2)%vp(1:3)
-!      write(*,'a30,3e15.6') 'wrote writebuf(2)%xp =',writebuf(2)%xp(1:3)
-      end if
-
-      call mpi_file_close(fh,ierr)
-
-      write(*,*) 'proc',myid,'wrote numpart = ',numpart
-
-      if (myid==0) write(*,7000) path_sav_part
- 7000 format(' PARTICLE DATA IS WRITTEN IN FILE  ',a80)
-
-      end subroutine save_particles
-      subroutine read_part_res
-      use pars
-      use particles
-      implicit none
-      include 'mpif.h'
-
-      integer :: istatus(mpi_status_size), ierr, fh
-      integer(kind=mpi_offset_kind) :: zoffset,offset
-      integer :: myp,totalp 
-      integer :: iproc,i,pidxmax
-      type(particle), allocatable :: readbuf(:)
-
-      if (myid==0) write(*,7000) path_part 
- 7000 format(' READING PARTICLE DATA FROM  ',a80)
-
-
-      call mpi_file_open(mpi_comm_world,path_part,
-     +                   mpi_mode_rdonly,
-     +                   mpi_info_null,fh,ierr)
-
-
-      !Read in the total number of particles:
-      offset = 0
-      call mpi_file_read_at_all(fh,offset,tnumpart,1,
-     +                      mpi_integer,istatus,ierr)
-      if (myid==0) write(*,*) 'read tnumpart = ',tnumpart
-    
-      offset = 4
-      allocate(readbuf(tnumpart))
-      call mpi_file_read_at_all(fh,offset,readbuf,tnumpart,
-     +                       particletype,istatus,ierr)
-
-      do i = 1,tnumpart
-        !Now - does it lie within this proc's bounds?
-        if (readbuf(i)%xp(2) .GT. ymin .AND.
-     +       readbuf(i)%xp(2) .LT. ymax .AND.
-     +       readbuf(i)%xp(1) .GT. xmin .AND.
-     +       readbuf(i)%xp(1) .LT. xmax) then 
-            if (.NOT. associated(first_particle)) then
-               allocate(first_particle)
-               first_particle = readbuf(i)
-               nullify(first_particle%prev,first_particle%next)
-               part => first_particle
-            else
-               allocate(part%next)
-               part%next = readbuf(i)
-               part%next%prev => part
-               part => part%next
-               nullify(part%next)
-            end if
-
-        end if
-      end do
-
-      deallocate(readbuf)
-
-      call mpi_file_close(fh,ierr)
-      
-      !Now just check how many each processor obtained:
-      !At the same time, figure out max(pidx) and set ngidx 
-      !to one plus this value:
-      pidxmax = 0
-      part => first_particle
-      myp = 0
-      do while (associated(part))
-         myp = myp+1
-         if (part%pidx .gt. pidxmax) pidxmax = part%pidx
-         part => part%next
-      end do
-
-      !Set ngidx (the index for creating new particles) to 1+pidmax:
-      ngidx = pidxmax + 1
-
-      numpart = myp
-     
-      call mpi_allreduce(myp,totalp,1,mpi_integer,mpi_sum,
-     +                   mpi_comm_world,ierr)
-
-      write(*,*) 'proc',myid,'read in numpart:',myp
-      if (myid==0) write(*,*) 'total number of particles read:',totalp
-
-      end subroutine read_part_res
-      subroutine particle_update_rk3(it,istage)
-      use pars
-      use particles
-      use con_data
-      use con_stats
-      use tank_pars
-      implicit none
-      include 'mpif.h'
-
-      integer :: istage,ierr,it
-      real :: denom,dtl,sigma,ttest
-      integer :: ix,iy,iz
-      real :: Rep,diff(3),diffnorm,corrfac,myRep_avg,xtmp(3),vtmp(3)
-      real :: Nup,Tptmp,taup_i,rhop,Volp,radiustmp,Shp
-      real :: TfC,einf,TpC,Lv,Eff_C,Eff_S,estar
-      real :: yp1,ypn,hpart,xpart(nnx),y2part(nnx),ddx
-
-      real :: t_s,t_f,t_s1,t_f1
-
-
-
-      !First fill extended velocity field for interpolation
-      !t_s = mpi_wtime()
-      call fill_ext 
-      !t_f = mpi_wtime()
-      !call mpi_barrier(mpi_comm_world,ierr)
-      !if (myid==5) write(*,*) 'time fill_ext:',t_f-t_s
-
-      !Get spline fit of surface boundary to interpolate h(xp,yp):
-      yp1 = 2.0e+30
-      ypn = yp1
-      ddx = xl/float(nnx)
-      do ix=1,nnx
-         xpart(ix) = float(ix-1)*ddx
-      end do
-      call spline(xpart,z_tank_i,nnx,yp1,ypn,y2part)
-
-      !update xip since waves have moved since last particle
-      part => first_particle
-      do while (associated(part))
-            !Update part%xip
-            call splint(xpart,z_tank_i,y2part,nnx,part%xp(1),hpart)
-            part%xip(1:3) = part%xp(1:3)
-            if (iz_space == 5) then    !Algebraic stretching to smooth out waves
-                call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
-            end if
-            part => part%next
-      end do
-         
-      !Apply bottom boundary conditions here since mesh will have moved from previous:
-      num_reintro = 0
-      call particle_bcs_nonperiodic
-
-      partcount_t = 0.0
-      partcountU_t = 0.0
-      if (istage .eq. 1) then
-         partflux_t = 0.0
-         partfluxup_t = 0.0
-         partfluxdn_t = 0.0
-      end if
-      vpsum_t = 0.0
-      upwp_t = 0.0
-      vpsqrsum_t = 0.0
-      Tpsum_t = 0.0
-      Tpsqrsum_t = 0.0
-      wpTpsum_t = 0.0
-      myRep_avg = 0.0
-      Tfsum_t = 0.0
-      qfsum_t = 0.0
-      radsum_t = 0.0
-      rad2sum_t = 0.0
-      qstarsum_t = 0.0
-
-      !t_s = mpi_wtime()
-
-
-      !Loop over the linked list of particles:
-      part => first_particle
-      do while (associated(part))
-         
-         !First, interpolate to get the fluid velocity part%uf(1:3):
-         !For wavy code, must pass in the wave height at particle location
-         !Get this from spline:
-         call splint(xpart,z_tank_i,y2part,nnx,part%xp(1),hpart)
-
-         call uf_interp(hpart)
-
-         if (it .le. 1) then
-            part%vp(1:3) = part%uf
-            part%Tp = part%Tf
-         end if
-
-         diff(1:3) = part%vp - part%uf
-         diffnorm = sqrt(diff(1)**2 + diff(2)**2 + diff(3)**2)
-         Rep = 2.0*part%radius*diffnorm/nuf
-         myRep_avg = myRep_avg + Rep
-         corrfac = (1.0 + 0.15*Rep**(0.687))
-
-         Volp = pi2*2.0/3.0*part%radius**3
-         rhop = (part%m_s+Volp*rhow)/Volp
-         taup_i = 18.0*rhoa*nuf/rhop/(2.0*part%radius)**2
-
-         !Compute Nusselt number for particle:
-         !Ranz-Marshall relation
-         Nup = 2.0 + 0.6*Rep**(1.0/2.0)*Pra**(1.0/3.0)
-         Shp = 2.0 + 0.6*Rep**(1.0/2.0)*Sc**(1.0/3.0)
-
-         !Mass Transfer calculations
-         TfC = part%Tf-273.15
-         einf = 610.94*EXP(17.6257*TfC/(TfC+243.04))
-         TpC = part%Tp-273.15
-         Lv =(25.0 - 0.02274*26.0)*10.0**5
-
-         Eff_C = 2.0*Mw*Gam/(Ru*rhow*part%radius*part%Tp)
-         Eff_S = Ion*Os*part%m_s*Mw/Ms/(Volp*rhop-part%m_s)
-         estar = einf*exp(Mw*Lv/Ru*(1.0/part%Tf-1.0/part%Tp)
-     +                                           +Eff_C-Eff_S)
-         part%qstar = Mw/Ru*estar/part%Tp/rhoa
-
-         !Temp vectors for RK3
-         xtmp(1:3) = part%xp(1:3) + dt*zetas(istage)*part%xrhs(1:3)
-         vtmp(1:3) = part%vp(1:3) + dt*zetas(istage)*part%vrhs(1:3) 
-         Tptmp = part%Tp + dt*zetas(istage)*part%Tprhs_s
-         Tptmp = Tptmp + dt*zetas(istage)*part%Tprhs_L         
-         radiustmp = part%radius + dt*zetas(istage)*part%radrhs         
-
- 
-         !Assemble RHS
-         part%xrhs(1:3) = part%vp(1:3)
-         part%vrhs(1:3) = corrfac*taup_i*(part%uf(1:3)-part%vp(1:3))
-     +                                  - part_grav(1:3)
-
-         if (ievap .EQ. 1) then
-            part%radrhs = Shp/9.0/Sc*rhop/rhow*part%radius*
-     +                       taup_i*(part%qinf-part%qstar) !assumes qinf=rhov/rhoa rather than rhov/rhom
-         else
-            part%radrhs = 0.0
-         end if
-
-         part%Tprhs_s = -Nup/3.0/Pra*CpaCpp*
-     +                     rhop/rhow*taup_i*(part%Tp-part%Tf)
-         part%Tprhs_L = 3.0*Lv/Cpp/part%radius*part%radrhs
-
-
-         !Update the particle properties
-         if (istage==1) then
-             part%xip_i(1:3) = part%xip(1:3)
-             part%xp_i(1:3) = part%xp(1:3)
-         end if
-
-         part%xp(1:3) = xtmp(1:3) + dt*gama(istage)*part%xrhs(1:3)
-         
-         part%vp(1:3) = vtmp(1:3) + dt*gama(istage)*part%vrhs(1:3)
-         part%Tp = Tptmp + dt*gama(istage)*part%Tprhs_s
-         part%Tp = part%Tp + dt*gama(istage)*part%Tprhs_L
-         part%radius = radiustmp + dt*gama(istage)*part%radrhs
-
-
-         !Update part%xip as well:
-         call splint(xpart,z_tank_i,y2part,nnx,part%xp(1),hpart)
-         part%xip(1:3) = part%xp(1:3)
-         if (iz_space == 5) then    !Algebraic stretching to smooth out waves
-             call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
-         end if
-
-        !Keep track of max height particle reaches during lifetime
-        if (part%xip(3) .gt. part%zpmax) part%zpmax = part%xip(3)
-
-
-        part => part%next
-      end do
-      !t_f1 = mpi_wtime()
-      !write(*,*) 'proc,loop time: ',myid,t_f1-t_s
-      !call mpi_barrier(mpi_comm_world,ierr)
-      !t_f = mpi_wtime()
-      !if (myid==5) write(*,*) 'time loop:', t_f-t_s
-
-      !Calculate particle fluxes before removing particles (to get lowest grid point correct)
-      if (istage .eq. 3) call update_particle_flux
-
-      !Enforce nonperiodic bcs (either elastic or destroying particles)
-      !t_s = mpi_wtime()
-      call particle_bcs_nonperiodic
-      !call mpi_barrier(mpi_comm_world,ierr)
-      !t_f = mpi_wtime()
-      !if (myid==5) write(*,*) 'time bc_non:', t_f - t_s
-
-      if (istage == 1) tot_reintro = 0
-      call particle_reintro
-      if (istage == 3) his_reintro = tot_reintro
-
-      !Check to see if particles left processor
-      !If they did, remove from one list and add to another
-      !t_s = mpi_wtime()
-      call particle_exchange
-      !call mpi_barrier(mpi_comm_world,ierr)
-      !t_f = mpi_wtime()
-      !if (myid==5) write(*,*) 'time exchg:', t_f - t_s
-
-      !Now enforce periodic bcs 
-      !just updates x,y locations if over xl,yl or under 0
-      !t_s = mpi_wtime()
-      call particle_bcs_periodic
-      !call mpi_barrier(mpi_comm_world,ierr)
-      !t_f = mpi_wtime()
-      !if (myid==5) write(*,*) 'time bc_per:', t_f - t_s
-
-      !Now that particles are in their updated position, 
-      !compute their contribution to the momentum coupling:
-      !t_s = mpi_wtime()
-      call update_particle_stats
-      !call mpi_barrier(mpi_comm_world,ierr)
-      !t_f = mpi_wtime()
-      !if (myid==5) write(*,*) 'time cpl: ', t_f - t_s
-
-      !Finally, now that coupling and statistics arrays are filled, 
-      !Transpose them back to align with the velocities:
-      call ztox_trans(partsrc_t(0:nnz+1,iys:iye,mxs:mxe,1),
-     +                partsrc(1:nnx,iys:iye,izs-1:ize+1,1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(partsrc_t(0:nnz+1,iys:iye,mxs:mxe,2),
-     +                partsrc(1:nnx,iys:iye,izs-1:ize+1,2),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(partsrc_t(0:nnz+1,iys:iye,mxs:mxe,3),
-     +                partsrc(1:nnx,iys:iye,izs-1:ize+1,3),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(partTsrc_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                partTsrc(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-
-      !Try only calling these when the history data is being written:
-      if(mtrans  .and. istage .eq. 3) then
-      call ztox_trans(upwp_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                upwp(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-
-      call ztox_trans(vpsum_t(0:nnz+1,iys:iye,mxs:mxe,1),
-     +                vpsum(1:nnx,iys:iye,izs-1:ize+1,1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(vpsum_t(0:nnz+1,iys:iye,mxs:mxe,2),
-     +                vpsum(1:nnx,iys:iye,izs-1:ize+1,2),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(vpsum_t(0:nnz+1,iys:iye,mxs:mxe,3),
-     +                vpsum(1:nnx,iys:iye,izs-1:ize+1,3),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-
-      call ztox_trans(vpsqrsum_t(0:nnz+1,iys:iye,mxs:mxe,1),
-     +                vpsqrsum(1:nnx,iys:iye,izs-1:ize+1,1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(vpsqrsum_t(0:nnz+1,iys:iye,mxs:mxe,2),
-     +                vpsqrsum(1:nnx,iys:iye,izs-1:ize+1,2),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(vpsqrsum_t(0:nnz+1,iys:iye,mxs:mxe,3),
-     +                vpsqrsum(1:nnx,iys:iye,izs-1:ize+1,3),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-
-      call ztox_trans(Tpsum_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                Tpsum(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(Tpsqrsum_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                Tpsqrsum(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(wpTpsum_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                wpTpsum(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-
-      call ztox_trans(partcount_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                partcount(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(partcountU_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                partcountU(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(partflux_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                partflux(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(partfluxup_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                partfluxup(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(partfluxdn_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                partfluxdn(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-
-      call ztox_trans(Tfsum_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                Tfsum(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(qfsum_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                qfsum(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(radsum_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                radsum(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(rad2sum_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                rad2sum(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      call ztox_trans(qstarsum_t(0:nnz+1,iys:iye,mxs:mxe),
-     +                qstarsum(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
-     +                mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
-     +                ncpu_s,numprocs)
-      end if
-
-      !t_s = mpi_wtime
-      !Get particle count:
-      numpart = 0
-      part => first_particle
-      do while (associated(part))
-      numpart = numpart + 1
-      part => part%next
-      end do
-      !call mpi_barrier(mpi_comm_world,ierr)
-      !t_f = mpi_wtime()
-      !if (myid==5) write(*,*) 'time numpart: ', t_f - t_s
-
-      !t_s = mpi_wtime()
-      !Compute total number of particles
-      call mpi_allreduce(numpart,tnumpart,1,mpi_integer,mpi_sum,
-     +                   mpi_comm_world,ierr)
-      !Compute average particle Reynolds number
-      call mpi_allreduce(myRep_avg,Rep_avg,1,mpi_real8,mpi_sum,
-     +                   mpi_comm_world,ierr)
-      Rep_avg = Rep_avg/tnumpart
-      !call mpi_barrier(mpi_comm_world,ierr)
-      !t_f = mpi_wtime()
-      !if (myid==5) write(*,*) 'time mpi_allreduce: ', t_f - t_s
-
-      end subroutine particle_update_rk3
-      subroutine particle_bcs_nonperiodic
-      use particles
-      use con_data
-      use pars
-      use tank_pars
-      implicit none
-      real :: top,bot
-      real :: restime,beg_phase,end_phase
-      real :: t_bndy,wave_local
-
-
-      t_bndy = t_stage - t_zero
-
-      part => first_particle
-      do while (associated(part))
-
-      !Remove particles which fall under the radius
-      !Rebound particles which hit top
-
-      top = zl - radius_init
-      bot = 0.0 + radius_init
-
-      if (part%xip(3) .GT. top) then
-         part%xp(3) = top - (part%xp(3)-top)
-         part%vp(3) = -part%vp(3)
-         part => part%next
-      elseif (part%xip(3) .LT. bot) then
-
-         restime = t_stage - part%t0
-
-         !Need to know where the wave is relative to periodic box:
-         wave_local = mod(c_speed*(part%t0-t_zero),xl)
-         if (part%xp_0(1) .gt. wave_local) then
-         !Particle ahead of wave phase inside domain
-         beg_phase = mod(part%xp_0(1)-wave_local,wave_l)/wave_l
-         else
-         !Particle behind wave phase inside domain 
-         beg_phase = mod((part%xp_0(1)+xl)-wave_local,wave_l)/wave_l
-         end if
-
-
-         wave_local = mod(c_speed*t_bndy,xl)
-         if (part%xp(1) .gt. wave_local) then
-         end_phase = mod(part%xp(1)-wave_local,wave_l)/wave_l
-         else
-         end_phase = mod((part%xp(1)+xl)-wave_local,wave_l)/wave_l
-         end if
-
-         !write(*,'(a5,2e15.6)') 'loc:',beg_phase,end_phase
-         !write(*,'(a5,2e15.6)') 'res:',hist_restime,beg_phase
-
-
-         !JPDF of residence time and wave-relative origin
-         call add_histogram(bins(:,1),bins(:,2),hist_restime,
-     +    histbins+2,log10(restime),beg_phase)
-
-         !JPDF of wave-relative origin and wave-relative end
-         call add_histogram(bins(:,2),bins(:,3),hist_locations,
-     +    histbins+2,beg_phase,end_phase)
-
-         !JPDF of wave-relative origin and max height
-         call add_histogram(bins(:,2),bins(:,4),hist_height,
-     +    histbins+2,beg_phase,part%zpmax)
-
-         !JPDF of wave-relative origin and max height
-         call add_histogram(bins(:,2),bins(:,5),hist_momentum,
-     +    histbins+2,beg_phase,part%vp(1)-part%u0)
-
-         call destroy_particle
-         num_reintro = num_reintro + 1
-
-      else
-         part => part%next
-      end if
-
-      end do
-
-      end subroutine particle_bcs_nonperiodic
-      subroutine particle_reintro(istage)
-      use particles
-      use pars
-      use con_data
-      use tank_pars
-      implicit none
-      include 'mpif.h'
-
-      integer :: ierr,randproc,np,tmp_reintro,istage,ix
-      real :: xv,yv,zv,ran2,vinj,t_bndy,uorb,worb
-      real :: xpart(nnx),y2part(nnx),yp1,ypn,ddx
-
-      t_bndy = t_stage - t_zero
-
-      call mpi_allreduce(num_reintro,tmp_reintro,1,mpi_integer,mpi_sum,
-     +       mpi_comm_world,ierr)
-
-      if (myid==0) write(*,*) 'time,tot_reintro: ',time,tmp_reintro
-
-      tot_reintro = tot_reintro + tmp_reintro
-
-      !Set up xpart for interpolation of h:
-      yp1 = 2.0e+30
-      ypn = yp1
-      ddx = xl/float(nnx)
-      do ix=1,nnx
-         xpart(ix) = float(ix-1)*ddx
-      end do
-      call spline(xpart,z_tank_i,nnx,yp1,ypn,y2part)
-
-      !Now everyone knows how many total particles need to be reintroduced
-      !For each one to be reintroduced, get a random processor who creates it:
-
-      do np=1,tmp_reintro
-
-      !Proc 0 gets a random proc ID, broadcasts it out:
-      if (myid==0) randproc = floor(ran2(iseed)*numprocs)
-
-      call mpi_bcast(randproc,1,mpi_integer,0,mpi_comm_world,ierr)
-
-       if (myid==randproc) then
-
-        xv = ran2(iseed)*(xmax-xmin) + xmin
-        yv = ran2(iseed)*(ymax-ymin) + ymin
-
-        !Inject the particles upwards:
-        !Include local orbital velocity as well as a random component for ejection
-        !Specific to monochromatic waves, so must modify for arbitrary tank waves
-        uorb = waveslope*c_speed*cos(pi2/wave_l*(xv-c_speed*t_bndy))
-        worb = -waveslope*c_speed*sin(pi2/wave_l*(xv-c_speed*t_bndy))
-        vinj = worb + ran2(iseed)*Vpmax
-        !zv = radius_init
-        zv = zw1
-
-        call create_particle((/xv,yv,zv/),(/uorb,0.0,vinj/),300.0,
-     +   radius_init,2,z_tank_i(1:nnx),xpart(1:nnx),
-     +   y2part(1:nnx),t_stage)
-
-       end if
-      end do
-
-      end subroutine particle_reintro
-      subroutine particle_bcs_periodic
-      use particles
-      use con_data
-      use pars
-      implicit none 
-
-      !Assumes domain goes from [0,xl),[0,yl),[0,zl] 
-      !Also maintain the number of particles on each proc
-      
-      part => first_particle
-      do while (associated(part))
-
-      !x,y periodic
-   
-      if (part%xp(1) .GT. xl) then
-         part%xp(1) = part%xp(1)-xl
-      elseif (part%xp(1) .LT. 0) then
-         part%xp(1) = xl + part%xp(1)
-      end if
-
-      if (part%xp(2) .GT. yl) then
-         part%xp(2) = part%xp(2)-yl
-      elseif (part%xp(2) .LT. 0) then
-         part%xp(2) = yl + part%xp(2)
-      end if
-
-      part => part%next
-
-      end do
-
-
-      end subroutine particle_bcs_periodic
-      subroutine particle_exchange
-      use pars
-      use particles
-      use con_data
-      use con_stats
-      implicit none
-      include 'mpif.h'
-
-      type(particle), pointer :: tmp
-      integer :: idx,psum,csum
-      integer :: ir,itr,itop,itl,il,ibl,ib,ibr
-      integer :: istatus(mpi_status_size),ierr
-      integer :: status_array(mpi_status_size,16),req(16)
-      type(particle), allocatable :: rbuf_s(:),trbuf_s(:)
-      type(particle), allocatable :: tbuf_s(:),tlbuf_s(:)
-      type(particle), allocatable :: lbuf_s(:),blbuf_s(:)
-      type(particle), allocatable :: bbuf_s(:),brbuf_s(:)
-      type(particle), allocatable :: rbuf_r(:),trbuf_r(:)
-      type(particle), allocatable :: tbuf_r(:),tlbuf_r(:)
-      type(particle), allocatable :: lbuf_r(:),blbuf_r(:)
-      type(particle), allocatable :: bbuf_r(:),brbuf_r(:)
-      type(particle), allocatable :: totalbuf(:)
-      
-      !Zero out the counters for how many particles to send each dir.
-      pr_s=0;ptr_s=0;pt_s=0;ptl_s=0;pl_s=0;pbl_s=0;pb_s=0;pbr_s=0
-      
-      !As soon as the location is updated, must check to see if it left the proc:
-      !May be a better way of doing this, but it seems most reasonable:
-      part => first_particle
-      do while (associated(part))     
-
-         !First get numbers being sent to all sides:
-         if (part%xp(2) .GT. ymax) then 
-            if (part%xp(1) .GT. xmax) then !top right
-               ptr_s = ptr_s + 1
-            elseif (part%xp(1) .LT. xmin) then !bottom right
-               pbr_s = pbr_s + 1
-            else  !right
-               pr_s = pr_s + 1
-            end if
-         elseif (part%xp(2) .LT. ymin) then
-            if (part%xp(1) .GT. xmax) then !top left
-               ptl_s = ptl_s + 1
-            else if (part%xp(1) .LT. xmin) then !bottom left
-               pbl_s = pbl_s + 1
-            else  !left
-               pl_s = pl_s + 1
-            end if
-         elseif ( (part%xp(1) .GT. xmax) .AND.
-     +           (part%xp(2) .LT. ymax) .AND.
-     +           (part%xp(2) .GT. ymin) ) then !top
-            pt_s = pt_s + 1
-         elseif ( (part%xp(1) .LT. xmin) .AND.
-     +           (part%xp(2) .LT. ymax) .AND.
-     +           (part%xp(2) .GT. ymin) ) then !bottom
-            pb_s = pb_s + 1
-         end if
-         
-         part => part%next
-      end do
-      
-      !Now allocate the send buffers based on these counts:
-      allocate(rbuf_s(pr_s),trbuf_s(ptr_s),tbuf_s(pt_s),tlbuf_s(ptl_s))
-      allocate(lbuf_s(pl_s),blbuf_s(pbl_s),bbuf_s(pb_s),brbuf_s(pbr_s))
-
-      !Now loop back through the particles and fill the buffers:
-      !NOTE: If it finds one, add it to buffer and REMOVE from list
-      ir=1;itr=1;itop=1;itl=1;il=1;ibl=1;ib=1;ibr=1
-
-      part => first_particle
-      do while (associated(part))
-         
-         if (part%xp(2) .GT. ymax) then 
-            if (part%xp(1) .GT. xmax) then !top right
-!               write(*,*) 'Proc',myid,'about to send part to 
-!     +proc',trproc,'TOP RIGHT'
-               trbuf_s(itr) = part
-               call destroy_particle
-               itr = itr + 1 
-            elseif (part%xp(1) .LT. xmin) then !bottom right
-!               write(*,*) 'Proc',myid,'about to send part to 
-!     +proc',brproc,'BOTTOM RIGHT'
-               brbuf_s(ibr) = part
-               call destroy_particle
-               ibr = ibr + 1
-            else   !right
-!               write(*,*) 'Proc',myid,'about to send part to 
-!     +proc',rproc,'RIGHT'
-               rbuf_s(ir) = part
-               call destroy_particle
-               ir = ir + 1
-            end if
-         elseif (part%xp(2) .LT. ymin) then
-            if (part%xp(1) .GT. xmax) then !top left
-!               write(*,*) 'Proc',myid,'about to send part to 
-!     +proc',tlproc,'TOP LEFT'
-               tlbuf_s(itl) = part
-               call destroy_particle
-               itl = itl + 1
-            else if (part%xp(1) .LT. xmin) then !bottom left
-!               write(*,*) 'Proc',myid,'about to send part to 
-!     +proc',blproc,'BOTTOM LEFT'
-               blbuf_s(ibl) = part
-               call destroy_particle
-               ibl = ibl + 1
-            else  !left
-!               write(*,*) 'Proc',myid,'about to send part to 
-!     +proc',lproc,'LEFT'
-               lbuf_s(il) = part
-               call destroy_particle
-               il = il + 1
-            end if
-         elseif ( (part%xp(1) .GT. xmax) .AND.
-     +           (part%xp(2) .LT. ymax) .AND.
-     +           (part%xp(2) .GT. ymin) ) then !top
-!               write(*,*) 'Proc',myid,'about to send part to 
-!     +proc',tproc,'TOP'
-            tbuf_s(itop) = part
-            call destroy_particle
-            itop = itop + 1
-         elseif ( (part%xp(1) .LT. xmin) .AND.
-     +           (part%xp(2) .LT. ymax) .AND.
-     +           (part%xp(2) .GT. ymin) ) then !bottom
-!               write(*,*) 'Proc',myid,'about to send part to 
-!     +proc',bproc,'BOTTOM'
-            bbuf_s(ib) = part
-            call destroy_particle
-            ib = ib + 1 
-         else
-         part => part%next
-         end if 
-         
-      end do
-
-      !Now everyone exchanges the counts with all neighbors:
-      !Left/right:
-      call MPI_Sendrecv(pr_s,1,mpi_integer,rproc,3,
-     +        pl_r,1,mpi_integer,lproc,3,mpi_comm_world,istatus,ierr)
-
-      call MPI_Sendrecv(pl_s,1,mpi_integer,lproc,4,
-     +        pr_r,1,mpi_integer,rproc,4,mpi_comm_world,istatus,ierr)
-
-      !Top/bottom:
-      call MPI_Sendrecv(pt_s,1,mpi_integer,tproc,5,
-     +        pb_r,1,mpi_integer,bproc,5,mpi_comm_world,istatus,ierr)
-
-      call MPI_Sendrecv(pb_s,1,mpi_integer,bproc,6,
-     +        pt_r,1,mpi_integer,tproc,6,mpi_comm_world,istatus,ierr)
-
-      !Top right/bottom left:
-      call MPI_Sendrecv(ptr_s,1,mpi_integer,trproc,7,
-     +        pbl_r,1,mpi_integer,blproc,7,
-     +        mpi_comm_world,istatus,ierr)
-
-      call MPI_Sendrecv(pbl_s,1,mpi_integer,blproc,8,
-     +        ptr_r,1,mpi_integer,trproc,8,
-     +        mpi_comm_world,istatus,ierr)
-
-       !Top left/bottom right:
-      call MPI_Sendrecv(ptl_s,1,mpi_integer,tlproc,9,
-     +        pbr_r,1,mpi_integer,brproc,9,
-     +        mpi_comm_world,istatus,ierr)
-
-      call MPI_Sendrecv(pbr_s,1,mpi_integer,brproc,10,
-     +         ptl_r,1,mpi_integer,tlproc,10,
-     +         mpi_comm_world,istatus,ierr)
-
-      !Now everyone has the number of particles arriving from every neighbor
-      !If the count is greater than zero, exchange:
-
-      !Allocate room to receive from each side
-      allocate(rbuf_r(pr_r),trbuf_r(ptr_r),tbuf_r(pt_r),tlbuf_r(ptl_r))
-      allocate(lbuf_r(pl_r),blbuf_r(pbl_r),bbuf_r(pb_r),brbuf_r(pbr_r))
-     
-      !Send to right:
-      if (pr_s .GT. 0) then
-      call mpi_isend(rbuf_s,pr_s,particletype,rproc,11,
-     +               mpi_comm_world,req(1),ierr)
-      else
-      req(1) = mpi_request_null
-      end if
-
-      !Receive from left:
-      if (pl_r .GT. 0) then
-      call mpi_irecv(lbuf_r,pl_r,particletype,lproc,11,
-     +               mpi_comm_world,req(2),ierr)
-      else
-      req(2) = mpi_request_null
-      end if
-
-      !Send to left:
-      if (pl_s .GT. 0) then
-      call mpi_isend(lbuf_s,pl_s,particletype,lproc,12,
-     +               mpi_comm_world,req(3),ierr)
-      else
-      req(3) = mpi_request_null
-      end if
-
-      !Receive from right:
-      if (pr_r .GT. 0) then
-      call mpi_irecv(rbuf_r,pr_r,particletype,rproc,12,
-     +               mpi_comm_world,req(4),ierr)
-      else
-      req(4) = mpi_request_null
-      end if
-
-      !Send to top:
-      if (pt_s .GT. 0) then
-      call mpi_isend(tbuf_s,pt_s,particletype,tproc,13,
-     +                mpi_comm_world,req(5),ierr)
-      else
-      req(5) = mpi_request_null
-      end if
-      
-      !Receive from bottom:
-      if (pb_r .GT. 0) then
-      call mpi_irecv(bbuf_r,pb_r,particletype,bproc,13,
-     +                mpi_comm_world,req(6),ierr)
-      else
-      req(6) = mpi_request_null
-      end if
-
-      !Send to bottom:
-      if (pb_s .GT. 0) then
-      call mpi_isend(bbuf_s,pb_s,particletype,bproc,14,
-     +                mpi_comm_world,req(7),ierr)
-      else
-      req(7) = mpi_request_null
-      end if
-      
-      !Recieve from top:
-      if (pt_r .GT. 0) then
-      call mpi_irecv(tbuf_r,pt_r,particletype,tproc,14,
-     +                mpi_comm_world,req(8),ierr)
-      else
-      req(8) = mpi_request_null
-      end if
-
-      !Send to top right:
-      if (ptr_s .GT. 0) then
-      call mpi_isend(trbuf_s,ptr_s,particletype,trproc,15,
-     +                mpi_comm_world,req(9),ierr)
-      else
-      req(9) = mpi_request_null
-      end if
-     
-      !Receive from bottom left:
-      if (pbl_r .GT. 0) then
-      call mpi_irecv(blbuf_r,pbl_r,particletype,blproc,15,
-     +                mpi_comm_world,req(10),ierr)
-      else 
-      req(10) = mpi_request_null
-      end if
-    
-      !Send to bottom left:
-      if (pbl_s .GT. 0) then
-      call mpi_isend(blbuf_s,pbl_s,particletype,blproc,16,
-     +                mpi_comm_world,req(11),ierr)
-      else
-      req(11) = mpi_request_null
-      end if
-     
-      !Receive from top right:
-      if (ptr_r .GT. 0) then
-      call mpi_irecv(trbuf_r,ptr_r,particletype,trproc,16,
-     +                mpi_comm_world,req(12),ierr)
-      else 
-      req(12) = mpi_request_null
-      end if
-
-      !Send to top left:
-      if (ptl_s .GT. 0) then
-      call mpi_isend(tlbuf_s,ptl_s,particletype,tlproc,17,
-     +                mpi_comm_world,req(13),ierr)
-      else 
-      req(13) = mpi_request_null
-      end if
-    
-      !Receive from bottom right:
-      if (pbr_r .GT. 0) then
-      call mpi_irecv(brbuf_r,pbr_r,particletype,brproc,17,
-     +                mpi_comm_world,req(14),ierr)
-      else 
-      req(14) = mpi_request_null
-      end if
-  
-      !Send to bottom right:
-      if (pbr_s .GT. 0) then
-      call mpi_isend(brbuf_s,pbr_s,particletype,brproc,18,
-     +                mpi_comm_world,req(15),ierr)
-      else
-      req(15) = mpi_request_null
-      end if
-  
-      !Receive from top left:
-      if (ptl_r .GT. 0) then
-      call mpi_irecv(tlbuf_r,ptl_r,particletype,tlproc,18,
-     +                mpi_comm_world,req(16),ierr)
-      else
-      req(16) = mpi_request_null
-      end if
-
-      call mpi_waitall(16,req,status_array,ierr)
-
-      !Now add incoming particles to linked list:
-      !NOTE: add them to beginning since it's easiest to access (first_particle)
-
-      !Form one large buffer to loop through and add:
-      psum = pr_r+ptr_r+pt_r+ptl_r+pl_r+pbl_r+pb_r+pbr_r
-      csum = 0
-      allocate(totalbuf(psum))
-      if (pr_r .GT. 0) then 
-         totalbuf(1:pr_r) = rbuf_r(1:pr_r)
-         csum = csum + pr_r 
-      end if
-      if (ptr_r .GT. 0) then 
-         totalbuf(csum+1:csum+ptr_r) = trbuf_r(1:ptr_r)
-         csum = csum + ptr_r
-      end if
-      if (pt_r .GT. 0) then 
-         totalbuf(csum+1:csum+pt_r) = tbuf_r(1:pt_r)
-         csum = csum + pt_r
-      end if
-      if (ptl_r .GT. 0) then 
-         totalbuf(csum+1:csum+ptl_r) = tlbuf_r(1:ptl_r)
-         csum = csum + ptl_r
-      end if
-      if (pl_r .GT. 0) then 
-         totalbuf(csum+1:csum+pl_r) = lbuf_r(1:pl_r)
-         csum = csum + pl_r
-      end if
-      if (pbl_r .GT. 0) then 
-         totalbuf(csum+1:csum+pbl_r) = blbuf_r(1:pbl_r)
-         csum = csum + pbl_r
-      end if
-      if (pb_r .GT. 0) then 
-         totalbuf(csum+1:csum+pb_r) = bbuf_r(1:pb_r)
-         csum = csum + pb_r
-      end if
-      if (pbr_r .GT. 0) then 
-         totalbuf(csum+1:csum+pbr_r) = brbuf_r(1:pbr_r)
-         csum = csum + pbr_r
-      end if
-
-      do idx = 1,psum
-        if (.NOT. associated(first_particle)) then
-           allocate(first_particle)
-           first_particle = totalbuf(idx)
-           nullify(first_particle%next,first_particle%prev)
-        else
-           allocate(first_particle%prev)
-           tmp => first_particle%prev
-           tmp = totalbuf(idx)
-           tmp%next => first_particle
-           nullify(tmp%prev)
-           first_particle => tmp
-           nullify(tmp)
-        end if
-      end do  
-      
-      deallocate(rbuf_s,trbuf_s,tbuf_s,tlbuf_s)
-      deallocate(lbuf_s,blbuf_s,bbuf_s,brbuf_s)
-      deallocate(rbuf_r,trbuf_r,tbuf_r,tlbuf_r)
-      deallocate(lbuf_r,blbuf_r,bbuf_r,brbuf_r)
-      deallocate(totalbuf)
-
-      end subroutine particle_exchange
-      subroutine destroy_particle
-      use particles
-      implicit none
-
-      type(particle), pointer :: tmp
-
-      !Is it the first and last in the list?
-      if (associated(part,first_particle) .AND. 
-     +    (.NOT. associated(part%next)) ) then
-          nullify(first_particle)
-          deallocate(part)
-      else
-        if (associated(part,first_particle)) then !Is it the first particle?
-           first_particle => part%next
-           part => first_particle
-           deallocate(part%prev)
-        elseif (.NOT. associated(part%next)) then !Is it the last particle?
-           nullify(part%prev%next)
-           deallocate(part)
-        else
-           tmp => part
-           part => part%next
-           tmp%prev%next => tmp%next
-           tmp%next%prev => tmp%prev
-           deallocate(tmp)
-        end if
-      end if
-   
-      end subroutine destroy_particle
-
-      subroutine fill_ext 
-      use pars
-      use particles
-      use fields
-      use con_stats
-      use con_data
-      implicit none
-      include 'mpif.h'
-
-      integer :: istatus(mpi_status_size),ierr
-      integer :: ix,iy,iz
-      !preceding letter: r=right,l=left,t=top,b=bot.
-      !_s: buf of things to send TO r,l,t,b
-      !_r: buf of things to recv FROM r,l,t,b 
-      real :: tbuf_s(nnz+2,iye-iys+1,2,5),tbuf_r(nnz+2,iye-iys+1,3,5)
-      real :: bbuf_s(nnz+2,iye-iys+1,3,5),bbuf_r(nnz+2,iye-iys+1,2,5)
-      real :: rbuf_s(nnz+2,2,mxe-mxs+1,5),rbuf_r(nnz+2,3,mxe-mxs+1,5)
-      real :: lbuf_s(nnz+2,3,mxe-mxs+1,5),lbuf_r(nnz+2,2,mxe-mxs+1,5)
-
-      !Corners:
-      real :: trbuf_s(nnz+2,2,2,5),trbuf_r(nnz+2,3,3,5)
-      real :: brbuf_s(nnz+2,2,3,5),brbuf_r(nnz+2,3,2,5)
-      real :: blbuf_s(nnz+2,3,3,5),blbuf_r(nnz+2,2,2,5)
-      real :: tlbuf_s(nnz+2,3,2,5),tlbuf_r(nnz+2,2,3,5)
-      !MPI send counts:
-      integer :: rc_s,rc_r,trc_s,trc_r,tc_s,tc_r,tlc_s,tlc_r
-      integer :: lc_s,lc_r,blc_s,blc_r,bc_s,bc_r,brc_s,brc_r
-
-      !Debugging:
-      real :: xv,yv,zv
- 
-      !To update the particle ODE in time, need the interpolated
-      !velocity field
-      !This requires filling uext,vext,wext from nearby procs
-      uext = 0.0
-      vext = 0.0
-      wext = 0.0
-      Text = 0.0
-      T2ext = 0.0
-
-      !First fill the center, since this is just u,v,w on that proc:
-
-      !In the column setup, need to tranpose u,v,w first into u_t,v_t,w_t:
-      call xtoz_trans(u(1:nnx,iys:iye,izs-1:ize+1),u_t,nnx,nnz,
-     +                mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
-     +                myid,ncpu_s,numprocs)
-      call xtoz_trans(v(1:nnx,iys:iye,izs-1:ize+1),v_t,nnx,nnz,
-     +                mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
-     +                myid,ncpu_s,numprocs)
-      call xtoz_trans(w(1:nnx,iys:iye,izs-1:ize+1),w_t,nnx,nnz,
-     +                mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
-     +                myid,ncpu_s,numprocs)
-      call xtoz_trans(t(1:nnx,iys:iye,1,izs-1:ize+1),T_t,nnx,nnz,
-     +                mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
-     +                myid,ncpu_s,numprocs)
-      call xtoz_trans(t(1:nnx,iys:iye,2,izs-1:ize+1),T2_t,nnx,nnz,
-     +                mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
-     +                myid,ncpu_s,numprocs)
-
-      uext(0:nnz+1,iys:iye,mxs:mxe) = u_t(0:nnz+1,iys:iye,mxs:mxe)
-      vext(0:nnz+1,iys:iye,mxs:mxe) = v_t(0:nnz+1,iys:iye,mxs:mxe)
-      wext(0:nnz+1,iys:iye,mxs:mxe) = w_t(0:nnz+1,iys:iye,mxs:mxe)
-      Text(0:nnz+1,iys:iye,mxs:mxe) = T_t(0:nnz+1,iys:iye,mxs:mxe)
-      T2ext(0:nnz+1,iys:iye,mxs:mxe) = T2_t(0:nnz+1,iys:iye,mxs:mxe)
-
-      !Recall that SR assign_nbrs assigned rproc,lproc, etc.
-
-      !Going to call 6 sendrecv calls - one for each proc. nbr.:
-      
-      !Fill the send buffers:
-      
-      !I know these are redundant, but so I can keep them straight...
-      tc_s = 5*(nnz+2)*2*(iye-iys+1)
-      tc_r = 5*(nnz+2)*3*(iye-iys+1)
-      trc_s = 5*(nnz+2)*2*2
-      trc_r = 5*(nnz+2)*3*3
-      rc_s = 5*(nnz+2)*(mxe-mxs+1)*2
-      rc_r = 5*(nnz+2)*(mxe-mxs+1)*3
-      tlc_s = 5*(nnz+2)*3*2
-      tlc_r = 5*(nnz+2)*2*3
-      bc_s = 5*(nnz+2)*3*(iye-iys+1)
-      bc_r = 5*(nnz+2)*2*(iye-iys+1)
-      blc_s = 5*(nnz+2)*3*3
-      blc_r = 5*(nnz+2)*2*2
-      lc_s = 5*(nnz+2)*(mxe-mxs+1)*3
-      lc_r = 5*(nnz+2)*(mxe-mxs+1)*2
-      brc_s = 5*(nnz+2)*2*3
-      brc_r = 5*(nnz+2)*3*2
-     
-      !First u:
-      tbuf_s(1:nnz+2,1:iye-iys+1,1:2,1) = u_t(0:nnz+1,iys:iye,mxe-1:mxe)
-      trbuf_s(1:nnz+2,1:2,1:2,1) = u_t(0:nnz+1,iye-1:iye,mxe-1:mxe)
-      rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,1) = u_t(0:nnz+1,iye-1:iye,mxs:mxe)
-      brbuf_s(1:nnz+2,1:2,1:3,1) = u_t(0:nnz+1,iye-1:iye,mxs:mxs+2)
-      bbuf_s(1:nnz+2,1:iye-iys+1,1:3,1) = u_t(0:nnz+1,iys:iye,mxs:mxs+2)
-      blbuf_s(1:nnz+2,1:3,1:3,1) = u_t(0:nnz+1,iys:iys+2,mxs:mxs+2)
-      lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,1) = u_t(0:nnz+1,iys:iys+2,mxs:mxe)
-      tlbuf_s(1:nnz+2,1:3,1:2,1) = u_t(0:nnz+1,iys:iys+2,mxe-1:mxe)
-
-      !v:
-      tbuf_s(1:nnz+2,1:iye-iys+1,1:2,2) = v_t(0:nnz+1,iys:iye,mxe-1:mxe)
-      trbuf_s(1:nnz+2,1:2,1:2,2) = v_t(0:nnz+1,iye-1:iye,mxe-1:mxe)
-      rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,2) = v_t(0:nnz+1,iye-1:iye,mxs:mxe)
-      brbuf_s(1:nnz+2,1:2,1:3,2) = v_t(0:nnz+1,iye-1:iye,mxs:mxs+2)
-      bbuf_s(1:nnz+2,1:iye-iys+1,1:3,2) = v_t(0:nnz+1,iys:iye,mxs:mxs+2)
-      blbuf_s(1:nnz+2,1:3,1:3,2) = v_t(0:nnz+1,iys:iys+2,mxs:mxs+2)
-      lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,2) = v_t(0:nnz+1,iys:iys+2,mxs:mxe)
-      tlbuf_s(1:nnz+2,1:3,1:2,2) = v_t(0:nnz+1,iys:iys+2,mxe-1:mxe)
-
-      !w:
-      tbuf_s(1:nnz+2,1:iye-iys+1,1:2,3) = w_t(0:nnz+1,iys:iye,mxe-1:mxe)
-      trbuf_s(1:nnz+2,1:2,1:2,3) = w_t(0:nnz+1,iye-1:iye,mxe-1:mxe)
-      rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,3) = w_t(0:nnz+1,iye-1:iye,mxs:mxe)
-      brbuf_s(1:nnz+2,1:2,1:3,3) = w_t(0:nnz+1,iye-1:iye,mxs:mxs+2)
-      bbuf_s(1:nnz+2,1:iye-iys+1,1:3,3) = w_t(0:nnz+1,iys:iye,mxs:mxs+2)
-      blbuf_s(1:nnz+2,1:3,1:3,3) = w_t(0:nnz+1,iys:iys+2,mxs:mxs+2)
-      lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,3) = w_t(0:nnz+1,iys:iys+2,mxs:mxe)
-      tlbuf_s(1:nnz+2,1:3,1:2,3) = w_t(0:nnz+1,iys:iys+2,mxe-1:mxe)
-
-      !T:
-      tbuf_s(1:nnz+2,1:iye-iys+1,1:2,4) = T_t(0:nnz+1,iys:iye,mxe-1:mxe)
-      trbuf_s(1:nnz+2,1:2,1:2,4) = T_t(0:nnz+1,iye-1:iye,mxe-1:mxe)
-      rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,4) = T_t(0:nnz+1,iye-1:iye,mxs:mxe)
-      brbuf_s(1:nnz+2,1:2,1:3,4) = T_t(0:nnz+1,iye-1:iye,mxs:mxs+2)
-      bbuf_s(1:nnz+2,1:iye-iys+1,1:3,4) = T_t(0:nnz+1,iys:iye,mxs:mxs+2)
-      blbuf_s(1:nnz+2,1:3,1:3,4) = T_t(0:nnz+1,iys:iys+2,mxs:mxs+2)
-      lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,4) = T_t(0:nnz+1,iys:iys+2,mxs:mxe)
-      tlbuf_s(1:nnz+2,1:3,1:2,4) = T_t(0:nnz+1,iys:iys+2,mxe-1:mxe)
-
-      !T2:
-      tbuf_s(1:nnz+2,1:iye-iys+1,1:2,5) =T2_t(0:nnz+1,iys:iye,mxe-1:mxe)
-      trbuf_s(1:nnz+2,1:2,1:2,5) = T2_t(0:nnz+1,iye-1:iye,mxe-1:mxe)
-      rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,5) =T2_t(0:nnz+1,iye-1:iye,mxs:mxe)
-      brbuf_s(1:nnz+2,1:2,1:3,5) = T2_t(0:nnz+1,iye-1:iye,mxs:mxs+2)
-      bbuf_s(1:nnz+2,1:iye-iys+1,1:3,5) =T2_t(0:nnz+1,iys:iye,mxs:mxs+2)
-      blbuf_s(1:nnz+2,1:3,1:3,5) = T2_t(0:nnz+1,iys:iys+2,mxs:mxs+2)
-      lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,5) =T2_t(0:nnz+1,iys:iys+2,mxs:mxe)
-      tlbuf_s(1:nnz+2,1:3,1:2,5) = T2_t(0:nnz+1,iys:iys+2,mxe-1:mxe)
-     
-      !Zero out recieve buffers 
-      rbuf_r=0.0;trbuf_r=0.0;tbuf_r=0.0;tlbuf_r=0.0;lbuf_r=0.0
-      blbuf_r=0.0;bbuf_r=0.0;brbuf_r=0.0
-
-      !Left/right:
-      call MPI_Sendrecv(rbuf_s,rc_s,mpi_real8,rproc,3,
-     +        lbuf_r,lc_r,mpi_real8,lproc,3,mpi_comm_world,istatus,ierr)
-
-      call mpi_barrier(mpi_comm_world,ierr)
-      call MPI_Sendrecv(lbuf_s,lc_s,mpi_real8,lproc,4,
-     +        rbuf_r,rc_r,mpi_real8,rproc,4,mpi_comm_world,istatus,ierr)
-
-      !Top/bottom:
-      call MPI_Sendrecv(tbuf_s,tc_s,mpi_real8,tproc,5,
-     +        bbuf_r,bc_r,mpi_real8,bproc,5,mpi_comm_world,istatus,ierr)
-
-      call MPI_Sendrecv(bbuf_s,bc_s,mpi_real8,bproc,6,
-     +        tbuf_r,tc_r,mpi_real8,tproc,6,mpi_comm_world,istatus,ierr)
-
-      !Top right/bottom left:
-      call MPI_Sendrecv(trbuf_s,trc_s,mpi_real8,trproc,7,
-     +        blbuf_r,blc_r,mpi_real8,blproc,7,
-     +        mpi_comm_world,istatus,ierr)
-
-      call MPI_Sendrecv(blbuf_s,blc_s,mpi_real8,blproc,8,
-     +        trbuf_r,trc_r,mpi_real8,trproc,8,
-     +        mpi_comm_world,istatus,ierr)
-
-       !Top left/bottom right:
-      call MPI_Sendrecv(tlbuf_s,tlc_s,mpi_real8,tlproc,9,
-     +        brbuf_r,brc_r,mpi_real8,brproc,9,
-     +        mpi_comm_world,istatus,ierr)
-
-      call MPI_Sendrecv(brbuf_s,brc_s,mpi_real8,brproc,10,
-     +         tlbuf_r,tlc_r,mpi_real8,tlproc,10,
-     +         mpi_comm_world,istatus,ierr)
-
-      !Now fill the ext arrays with the recieved buffers:
-      uext(0:nnz+1,iys:iye,mxe+1:mxe+3) = 
-     +     tbuf_r(1:nnz+2,1:iye-iys+1,1:3,1)
-      uext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3) = trbuf_r(1:nnz+2,1:3,1:3,1)
-      uext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
-     +     rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,1)
-      uext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1) = brbuf_r(1:nnz+2,1:3,1:2,1)
-      uext(0:nnz+1,iys:iye,mxs-2:mxs-1) = 
-     +     bbuf_r(1:nnz+2,1:iye-iys+1,1:2,1)
-      uext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1) = blbuf_r(1:nnz+2,1:2,1:2,1)
-      uext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
-     +     lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,1)
-      uext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3) = tlbuf_r(1:nnz+2,1:2,1:3,1)
- 
-      vext(0:nnz+1,iys:iye,mxe+1:mxe+3) = 
-     +     tbuf_r(1:nnz+2,1:iye-iys+1,1:3,2)
-      vext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3) = trbuf_r(1:nnz+2,1:3,1:3,2)
-      vext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
-     +     rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,2)
-      vext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1) = brbuf_r(1:nnz+2,1:3,1:2,2)
-      vext(0:nnz+1,iys:iye,mxs-2:mxs-1) = 
-     +     bbuf_r(1:nnz+2,1:iye-iys+1,1:2,2)
-      vext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1) = blbuf_r(1:nnz+2,1:2,1:2,2)
-      vext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
-     +     lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,2)
-      vext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3) = tlbuf_r(1:nnz+2,1:2,1:3,2)
-
-      wext(0:nnz+1,iys:iye,mxe+1:mxe+3) = 
-     +     tbuf_r(1:nnz+2,1:iye-iys+1,1:3,3)
-      wext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3) = trbuf_r(1:nnz+2,1:3,1:3,3)
-      wext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
-     +     rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,3)
-      wext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1) = brbuf_r(1:nnz+2,1:3,1:2,3)
-      wext(0:nnz+1,iys:iye,mxs-2:mxs-1) = 
-     +     bbuf_r(1:nnz+2,1:iye-iys+1,1:2,3)
-      wext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1) = blbuf_r(1:nnz+2,1:2,1:2,3)
-      wext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
-     +     lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,3)
-      wext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3) = tlbuf_r(1:nnz+2,1:2,1:3,3)
-
-      Text(0:nnz+1,iys:iye,mxe+1:mxe+3) = 
-     +     tbuf_r(1:nnz+2,1:iye-iys+1,1:3,4)
-      Text(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3) = trbuf_r(1:nnz+2,1:3,1:3,4)
-      Text(0:nnz+1,iye+1:iye+3,mxs:mxe) =
-     +     rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,4)
-      Text(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1) = brbuf_r(1:nnz+2,1:3,1:2,4)
-      Text(0:nnz+1,iys:iye,mxs-2:mxs-1) = 
-     +     bbuf_r(1:nnz+2,1:iye-iys+1,1:2,4)
-      Text(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1) = blbuf_r(1:nnz+2,1:2,1:2,4)
-      Text(0:nnz+1,iys-2:iys-1,mxs:mxe) =
-     +     lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,4)
-      Text(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3) = tlbuf_r(1:nnz+2,1:2,1:3,4)
-
-      T2ext(0:nnz+1,iys:iye,mxe+1:mxe+3) = 
-     +     tbuf_r(1:nnz+2,1:iye-iys+1,1:3,5)
-      T2ext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3) =trbuf_r(1:nnz+2,1:3,1:3,5)
-      T2ext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
-     +     rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,5)
-      T2ext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1) =brbuf_r(1:nnz+2,1:3,1:2,5)
-      T2ext(0:nnz+1,iys:iye,mxs-2:mxs-1) = 
-     +     bbuf_r(1:nnz+2,1:iye-iys+1,1:2,5)
-      T2ext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1) =blbuf_r(1:nnz+2,1:2,1:2,5)
-      T2ext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
-     +     lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,5)
-      T2ext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3) =tlbuf_r(1:nnz+2,1:2,1:3,5)
-
-
-      end subroutine fill_ext
-      subroutine get_zeta_algeb(alpha,L,h,xip)
-      implicit none
-
-      real :: f,fp,h,alpha,tol,err,zeta,zetanew,L,z
-      real, intent(inout) :: xip(1:3)
-
-      err = 1.0
-      z = xip(3)
-      zeta = z
-      do while (err .gt. 1e-10)
-        f = zeta + h*(1.0 - zeta/L)**alpha - z
-        fp = 1 - alpha*h/L*(1.0 - zeta/L)**(alpha-1.0)
-
-        zetanew = zeta - f/fp
-        err = abs(zeta-zetanew)/zeta
-        zeta = zetanew
-      end do
-      xip(3) = zeta 
-
-      end subroutine get_zeta_algeb
-      subroutine uf_interp(hpart)
-      use pars
-      use particles
-      use fields
-      use con_stats
-      use con_data
-      implicit none
-       
-      integer :: ix,iy,izuv,izw,iz,i,k,j
-      integer :: first,last
-      real :: xkval,xjval,pj,dxvec(2)
-      integer :: ijpts(2,6),kuvpts(6)
-      real :: wt(3,6)
-      real :: ran2,hpart
-      
-      !Interpolates to get the fluid velocity 
-      !NOTE: interpolating in COMPUTATIONAL space! 
-      !part%xp is in physical space - first must figure out where in 
-      !computational space that lies and put into part%xip! 
-      !then interpolate velocity to that position:
-
-      !Newton's method to back out the computational location (xi,eta,zeta)
-      !into part%xip given h at that location:
-
-      part%xip(1:3) = part%xp(1:3)
-      if (iz_space == 5) then    !Algebraic stretching to smooth out waves
-          call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
-      end if
-
-      !Following Orlando's code, get the "leftmost" node
-      !This is just the minimum (i,j,k) on the volume 
-
-      ijpts(1,3) = floor(part%xip(1)/dx) + 1 
-      ijpts(2,3) = floor(part%xip(2)/dy) + 1
-
-      if (ijpts(1,3) .le. 0)  then
-      write(*,*) 'PROB:',part%xip(1),part%xip(2),part%xip(3)
-      end if
-     
-      !Fill in the neighbors:
-      ijpts(1,2) = ijpts(1,3)-1
-      ijpts(1,1) = ijpts(1,2)-1
-      ijpts(1,4) = ijpts(1,3)+1
-      ijpts(1,5) = ijpts(1,4)+1
-      ijpts(1,6) = ijpts(1,5)+1
-
-      ijpts(2,2) = ijpts(2,3)-1
-      ijpts(2,1) = ijpts(2,2)-1
-      ijpts(2,4) = ijpts(2,3)+1
-      ijpts(2,5) = ijpts(2,4)+1
-      ijpts(2,6) = ijpts(2,5)+1
-     
-      !Finding the k-lhnode is different since grid may be stretched
-      
-      !Do (u,v) loop first:
-      do iz=0,nnz+1
-         if (zz(iz) .GT. part%xip(3)) go to 1199
-      end do
-1199  continue
-
-      kuvpts(3) = iz-1
-      !Then fill in the rest:
-      kuvpts(4) = kuvpts(3)+1
-      kuvpts(5) = kuvpts(4)+1
-      kuvpts(6) = kuvpts(5)+1
-      kuvpts(2) = kuvpts(3)-1
-      kuvpts(1) = kuvpts(2)-1
-
-
-!---------
-!      !As an aside, use ijpts,kuvpts to update the particle numbers at
-!      each cell:
-!
-!      !call inputs  are the nodes associated with the volume that each
-!      part. lies in
-!      call particle_stats(ijpts(1,3),ijpts(2,3),kuvpts(3))
-!   
-!---------
-
-
-      !Fill in the weights:
-      !First for x and y since they are periodic:
-      wt(1:3,1:6) = 0.0
-      dxvec(1) = dx
-      dxvec(2) = dy
-      do iz = 1,2
-      do j = 1,6
-         xjval = dxvec(iz)*(ijpts(iz,j)-1)
-         pj = 1.0
-         do k = 1,6
-            xkval = dxvec(iz)*(ijpts(iz,k)-1)
-            if (j .NE. k) then
-                  pj = pj*(part%xip(iz)-xkval)/(xjval-xkval)
-            end if
-         end do
-         wt(iz,j) = pj
-       end do
-       end do
-
-       !Now compute weights in z-dir
-       !There are 2 sections: weights at (u,v) nodes (kuvpts) 
-       !And weights computed at w nodes (kwpts)
-
-       !Compute weights at kuvpts
-       !Must check to see how close we are to a top/bot boundary
-       if (kuvpts(3) == 1) then
-          first = 3
-          last = 4
-          !Set these equal to 1 so uext(-1) won't be accessed
-          !Note: the value doesn't matter since weight will be 0
-          kuvpts(1) = 1
-          kuvpts(2) = 1
-       elseif (kuvpts(3) == 0) then
-          first = 4
-          last = 5
-          kuvpts(1) = 1
-          kuvpts(2) = 1
-          kuvpts(3) = 1
-       elseif (kuvpts(3) .LT. 0) then 
-          first = 0
-          last = 0
-       elseif (kuvpts(3) == 2) then 
-          first = 2
-          last = 5
-       !Between top cell center and the domain boundary
-       elseif (kuvpts(3) == nnz) then
-          first = 2
-          last = 3
-          kuvpts(4) = nnz
-          kuvpts(5) = nnz
-          kuvpts(6) = nnz
-       elseif (kuvpts(3) .GT. nnz) then
-          first = 0
-          last = 0
-       !Between 2nd to last and last cell center at top
-       elseif (kuvpts(3) == nnz-1) then
-          first = 3
-          last = 4
-          kuvpts(5) = nnz
-          kuvpts(6) = nnz
-       elseif (kuvpts(3) == nnz-2) then
-          first = 2
-          last = 5
-       else
-          first = 1
-          last = 6
-       end if
-
-       !Recall that wt has been set to zero, so
-       !weights will be zero if (first,last) isn't (1,6)
-       do j = first,last
-           xjval = zz(kuvpts(j))
-           pj = 1.0
-           do k = first,last
-              xkval = zz(kuvpts(k))
-              if (j .NE. k) then
-                 pj = pj*(part%xip(3)-xkval)/(xjval-xkval)
-              end if
-           end do
-           wt(3,j) = pj
-      end do
-
-      !Now we have the weights - compute the velocity at xp:
-        part%uf(1:3) = 0.0
-        part%Tf = 0.0
-        part%qinf = 0.0
-        do k = 1,6
-        do j = 1,6
-        do i = 1,6
-            ix = ijpts(1,i)
-            iy = ijpts(2,j)
-            izuv = kuvpts(k)
-            part%uf(1) = part%uf(1)+uext(izuv,iy,ix)*wt(1,i)*
-     +                   wt(2,j)*wt(3,k) 
-            part%uf(2) = part%uf(2)+vext(izuv,iy,ix)*wt(1,i)*
-     +                   wt(2,j)*wt(3,k) 
-            part%uf(3) = part%uf(3)+wext(izuv,iy,ix)*wt(1,i)*
-     +                   wt(2,j)*wt(3,k) 
-            part%Tf = part%Tf+Text(izuv,iy,ix)*wt(1,i)*
-     +                   wt(2,j)*wt(3,k) 
-            part%qinf = part%qinf+T2ext(izuv,iy,ix)*wt(1,i)*
-     +                   wt(2,j)*wt(3,k) 
-         end do
-         end do 
-         end do
-
-
-      end subroutine uf_interp 
-
-      subroutine particle_stats(ipt,jpt,kpt)
-      use particles
-      use pars
-      use con_data
-      implicit none
-      integer :: i,ipt,jpt,kpt
-      real :: partmass,Volp,rhop
-
-      !Takes in ipt,jpt,kpt as the node to the "bottom left" of the
-      !particle
-      !(i.e. the node in the negative direction for x,y,z)
-      !and computes quantities needed to get particle statistics
-
-      !partcount_t(kpt,jpt,ipt) = partcount_t(kpt,jpt,ipt) + 1.0
-
-      Volp = pi2*2.0/3.0*part%radius**3
-      rhop = (part%m_s+Volp*rhow)/Volp
-      partmass = rhop*Volp
-      partcount_t(kpt,jpt,ipt) = partcount_t(kpt,jpt,ipt) + partmass  !PARTICLE AVERAGES ARE MASS-WEIGHTED
-
-!      !Get su mean, mean-squared of particle velocities at each level
-!      upwp_t(kpt,jpt,ipt) = upwp_t(kpt,jpt,ipt) +
-!     +                      partmass*part%vp(1)*part%vp(3)
-!      do i = 1,3
-!      vpsum_t(kpt,jpt,ipt,i) = vpsum_t(kpt,jpt,ipt,i) +
-!     +                         part%vp(i)*partmass
-!      vpsqrsum_t(kpt,jpt,ipt,i)=vpsqrsum_t(kpt,jpt,ipt,i)+
-!     +                          partmass*part%vp(i)**2
-!      end do
-!
-!      Tpsum_t(kpt,jpt,ipt) = Tpsum_t(kpt,jpt,ipt) +
-!     +                       partmass*part%Tp
-!      Tpsqrsum_t(kpt,jpt,ipt) = Tpsqrsum_t(kpt,jpt,ipt) +
-!     +                          partmass*part%Tp**2
-!      wpTpsum_t(kpt,jpt,ipt) = wpTpsum_t(kpt,jpt,ipt) +
-!     +                          partmass*part%Tp*part%vp(3)
-!      Tfsum_t(kpt,jpt,ipt) = Tfsum_t(kpt,jpt,ipt) +
-!     +                       partmass*part%Tf
-!      qfsum_t(kpt,jpt,ipt) = qfsum_t(kpt,jpt,ipt) +
-!     +                       partmass*part%qinf
-!      radsum_t(kpt,jpt,ipt) = radsum_t(kpt,jpt,ipt) +
-!     +                       partmass*part%radius
-!      rad2sum_t(kpt,jpt,ipt) = rad2sum_t(kpt,jpt,ipt) +
-!     +                       partmass*part%radius**2
-!      qstarsum_t(kpt,jpt,ipt) = qstarsum_t(kpt,jpt,ipt) +
-!     +                       partmass*part%qstar
-
-      end subroutine particle_stats
-
-      subroutine particle_stats_U(ipt,jpt,kpt)
-      use particles
-      use pars
-      use con_data
-      implicit none
-      integer :: i,ipt,jpt,kpt
-      real :: partmass,Volp,rhop
-
-      !Takes in ipt,jpt,kpt as the node to the "bottom left" of the
-      !particle
-      !(i.e. the node in the negative direction for x,y,z)
-      !and computes quantities needed to get particle statistics
-
-      !partcount_t(kpt,jpt,ipt) = partcount_t(kpt,jpt,ipt) + 1.0
-
-      Volp = pi2*2.0/3.0*part%radius**3
-      rhop = (part%m_s+Volp*rhow)/Volp
-      partmass = rhop*Volp
-      partcountU_t(kpt,jpt,ipt) = partcountU_t(kpt,jpt,ipt) + partmass  !PARTICLE AVERAGES ARE MASS-WEIGHTED
-
-      !Get su mean, mean-squared of particle velocities at each level
-      upwp_t(kpt,jpt,ipt) = upwp_t(kpt,jpt,ipt) +
-     +                      partmass*part%vp(1)*part%vp(3)
-      do i = 1,3
-      vpsum_t(kpt,jpt,ipt,i) = vpsum_t(kpt,jpt,ipt,i) +
-     +                         part%vp(i)*partmass
-      vpsqrsum_t(kpt,jpt,ipt,i)=vpsqrsum_t(kpt,jpt,ipt,i)+
-     +                          partmass*part%vp(i)**2
-      end do
-
-      Tpsum_t(kpt,jpt,ipt) = Tpsum_t(kpt,jpt,ipt) +
-     +                       partmass*part%Tp
-      Tpsqrsum_t(kpt,jpt,ipt) = Tpsqrsum_t(kpt,jpt,ipt) +
-     +                          partmass*part%Tp**2
-      wpTpsum_t(kpt,jpt,ipt) = wpTpsum_t(kpt,jpt,ipt) +
-     +                          partmass*part%Tp*part%vp(3)
-      Tfsum_t(kpt,jpt,ipt) = Tfsum_t(kpt,jpt,ipt) +
-     +                       partmass*part%Tf
-      qfsum_t(kpt,jpt,ipt) = qfsum_t(kpt,jpt,ipt) +
-     +                       partmass*part%qinf
-      radsum_t(kpt,jpt,ipt) = radsum_t(kpt,jpt,ipt) +
-     +                       partmass*part%radius
-      rad2sum_t(kpt,jpt,ipt) = rad2sum_t(kpt,jpt,ipt) +
-     +                       partmass*part%radius**2
-      qstarsum_t(kpt,jpt,ipt) = qstarsum_t(kpt,jpt,ipt) +
-     +                       partmass*part%qstar
-
-      end subroutine particle_stats_U
-
-      subroutine update_particle_flux
-
-      use particles
-      use pars
-      use con_data
-      use con_stats
-      use tank_pars
-      implicit none
-      include 'mpif.h'
-      real :: rhop,taup_i,partmass
-      real :: xv,yv,zv
-      integer :: i,j,k,ncount,ipt,jpt,kpt,kwpt,kUpt
-      integer :: ix,iy,iz
-      real :: lref,Cvv,Cva,Cpv
-      real :: zu_1,zu_nnz,ztocheck,ztocheck_i
-      integer :: iz_beg,iz_end
-
-
-      part => first_particle
-      do while (associated(part))
-
-      ipt = floor(part%xp(1)/dx) + 1
-      jpt = floor(part%xp(2)/dy) + 1
-
-
-      if (i_zeta .eq. 1) then  !Check fluxes according to zeta levels
-          ztocheck = part%xip(3)
-          ztocheck_i = part%xip_i(3)
-      elseif (i_zeta .eq. 0) then
-          ztocheck = part%xp(3)  !Check fluxes according to z-levels
-          ztocheck_i = part%xp_i(3)
-      end if
-
-      kUpt = floor((ztocheck-minwavez)/dz_U) + 1
-
-      !Also compute particle flux statistics, which is slightly more
-      !complicated:
-      zu_1 = minwavez + 0.5*dz_U
-      zu_nnz = zl - 0.5*dz_U
-
-      if (ztocheck .gt. minwavez) then
-      !Compute particle flux statistics based on the move:
-      if (ztocheck_i .lt. ztocheck) then  !Particle moved up
-
-        iz_beg = floor((ztocheck_i-zu_1)/dz_U) + 2
-        iz_end = floor((ztocheck-zu_1)/dz_U) + 1
-
-        !Calling this before particle_bcs_nonperiodic, so must account for when particles are below
-        if (iz_beg .lt. 1) then
-           iz_beg = 1
-        end if
-
-         do iz=iz_beg,iz_end
-
-            if (iz .lt. 1) then
-            write(*,*) 'up iz<1:',iz,ztocheck,ztocheck_i
-            end if
-            if (iz .gt. nnz) then
-            write(*,*) 'up iz>nnz:',iz,ztocheck,ztocheck_i
-            end if
-
-            partflux_t(iz,jpt,ipt) = partflux_t(iz,jpt,ipt) + 1.0
-            partfluxup_t(iz,jpt,ipt) = partfluxup_t(iz,jpt,ipt) + 1.0
-         end do
-
-      elseif (ztocheck_i .gt. ztocheck) then  !Particle moved down
-
-        iz_beg = floor((ztocheck-zu_1)/dz_U) + 2
-        iz_end = floor((ztocheck_i-zu_1)/dz_U) + 1
-
-        if (iz_beg .lt. 1) then
-           iz_beg = 1
-        end if
-
-         do iz=iz_beg,iz_end
-
-            if (iz .lt. 1) then
-            write(*,*) 'dn iz<1:',iz,ztocheck,ztocheck_i
-            end if
-            if (iz .gt. nnz) then
-            write(*,*) 'dn iz>nnz:',iz,ztocheck,ztocheck_i
-            end if
-
-            partflux_t(iz,jpt,ipt) = partflux_t(iz,jpt,ipt) - 1.0
-            partfluxdn_t(iz,jpt,ipt) = partfluxdn_t(iz,jpt,ipt) - 1.0
-         end do
-
-      end if
-      end if
-
-
-      part => part%next
-      end do
-
-
-      end subroutine update_particle_flux
-
-      subroutine update_particle_stats
-
-      use particles
-      use pars
-      use con_data
-      use con_stats
-      use tank_pars
-      implicit none
-      include 'mpif.h'
-      real :: rhop,taup_i,partmass
-      real :: xv,yv,zv
-      integer :: i,j,k,ncount,ipt,jpt,kpt,kwpt,kUpt
-      integer :: ix,iy,iz
-      real :: lref,Cvv,Cva,Cpv
-      real :: zu_1,zu_nnz,ztocheck
-      integer :: iz_beg,iz_end
-
-
-      part => first_particle
-      do while (associated(part))
-
-      ipt = floor(part%xp(1)/dx) + 1
-      jpt = floor(part%xp(2)/dy) + 1
-      kUpt = floor((part%xip(3)-0.0)/dz_U) + 1
-
-      if (i_zeta .eq. 1) then  !particle stats according to zeta levels
-          ztocheck = part%xip(3)
-      elseif (i_zeta .eq. 0) then
-          ztocheck = part%xp(3)  !particle stats according to z-levels
-      end if
-
-      kUpt = floor((ztocheck-minwavez)/dz_U) + 1
-
-      call particle_stats_U(ipt,jpt,kUpt)
-
-
-
-      !First, as done in uf_interp, must find the "leftmost" node
-      !of volume where particle belongs:
-      !(must repeat since now particle locations have been updated)
-
-      do iz=0,nnz+1
-         if (zz(iz) .GT. part%xip(3)) go to 1299
-      end do
-1299  continue
-      kpt = iz-1
-
-      !Do again for w:
-      do iz = 0,nnz+1
-         if (z(iz) .GT. part%xip(3)) go to 1120
-      end do
-1120  continue
-
-      kwpt = iz
-
-
-!---------
-      !As an aside, use ipt,jpt,kwpt to update the particle numbers at
-      !each cell:
-
-      !call inputs are the nodes associated with the volume that each
-      !part. lies in
-      call particle_stats(ipt,jpt,kwpt)
-
-
-!---------
-
-      part => part%next
-      end do
-
-
-      end subroutine update_particle_stats
 
       function ran2(idum)
       integer :: idum,IM1,IM2,IMM1,IA1,IA2,IQ1,IQ2,IR1,IR2,NTAB,NDIV
@@ -18841,286 +16345,18 @@ c
       return
       end function ran2
 
-      subroutine read_input_file
-      use pars
-      use particles
-      use con_data
-      use tank_pars
-      implicit none
-
-      character(48) :: label
-      character(180) :: params_dir
-      namelist /step_params/ iti,itmax,imean,ihst,itape,
-     +                       itstr,it_his,it_viz,iviz,itn
-
-      namelist /grid_params/ ncpu_s, Uo, Ttop, Tbot,
-     +         qstar, tsfcc, ugcont, vgcont,
-     +         zi, zl, xl, yl, zw1,
-     +         zo, ustar_tank,waveslope,c_speed,wave_l,minwavez,
-     +         dt_new,cfl
-
-      namelist /path_names/ path_seed,path_part,path_res,
-     +         path_ran
-
-      namelist /flags/ iradup,ifilt,itcut,isubs,ibrcl,iocean,idebug,
-     +         ivis0,new_vis,ismlt,ifree,iupwnd,iskew,ibuoy,ifix_dt,
-     +         i_move_step,method,iz_space,iflat,i3d_surf,i_pm,lpbc,
-     +         k_stab,no_pgrad,ispray,iDNS,ifields,ievap,isfc,i_tank,
-     +         i_zeta,inetcdf
-
-      namelist /constants/ grav, t00, fcor, tnumpart,
-     +         radius_init,part_grav,Vpmax,nuf,Pra,Sc,
-     +         vp_init,Tp_init,rhoa,rhow,
-     +         Cpp,Cpa,Mw,Ru,Ms,Sal,Gam,Ion,Os
-
-
-      !params.in contains namelists to read
-      !open(12, file="./params.in", status="old")
-      call get_command_argument(1,params_dir)
-      open(12,file=params_dir,status="old")
-
-      read(12,nml=step_params)
-      if (myid==0) print step_params
-
-      read(12,nml=flags)
-      if (myid==0) print flags
-
-      read(12,nml=grid_params)
-      if (myid==0) print grid_params
-
-      read(12,nml=path_names)
-      if (myid==0) print path_names
-
-      read(12,nml=constants)
-      if (myid==0) print constants
-      CpaCpp = Cpa/Cpp
-
-      dz_U = (zl-minwavez)/maxnz
-
-
-      end subroutine read_input_file
-
-c       =========== WRITE HISTOGRAMS ==========
-        subroutine write_histograms(istep)
-        use pars
-        use fields
-        use con_data
-        use con_stats
-        use particles
-        implicit none
-
-        include 'mpif.h'
-        integer :: i,j
-        integer :: ierr
-
-
-        integer,intent(in) :: istep
-        integer :: iblnk
-        integer :: num_entries
-
-        real :: sumbuf_restime(histbins+2,histbins+2)
-        real :: sumbuf_locations(histbins+2,histbins+2)
-        real :: sumbuf_height(histbins+2,histbins+2)
-        real :: sumbuf_momentum(histbins+2,histbins+2)
-
-
-        character*80 path_restime,path_locations,path_height
-        character*80 path_momentum
-
-        character cgrid*10, num*3,iblks*16, fformat*10
-
-
-
-c -------------- Collect all histogram from different processors
-        num_entries = (histbins+2)*(histbins+2)
-        call mpi_reduce(hist_restime,sumbuf_restime,num_entries,
-     +   mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-        call mpi_reduce(hist_locations,sumbuf_locations,num_entries,
-     +   mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-        call mpi_reduce(hist_height,sumbuf_height,num_entries,
-     +   mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-        call mpi_reduce(hist_momentum,sumbuf_momentum,num_entries,
-     +   mpi_real8,mpi_sum,0,mpi_comm_world,ierr)
-
-
-        if (myid==0) then
-
-c
-c --------------- build character strings for file name
-c
-        cgrid = '.le.'
-        write(num,'(i3.3)') itn
-
-        iblnk = index(path_histog,' ')
-        call blnk(iblks)
-        write(iblks(1:7),'(i7.7)') istep
-        iblks(8:8) = '_'
-        write(iblks(9:15),'(i7.7)') (istep+itape)
-        call blnk(path_sav_hist)
-
-
-        path_restime = path_histog(1:iblnk-1)//'/restime'//
-     +          cgrid(1:4)//case(1:3)//'.'//iblks(1:15)//'.txt'
-        path_locations = path_histog(1:iblnk-1)//'/locations'//
-     +          cgrid(1:4)//case(1:3)//'.'//iblks(1:15)//'.txt'
-        path_height = path_histog(1:iblnk-1)//'/height'//
-     +          cgrid(1:4)//case(1:3)//'.'//iblks(1:15)//'.txt'
-        path_momentum = path_histog(1:iblnk-1)//'/momentum'//
-     +          cgrid(1:4)//case(1:3)//'.'//iblks(1:15)//'.txt'
-
-c ---------------- save data 
-
-        write(num,'(i3.3)') histbins+2
-        fformat = '('//num//'e15.6)'
-        open (unit=900,file=path_restime,
-     +  form='formatted',access='sequential')
-
-        write(900,fformat),bins(:,1)
-        write(900,fformat),bins(:,2)
-
-        do i =1,histbins+2
-           write(900,fformat),sumbuf_restime(1:histbins+2,i)
-        end do
-
-
-        close(900)
-
-        open (unit=901,file=path_locations,
-     +  form='formatted',access='sequential')
-
-        write(901,fformat),bins(:,2)
-        write(901,fformat),bins(:,3)
-
-        do i =1,histbins+2
-           write(901,fformat),sumbuf_locations(1:histbins+2,i)
-        end do
-
-
-        close(901)
-
-
-        open (unit=902,file=path_height,
-     +  form='formatted',access='sequential')
-
-        write(902,fformat),bins(:,2)
-        write(902,fformat),bins(:,4)
-
-        do i =1,histbins+2
-           write(902,fformat),sumbuf_height(1:histbins+2,i)
-        end do
-
-
-        close(902)
-
-
-        open (unit=903,file=path_momentum,
-     +  form='formatted',access='sequential')
-
-        write(903,fformat),bins(:,2)
-        write(903,fformat),bins(:,5)
-
-        do i =1,histbins+2
-           write(903,fformat),sumbuf_momentum(1:histbins+2,i)
-        end do
-
-
-        close(903)
-        end if
-
-        end subroutine write_histograms
-        subroutine set_binsdata(binsdata,sizea,numvars,lmin,lmax,idx)
-        use pars
-        use fields
-        use con_data
-        use con_stats
-        use particles
-        implicit none
-
-        integer :: i,nbin,ibin,nbinnew,idx
-        real :: dhl
-
-        integer,intent(in) :: sizea,numvars
-        real,intent(inout) :: binsdata(sizea,numvars)
-
-        real :: lmin,lmax
-
-        nbin = histbins !From Module Particle 
-
-
-c       Calculate size of interval
-        dhl = (lmax-lmin)/nbin
-
-c       ===== update x-axis for each bin ===== 
-        binsdata(1,idx) = lmin-dhl
-        do i = 1,histbins+1
-          binsdata(i+1,idx)= dhl+binsdata(i,idx)
-        end do
-
-        end subroutine set_binsdata
-        subroutine add_histogram(binsdata1,binsdata2,
-     +            histdata,sizea,val1,val2)
-
-        use pars
-        use fields
-        use con_data
-        use con_stats
-        use particles
-        implicit none
-
-        integer :: i,nbin,nbinnew
-        integer :: ibin(2)
-        real :: dht,dhl
-        real,intent(in) :: val1,val2
-c       real,intent(inout),dimension(:,:) :: histdata
-
-        integer,intent(in) :: sizea
-        real,intent(in) :: binsdata1(sizea),binsdata2(sizea)
-        real,intent(inout) :: histdata(sizea,sizea)
-
-        real :: tmin,lmin,tmax,lmax
-
-        tmin = binsdata1(2)
-        lmin = binsdata2(2)
-        nbin = histbins !From Module Particle 
-        tmax = binsdata1(nbin+1)
-        lmax = binsdata2(nbin+1)
-
-c       Calculate size of interval
-        dht = (tmax-tmin)/nbin
-        dhl = (lmax-lmin)/nbin
-c       Find corresponding bin of input data
-
-
-        if (val1 .gt. tmax) then
-                ibin(1) = nbin + 2
-        else if (val1 .lt. tmin) then
-                ibin(1) = 1
-        else
-                ibin(1) = (floor((val1-tmin)/dht)+1)+1
-        end if
-
-        if (val2 .gt. lmax) then
-                ibin(2) = nbin + 2
-        else if (val2 .lt. lmin) then
-                ibin(2) = 1
-        else
-                ibin(2) = (floor((val2-lmin)/dhl)+1)+1
-        end if
-
-
-c       Add the current event to the histogram
-        histdata(ibin(1),ibin(2)) = histdata(ibin(1),ibin(2)) + 1.0
-
-        end subroutine add_histogram
-        subroutine clean_histograms
-        use pars
-        use fields
-        use con_data
-        use con_stats
-        use particles
-        hist_restime = 0
-        hist_locations = 0
-        hist_height = 0
-        hist_momentum = 0
-
-        end subroutine clean_histograms
+      subroutine linInterp(xa,ya,n,x,y)
+      integer n
+      real x, xper, y, xa(n), ya(n)
+      integer i1, i2
+      xper = x
+      if (xper .ge. xa(n)) then
+        xper = xper-xa(n)
+      else if (xper < 0) then
+        xper = xa(n)+xper
+      endif
+      i1 = floor((n-1)*xper/xa(n)) + 1
+      i2 = i1+1
+      y = ya(i1) + (xper-xa(i1))*(ya(i2)-ya(i1))/(xa(i2)-xa(i1))
+      return
+      end

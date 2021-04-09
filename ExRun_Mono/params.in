@@ -1,0 +1,121 @@
+!Time step information
+&step_params
+iti=0        !Time step to begin
+itmax=200000 !Max number of time steps
+imean=100    !Number of time steps between writing mean profiles to output log file
+ihst=10      !Number of time steps between writing profiles to history file
+itape=5000   !Number of time steps before opening new history file and writing full 3D volumes
+itstr=1
+it_his=1     !Time step to begin recording history files
+it_viz=1     !Time step to begin recording viz files
+iviz=5000    !Time steps between writing to viz file
+itn = 0      !Index for "u.le.wav001" files
+/
+
+!Flags for various features
+&flags
+iradup=-1, ifilt=0, itcut=1, isubs=0, ibrcl=0, iocean=0, idebug=1, ivis0=0, new_vis=-1
+ismlt=0    !Which MO function to use?
+ifree = 2  !Use average or point-by-point velocity, temp for MO?
+iupwnd=1   !0 use skew-symmetric for derivatives in scalar equations; 1 use hybrid upwind scheme in scalar equations
+iskew=1    !0 use skew symmetric form for advection in (u,v,w) eqns; 1 use hybrid upwind scheme for advection in momentum
+ibuoy=1    !0 no buoyancy term; 1 turn buoyancy on
+ifix_dt=1
+i_move_step=0
+method=3
+iz_space=5  !Grid stretching options
+iflat=2     !0 flat lower (no press. iteration); 1 curvy lower boundary; 2 time-dependent lower boundary shape
+i3d_surf=3  !Type of lower boundary (moving, time varying, tank)
+i_pm = 2
+lpbc = 2
+k_stab = -1
+no_pgrad = 1
+ispray = 1
+iDNS = 0
+isfc = 0, 1  !0 sets surface flux (qstar), 1 sets surface condition (tsfcc)
+ifields = 0  ! if set to 1, reads the initial condition from path_ran below; otherwise calls subroutine random
+ievap = 0
+i_tank = 10
+i_zeta = 1   !Do particle statistics correspond to zeta (i_zeta=1) or z (i_zeta=0) levels?
+inetcdf=1    !If set to 1, writes history file to netcdf format. Otherwise writes original binary
+i_pinertia=1 !Set to 1 to enable inertial mass for particles
+/
+
+!Grid and domain parameters
+&grid_params
+ncpu_s = 8
+
+Uo = 0.0  !Sets the magnitude of the top and bottom plate velocities (Couette flow -- assumes equal and opposite)
+
+!LES uses Tbot(2) as a permanent reference to lower RH, so make sure this matches tsfcc
+Ttop(1) = 295.0, 100.0  !Currently this should be (temperature, relative humidity)
+Tbot(1) = 300.0, 100.0  !Currently this should be (temperature, relative humidity)
+
+!Use for LES:
+qstar = 0.0, 0.0      !Surface fluxes of (temperature, humidity) (used for LES and DNS)
+tsfcc = 300.0, 100.0  !Surface conditions of (temp, humidity) (used for LES) -- make sure tsfcc is gt than t00 for both isfc=0 or 1
+
+ugcont = 1.0   !The initial u-velocity in the field
+vgcont = 0.0   !The initial v-velocity
+
+ustar_tank = 0.883   !m/s -- sets the pressure gradient
+waveslope = 0.2      !dimensionless
+c_speed = 0.883      !m/s
+wave_l = 0.5         !m
+minwavez = 0.0       !m -- the minimum height to look for particles in z-domain
+
+zi = 0.5  !This has to do with grid stretching; make equal to zl for Couette/channel
+zl = 0.5
+xl = 3.0
+yl = 2.5
+
+zw1 = 0.00325  !The first grid point
+zo = 2.15e-4   !Aerodynamic roughness
+
+dt_new = 0.000226501
+cfl = 0.5
+
+/
+
+!Set the paths for code I/O. Must be on the scratch directory, not AFS!
+&path_names
+path_seed="/scratch365/user/NTLP-wavy/case1/"
+path_part="/scratch365/user/NTLP-wavy/case1/part.le.wav040"
+path_res="/scratch365/user/NTLP-wavy/case1/u.le.wav040"
+path_ran="/scratch365/user/NTLP-wavy/case1/u.le.wav000"
+/
+
+
+!Material and particle properties and other constants
+&constants
+grav = 9.81
+t00 = 273.0 !Reference temp for buoyancy
+fcor = 0.0  !Coriolis parameter
+
+!Air properties:
+nuf = 1.57e-5  !Kinematic viscosity of air
+Pra = 0.71     !Prandtl number of air
+Sc = 0.61      !Schmidt number for humidity diffusivity
+Cpa = 1006.0   !J/kg-K
+
+!Particle properties:
+tnumpart = 5e5
+rhow=1000.0  !Density of water droplets
+rhoa = 1.0   !Density of air
+part_grav = 0.0, 0.0, 9.81
+Vpmax = 5.0
+Cpp = 4179.0   !J/kg-K
+Mw = 0.018015  !kg/mol
+Ru = 8.3144
+Ms = 0.05844   !kg/mol: molecular weight of salt
+Sal = 34.0     !Salinity
+Gam = 7.28e-2
+Ion = 2.0
+Os = 1.093
+
+!Particle initial conditions:
+radius_init = 5.0e-6
+Tp_init = 300.0
+vp_init = 0.0, 0.0, 0.0
+
+/
