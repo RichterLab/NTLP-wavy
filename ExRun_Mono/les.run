@@ -1,7 +1,7 @@
 #!/bin/bash
 #$ -M Email
 #$ -m abe	   # Send mail when job aborts, begins or ends
-#$ -pe mpi-16 64
+#$ -pe mpi-16 128
 #$ -q *@@richter
 #$ -N case1_NTLP-wavy
 #$ -j y
@@ -36,4 +36,4 @@ echo $imachine > ./mach.file
 echo $datadir >> ./mach.file
 
 runout=$case.out.$time # output file
-mpirun -n 64 $homedir/../build/lesmpi.a $homedir/params.in > $datadir/$runout
+mpirun -n 128 $homedir/../build/lesmpi.a $homedir/params.in > $datadir/$runout
