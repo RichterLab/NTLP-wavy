@@ -1,0 +1,7 @@
+#!/bin/bash
+
+case=$(basename $(pwd))
+parent=$(basename $(dirname $(pwd)))
+datadir=/scratch365/$USER/$parent/$case
+
+tail -f  $datadir/$case.out.*

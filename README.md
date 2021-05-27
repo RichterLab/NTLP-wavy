@@ -35,4 +35,8 @@ qsub les.run
 ---
 
 The les.run script will create a matching set of directories in your scratch365
-drive.  This is where you will find the simulation output files.  
+drive.  This is where you will find the simulation output files. 
+
+Also note the helper scripts ```report``` and ```clean```. The report script 
+simply tails the run log to the screen.  The clean script deletes files created
+during the run, including all files in the run's scratch directory.

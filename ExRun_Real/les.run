@@ -3,7 +3,7 @@
 #$ -m abe	   # Send mail when job aborts, begins or ends
 #$ -pe mpi-16 64
 #$ -q *@@richter
-#$ -N ExRun_Real_NTLP-wavy
+#$ -N case1_NTLP-wavy
 #$ -j y
 
 # If no input, run from current directory

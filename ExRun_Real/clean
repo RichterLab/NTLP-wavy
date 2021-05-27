@@ -1,0 +1,9 @@
+#!/bin/bash
+shopt -s extglob
+
+case=$(basename $(pwd))
+parent=$(basename $(dirname $(pwd)))
+datadir=/scratch365/$USER/$parent/$case
+
+rm -v $datadir/*
+rm -v $case* fort.1 mach.file
