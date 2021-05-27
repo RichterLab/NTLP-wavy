@@ -94,7 +94,9 @@ path = dirs[-1] + "/" + newRun
 
 # Copy over run files
 os.system("mkdir " + newRun + " &> /dev/null")  # silences output
-os.system("cp " + oldRun+"/*.dat " + newRun+"/") # copy over dat files
+os.system("cp " + oldRun+"/*.dat " + newRun+"/") # all dat files
+os.system("cp " + oldRun+"/clean " + newRun+"/clean")
+os.system("cp " + oldRun+"/report " + newRun+"/report")
 
 # Change path in params.in
 pStr = setPath(pStr, "path_seed", path)
