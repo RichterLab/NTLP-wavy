@@ -1,7 +1,30 @@
 #!/bin/bash
+# Usage: ./report [ARGS]
+# Tails the redirected run output file in the corresponding
+# scratch directory, and reports sets of volumes created.
+#
+# Arguments:
+#   -h, --help          Display this file header
+#   (all other args)    Passed to tail (-f, -n 5, etc.)
 
 case=$(basename $(pwd))
 parent=$(basename $(dirname $(pwd)))
-datadir=/scratch365/$USER/$parent/$case
+# comment
+if [[ $1 == "-h" || $1 == "--help" ]]; then
+  head -n 8 $0 | tail -n 7
+  exit 1
+fi
 
-tail -f  $datadir/$case.out.*
+if [[ $(hostname) == cheyenne* ]]; then
+  datadir=/glade/scratch/$USER/$parent/$case
+else
+  datadir=/scratch365/$USER/$parent/$case
+fi
+
+if [[ $1 == "-v" ]]; then
+  vim $datadir/$case.out.*
+else
+  steps=$(ls $datadir/u.*.con 2> /dev/null | wc -l)
+  echo $steps sets of volumes created
+  tail $@ $datadir/$case.out.*
+fi

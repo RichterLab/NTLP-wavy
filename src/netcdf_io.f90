@@ -108,7 +108,7 @@ subroutine netcdf_init
 
       call netcdf_check( nf90_def_var(ncid,"uwsb",NF90_REAL, dimids_zw,uwsb_vid) )
       call netcdf_check( nf90_put_att(ncid,uwsb_vid,"title","Subgrid <u'w'>") )
-     
+
       call netcdf_check( nf90_def_var(ncid,"vwle",NF90_REAL, dimids_zw,vwle_vid) )
       call netcdf_check( nf90_put_att(ncid,vwle_vid,"title","Resolved <v'w'>") )
 
@@ -203,17 +203,17 @@ subroutine write_his_netcdf
       tmp(0) = 0
       tmp(1:nnz) = uwle(1:nnz)
       call netcdf_check( nf90_put_var(ncid,uwle_vid,real(tmp),start=(/1, his_counter/)) )
-      call netcdf_check( nf90_put_var(ncid,uwsb_vid,real(uwsb(0:nnz)),start=(/1, his_counter/)) )
+      call netcdf_check( nf90_put_var(ncid,uwsb_vid,real(uwsb(nnz)),start=(/1, his_counter/)) )
 
       tmp(0) = 0
       tmp(1:nnz) = vwle(1:nnz)
       call netcdf_check( nf90_put_var(ncid,vwle_vid,real(tmp),start=(/1, his_counter/)) )
-      call netcdf_check( nf90_put_var(ncid,vwsb_vid,real(vwsb(0:nnz)),start=(/1, his_counter/)) )
+      call netcdf_check( nf90_put_var(ncid,vwsb_vid,real(vwsb(nnz)),start=(/1, his_counter/)) )
 
       tmp_s(0,1:nscl) = 0
       tmp_s(1:nnz,1:nscl) = wtle(1:nnz,1:nscl)
       call netcdf_check( nf90_put_var(ncid,wtle_vid,real(tmp_s),start=(/1,1, his_counter/)) )
-      call netcdf_check( nf90_put_var(ncid,wtsb_vid,real(wtsb(0:nnz,1:nscl)),start=(/1,1, his_counter/)) )
+      call netcdf_check( nf90_put_var(ncid,wtsb_vid,real(wtsb(nnz,1:nscl)),start=(/1,1, his_counter/)) )
 
       call netcdf_check( nf90_put_var(ncid,zconc_vid,real(zconc(1:nnz)),start=(/1, his_counter/)) )
       call netcdf_check( nf90_put_var(ncid,vp1mean_vid,real(vp1mean(1:nnz)),start=(/1, his_counter/)) )
@@ -254,7 +254,7 @@ subroutine netcdf_restart
       use pars
       implicit none
 
-       
+
       path_netcdf_his = trim(adjustl(path_his))//"history.nc"
       call netcdf_check( nf90_open(path_netcdf_his,NF90_WRITE,ncid) )
 

@@ -1,10 +1,11 @@
 #!/bin/bash
 #$ -M Email
-#$ -m abe	   # Send mail when job aborts, begins or ends
-#$ -pe mpi-16 128
+#$ -m abe # Send mail when job aborts, begins or ends
 #$ -q *@@richter
 #$ -N case1_NTLP-wavy
 #$ -j y
+#$ -pe mpi-16 128 
+
 
 # If no input, run from current directory
 homedir=~/$@;
@@ -22,6 +23,7 @@ fi
 # Locate and create data directory if needed
 case=$(basename $(pwd))
 time=0000000
+runout=$case.out.$time # output file 
 parent=$(basename $(dirname $(pwd)))
 datadir=/scratch365/$USER/$parent/$case
 mkdir -p $datadir
@@ -35,5 +37,4 @@ imachine=0
 echo $imachine > ./mach.file
 echo $datadir >> ./mach.file
 
-runout=$case.out.$time # output file
 mpirun -n 128 $homedir/../build/lesmpi.a $homedir/params.in > $datadir/$runout

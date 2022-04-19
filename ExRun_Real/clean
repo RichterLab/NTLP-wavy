@@ -2,7 +2,12 @@
 
 case=$(basename $(pwd))
 parent=$(basename $(dirname $(pwd)))
-datadir=/scratch365/$USER/$parent/$case
+
+if [[ $(hostname) == cheyenne* ]]; then
+  datadir=/glade/scratch/$USER/$parent/$case
+else
+  datadir=/scratch365/$USER/$parent/$case
+fi
 
 rm -v $datadir/*
-rm -v $case* fort.1 mach.file
+rm -v ${case}_* fort.1 mach.file

@@ -1,10 +1,14 @@
 #!/bin/bash
-#$ -M Email
-#$ -m abe # Send mail when job aborts, begins or ends
-#$ -q *@@richter
-#$ -N case1_NTLP-wavy
-#$ -j y
-#$ -pe mpi-16 128 
+#PBS -M Email
+# Send mail when job aborts, begins or ends
+#PBS -m abe
+#PBS -q regular
+#PBS -N NTLP-wavy_real4 
+#PBS -j oe
+#PBS -A UNDM0005
+# Select = number of cores
+#PBS -l select=8:ncpus=36:mpiprocs=36
+#PBS -l walltime=4:00:00
 
 
 # If no input, run from current directory
@@ -25,11 +29,11 @@ case=$(basename $(pwd))
 time=0000000
 runout=$case.out.$time # output file 
 parent=$(basename $(dirname $(pwd)))
-datadir=/scratch365/$USER/$parent/$case
+datadir=/glade/scratch/$USER/$parent/$case
 mkdir -p $datadir
 cd $homedir
 
-module load mvapich2
+module load impi
 module load intel
 module load netcdf
 
@@ -37,4 +41,4 @@ imachine=0
 echo $imachine > ./mach.file
 echo $datadir >> ./mach.file
 
-mpirun -n 128 $homedir/../build/lesmpi.a $homedir/params.in > $datadir/$runout
+mpirun -n 288 $homedir/../build/lesmpi.a $homedir/params.in > $datadir/$runout
