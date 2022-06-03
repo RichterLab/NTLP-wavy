@@ -3,15 +3,15 @@
 !! Time step information                        !!
 !!==============================================!!
 &step_params
-iti    = 0       !Time step to begin (iti > 0 causes restart file to be used)
+iti    = 0       !Time step to begin (iti > 0 causes restart files to be used)
 itmax  = 1000000 !Max number of time steps
 imean  = 100     !Number of time steps between writing mean profiles to output log file
-ihst   = 100     !Number of time steps between writing profiles to history file
-itape  = 100     !Number of time steps before opening new history file and writing full 3D volumes
+ihst   = 10      !Number of time steps between writing profiles to history file
+itape  = 1000    !Number of time steps before opening new history file and writing full 3D volumes
 itstr  = 1       !Time step to begin recording 3D volumes
 it_his = 1       !Time step to begin recording history files
 it_viz = 1       !Time step to begin recording viz files
-iviz   = 100     !Time steps between writing to viz file
+iviz   = 1000    !Time steps between writing to viz file
 itn    = 1       !Start index for u.le.wav files (0 -> u.le.wav000 is often used for path_ran)
 /
 
@@ -70,7 +70,7 @@ pinertia  = 1     ! Set to 1 to enable inertial mass for particles
 verb      = 0     ! Set greater than 0 for additional output
 
 !-- computational variables --!
-ncpu_s    = 36
+ncpu_s    = 8
 minwavez  = 0.0         ! m -- the minimum height to look for particles in z-domain
 zi        = 0.5         ! This has to do with grid stretching; make equal to zl for Couette/channel
 zw1       = 0.00325     ! The first grid point

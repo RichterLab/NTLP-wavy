@@ -3,16 +3,16 @@
 !! Time step information                        !!
 !!==============================================!!
 &step_params
-iti=0         !Time step to begin
-itmax=1000000 !Max number of time steps
-imean=100     !Number of time steps between writing mean profiles to output log file
-ihst=10       !Number of time steps between writing profiles to history file
-itape=1000    !Number of time steps before opening new history file and writing full 3D volumes
-itstr=1
-it_his=1      !Time step to begin recording history files
-it_viz=1      !Time step to begin recording viz files
-iviz=1000     !Time steps between writing to viz file
-itn = 0       !Index for "u.le.wav001" files
+iti    = 0       !Time step to begin (iti > 0 causes restart files to be used)
+itmax  = 1000000 !Max number of time steps
+imean  = 100     !Number of time steps between writing mean profiles to output log file
+ihst   = 10      !Number of time steps between writing profiles to history file
+itape  = 1000    !Number of time steps before opening new history file and writing full 3D volumes
+itstr  = 1       !Time step to begin recording 3D volumes
+it_his = 1       !Time step to begin recording history files
+it_viz = 1       !Time step to begin recording viz files
+iviz   = 1000    !Time steps between writing to viz file
+itn    = 1       !Start index for u.le.wav files (0 -> u.le.wav000 is often used for path_ran)
 /
 
 
@@ -21,7 +21,7 @@ itn = 0       !Index for "u.le.wav001" files
 !! Output paths must be in scratch directory)                  !!
 !!=============================================================!!
 &io_params
-inetcdf   = 1    ! write history file to netcdf format rather than original binary
+inetcdf   = 0    ! write history file to netcdf format rather than original binary
 ifields   = 0    ! read the initial condition from path_ran
 path_seed="/scratch365/user/NTLP-wavy/case1/"
 path_part="/scratch365/user/NTLP-wavy/case1/part.le.wav040"
@@ -59,7 +59,7 @@ i_pm      = 2
 lpbc      = 2
 k_stab    = -1
 no_pgrad  = 1
-ispray    = 1
+ispray    = 1     ! use particles
 iDNS      = 0
 isfc      = 0, 1  ! 0 sets surface flux (qstar), 1 sets surface condition (tsfcc)
 ievap     = 0
@@ -69,7 +69,7 @@ pinertia  = 1     ! Set to 1 to enable inertial mass for particles
 verb      = 0     ! Set greater than 0 for additional output
 
 !-- computational variables --!
-ncpu_s    = 36
+ncpu_s    = 8
 minwavez  = 0.0         ! m -- the minimum height to look for particles in z-domain
 zi        = 0.5         ! This has to do with grid stretching; make equal to zl for Couette/channel
 zw1       = 0.00325     ! The first grid point
