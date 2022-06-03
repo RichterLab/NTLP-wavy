@@ -15,14 +15,14 @@ cd ../
 ---
 
 You can use the copyRun script to create new runs based on the files and
-parameters of an old run.  The script automatically updates locations in
+parameters of an old run.  The script automatically updates path_seed in
 params.in and the job name in les.run.  The command syntax is ``` ./copyRun
-oldRun newRun -param1 value -param2 value -paramN value ```.  For example, to 
-create a new run based on ExRun_Mono, but change the number of particles and 
-the number of time steps:  
+oldRun newRun -param1 value -param2 value -paramN value ```.  For example, 
+to create a new run called RUN1 based on ExRun_Real, but change the number 
+of particles and the number of time steps:  
 
 ---
-./copyRun ExRun_Mono run1 -tnumpart 9e6 -itmax 100000  
+./copyRun ExRun_Real RUN1 -tnumpart 9e6 -itmax 100000  
 
 ---
 
