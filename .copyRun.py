@@ -1,25 +1,29 @@
 #!/usr/bin/env python3
 import os
 import sys
-
+import socket
+from os.path import exists
+CRC = 0
+UCAR = 1
 # Copies all files from first arg to second arg (dir created if needed)
 # Changes param directories to /scratch365/$USER/[this dir, 2 deep]/*
 # Also sets les.run process name to the current directory, 2 deep
 
 
-def setPath(text, var, path):
+def setPath(text, var, path, hpc):
     home = os.path.expanduser("~")
     user = home.split('/')[-1]
-    dir = "/scratch365/" + user + "/"
-    i = text.find("\n&path_names")
-    i = text.find(var, i)
+    if   hpc == CRC:  dir = "/scratch365/"   + user + "/"
+    elif hpc == UCAR: dir = "/glade/scratch/" + user + "/"
+    i = text.find("\n&io_params")
+    i = text.find("\n" + var, i) + 1
     i = text.find('\"', i) + 1
     j = text.find('\"', i)
     j = text[i:j].rfind('/') + i
     return text[:i] + dir+path + text[j:]
 
 def setProcName(text, name):
-    var = "#$ -N "
+    var = "-N "
     i = text.find(var)+len(var)
     j = text.find('\n', i)
     return text[0:i] + name + text[j:]
@@ -58,16 +62,24 @@ def printHelp():
         + "  parameters matching entries in params.in are set to the given values")
 
 
+if socket.gethostname().find("cheyenne") > -1:
+    hpcCode = UCAR
+else:
+    hpcCode = CRC
 
 # Parse CLI #
 args = {} # dictionary to hold cli args
+updatePaths = False
 for i in range(0, len(sys.argv)):
     a = sys.argv[i]
     if a == '-help' or a =='-h':
         printHelp()
         quit()
+    if a == "-restartPaths":
+        updatePaths = True
     elif a[0] == '-':
         args[a[1:]] = sys.argv[i+1]
+
 
 if len(sys.argv) < 3:
     print("Error:\n  Not enough arguments")
@@ -79,9 +91,12 @@ oldRun = sys.argv[1]
 newRun = sys.argv[2]
 with open(oldRun+"/params.in") as file:
     pStr = file.read()
-with open(oldRun+"/les.run") as file:
-    lStr = file.read()
-
+if hpcCode == UCAR and exists(oldRun+"/.les_cheyenne.run"):
+    file = open(oldRun+"/.les_cheyenne.run")
+else:
+    file = open(oldRun+"/les.run")
+lStr = file.read()
+file.close()
 
 # Set parameters given
 for a in args:
@@ -99,10 +114,11 @@ os.system("cp " + oldRun+"/clean " + newRun+"/clean")
 os.system("cp " + oldRun+"/report " + newRun+"/report")
 
 # Change path in params.in
-pStr = setPath(pStr, "path_seed", path)
-pStr = setPath(pStr, "path_part", path)
-pStr = setPath(pStr, "path_res",  path)
-pStr = setPath(pStr, "path_ran",  path)
+pStr = setPath(pStr, "path_seed", path, hpcCode)
+if updatePaths:
+    pStr = setPath(pStr, "path_part", path, hpcCode)
+    pStr = setPath(pStr, "path_res",  path, hpcCode)
+    pStr = setPath(pStr, "path_ran",  path, hpcCode)
 
 # Change process name in les.run
 lStr = setProcName(lStr, procName)

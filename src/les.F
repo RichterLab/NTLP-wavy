@@ -116,10 +116,10 @@ c
 c
         i_root = 0
         l_root = .false.
-        if(myid .eq. i_root) l_root = .true.
+        if(myid == i_root) l_root = .true.
 c
         l_debug = .false.
-        if(idebug .eq. 1) l_debug = .true.
+        if(idebug == 1) l_debug = .true.
 c
         ts_mpi = mpi_wtime()
 
@@ -139,22 +139,20 @@ c
 c
 c -------------- scratch run
 c
-        if (iti.eq.0)  then
+        ! if this is a fresh run
+        if (iti==0)  then
           igrdr = 2
           case = case_inp
           call init
           call setup(it)
           call mesh
-          if (inetcdf .eq. 1) then
+          if (inetcdf == 1) then
             call netcdf_init
           end if
 
           if (ispray==1) then
-            if (myid==0.and.verb>0) write(*,*) 'Calling particle_setup'
             call particle_setup
-            if (myid==0.and.verb>0) write(*,*) 'Calling particle_init'
             call particle_init
-            !call read_part_res
           end if
 
 c
@@ -162,20 +160,22 @@ c ---------- choose routine for getting initial guess
 c
           if (myid==0.and.verb>0) write(*,*)
      +        'Choosing routine for getting initial guess'
-          if(iocean .eq. 1) then
+          if(iocean == 1) then
             call randoc
           else
-            if (ifields .eq. 1) then
+            if (ifields == 1) then
               call get_fields
             else
               call random
                !call random_f
                !call random_wt
             end if
-          endif
+          end if
           call dns_vis
           call get_max
-        else
+
+        ! if this is a restart run
+        else ! (iti\=0)
           igrdr = 3
           call restart
           call get_max
@@ -187,8 +187,7 @@ c
             call read_part_res
           end if
 
-
-        endif
+        end if
 
 
 
@@ -252,11 +251,11 @@ c           for gabls run
 c
 c     call forcing
 c
-        if(it .ge. new_vis .and. ivis0 .eq. 1) then
+        if(it >= new_vis .and. ivis0 == 1) then
           ivis = 1
         else
           ivis = 0
-        endif
+        end if
 c
 c ---------------- 3 stage runge-kutta time stepping
 c
@@ -268,11 +267,11 @@ c
           dtalp    = dtzeta + dtgama
           t_stage  = time + dt*etas(istage)
           t_stage2 = time + dt*etas(istage+1)
-          if(istage .le. 2) then
+          if(istage <= 2) then
             t_stage3 = time + dt*etas(istage+2)
           else
             t_stage3 = time + dt + dt1*etas(istage-1)
-          endif
+          end if
 c
 c ---------- compute derivatives of (u,v,w)
 c
@@ -281,60 +280,60 @@ c
 c
 c --------- check for moving grid
 c
-          if(imesh .eq. 1) then
+          if(imesh == 1) then
             call new_mesh(it,istage)
             call grid_speed(it,istage)
-          endif
+          end if
 
 c
 c --------- new eddy viscosity, and bcs
 c
           if (myid==0.and.verb>0) write(*,*) 'Handling lower bc'
-          if(iss .eq. 0 .and. ifree .eq. 0) then
+          if(iss == 0 .and. ifree == 0) then
             call lower(it)
-          elseif(ifree .eq. 1) then
+          else if(ifree == 1) then
             call lower_free(it)
-          elseif(ifree .eq. 2) then
+          else if(ifree == 2) then
             call lower_curvy(it,istage)
-          elseif(ifree .eq. 3) then
+          else if(ifree == 3) then
             call lower_curvy_dns(it,istage)
-          endif
+          end if
 c
           if (myid==0.and.verb>0) write(*,*) 'Handling upper bc'
-          if(ise .eq. numprocs-1) then
-            if (iDNS .eq. 1) then
+          if(ise == numprocs-1) then
+            if (iDNS == 1) then
               call upper_dns
             else
               call upper
-            endif
-          endif
+            end if
+          end if
           call bcast_pbc
           call bcast_surf
           call get_means(istage)
-          if(ivis .eq. 1) then
+          if(ivis == 1) then
             call iso(it)
             call surfvis(it)
-          endif
-          if(istage .eq. 1)then
+          end if
+          if(istage == 1)then
             call xy_stats
             call tke_budget
             call pbltop(itop)
-          endif
+          end if
 c
 c ------------ save velocity aand pressure fields
 c
-          if(msave .and. istage .eq. 1) then
+          if(msave .and. istage == 1) then
             if(myid==0.and.verb>0)write(*,*)'Saving fields and parts'
             call save_v(it)
             call save_p
             if (ispray==1) call save_particles
-          endif
-          if(msave_v .and. istage .eq. 1) then
+          end if
+          if(msave_v .and. istage == 1) then
             call save_bndy(it)
 !         call save_viz(it)
-          endif
+          end if
 
-          if (msave .and. istage .eq. 1) then
+          if (msave .and. istage == 1) then
             call write_histograms(it-itape+1)
             call clean_histograms
           end if
@@ -344,9 +343,9 @@ c --------- get rhs/J for all equations
 c
           call comp1(istage,it)
 c
-          if(istage .eq. 1) then
+          if(istage == 1) then
             if(msave .and. l_root) call save_c(it)
-          endif
+          end if
 c
 c --------- solve for pressure
 c
@@ -360,7 +359,7 @@ c
           if(micut) then
             call dealias
             call dealias_grid_speed
-          endif
+          end if
 c     call chk_div
 
 c
@@ -375,28 +374,28 @@ c
          !if (myid==5) write(*,*) 'time part: ',t_f-t_s
           end if
 
-          if(mnout .and. istage .eq. 1)  then
+          if(mnout .and. istage == 1)  then
             if(l_debug) call print(nprt,it,izs,ize)
             if(l_root) call print(6,it,1,nnz)
-          endif
+          end if
           if(l_root) then
-            if (inetcdf .eq. 1) then
-              if(mhis .and. istage .eq. 1) then
+            if (inetcdf == 1) then
+              if(mhis .and. istage == 1) then
                 call write_his_netcdf
                 if(mtape) call close_his_netcdf
-              endif
+              end if
             else
-              if(mhis .and. istage .eq. 1) then
+              if(mhis .and. istage == 1) then
                 call write_his(itop)
                 if(mtape) call close_his
-              endif
-            endif !(inetcdf .eq. 1)
-          endif !(l_root)
+              end if
+            end if !(inetcdf == 1)
+          end if !(l_root)
  8999   continue
         call get_max
         call get_dt(it)
 c
-        if (it.ge.itmax) go to 99000
+        if (it>=itmax) go to 99000
         go to 9000
 c
 99000   continue

@@ -174,12 +174,12 @@ c ----------------------------------------------------------------------
         real :: bins(histbins+2,numhistvars)  !residence time, wave-relative origin, wave-relative death, max height
 
 
-      !REMEMBER: IF ADDING ANYTHING, MUST UPDATE MPI DATATYPE!
+      !IF ADD//REMOVING ANYTHING, UPDATE MPI DATATYPE IN particleSubs.F->particle_setup
         type :: particle
           integer :: pidx,procidx
           real :: vp(3),xp(3),xip(3),uf(3),xrhs(3),vrhs(3),Tp,Tprhs_s,Tf
           real::Tprhs_L,radius,radrhs,qinf,qstar,m_s,xip_i(3),xp_0(3),t0
-          real :: zpmax,xp_i(3),u0
+          real :: zpmax,xp_i(3),v0,dh,dh2
           type(particle), pointer :: prev,next
         end type particle
 
@@ -214,7 +214,7 @@ c
      +      z_tank(:), u_tank(:), w_tank(:),
      +      z_tank_f(:), u_tank_f(:), w_tank_f(:),
      +      z_tank_i(:), u_tank_i(:), w_tank_i(:),
-     +      hdot_i(:), hx_i(:)
+     +      hdot_i(:), hx_i(:), hx2_i(:)
       end module tank_pars
 c ----------------------------------------------------------------------
       module fields

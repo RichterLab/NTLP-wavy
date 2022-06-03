@@ -278,17 +278,17 @@ c       Calculate size of interval
 c       Find corresponding bin of input data
 
 
-        if (val1 .gt. tmax) then
+        if (val1 > tmax) then
           ibin(1) = nbin + 2
-        else if (val1 .lt. tmin) then
+        else if (val1 < tmin) then
           ibin(1) = 1
         else
           ibin(1) = (floor((val1-tmin)/dht)+1)+1
         end if
 
-        if (val2 .gt. lmax) then
+        if (val2 > lmax) then
           ibin(2) = nbin + 2
-        else if (val2 .lt. lmin) then
+        else if (val2 < lmin) then
           ibin(2) = 1
         else
           ibin(2) = (floor((val2-lmin)/dhl)+1)+1
@@ -363,7 +363,7 @@ c       Add the current event to the histogram
         end do
 
       !Now everyone else write, ONLY if numpart > 0
-        if (numpart .GT. 0) then
+        if (numpart > 0) then
           call mpi_file_write_at(fh,offset,writebuf,numpart,
      +        particletype,istatus,ierr)
         end if
@@ -410,10 +410,10 @@ c       Add the current event to the histogram
 
         do i = 1,tnumpart
         !Now - does it lie within this proc's bounds?
-          if (readbuf(i)%xp(2) .GT. ymin .AND.
-     +        readbuf(i)%xp(2) .LT. ymax .AND.
-     +        readbuf(i)%xp(1) .GT. xmin .AND.
-     +        readbuf(i)%xp(1) .LT. xmax) then
+          if (readbuf(i)%xp(2) > ymin .AND.
+     +        readbuf(i)%xp(2) < ymax .AND.
+     +        readbuf(i)%xp(1) > xmin .AND.
+     +        readbuf(i)%xp(1) < xmax) then
             if (.NOT. associated(first_particle)) then
               allocate(first_particle)
               first_particle = readbuf(i)
@@ -442,7 +442,7 @@ c       Add the current event to the histogram
         myp = 0
         do while (associated(part))
           myp = myp+1
-          if (part%pidx .gt. pidxmax) pidxmax = part%pidx
+          if (part%pidx > pidxmax) pidxmax = part%pidx
           part => part%next
         end do
 
@@ -526,7 +526,7 @@ c                       reuse unit number
         else
           if(l_root) write(6,6005) path_ran
           stop
-        endif
+        end if
 
 c ---- open file
 
@@ -565,17 +565,17 @@ c              grid speed is in file but don't need it for this restart
               vf(i,j,k) = temp(5,i,j)
               wf(i,j,k) = temp(6,i,j)
               e(i,j,k)  = temp(nvar+3,i,j)
-            enddo
-          enddo
+            end do
+          end do
           do is = 1,nscl
             do j = iys,iye
               do i = 1,nnx
                 t(i,j,is,k) = temp(6+is,i,j)
-              enddo
-            enddo
-          enddo
+              end do
+            end do
+          end do
 
-        enddo
+        end do
 
 c ---- close file
 
@@ -586,7 +586,7 @@ c ---- close file
         do k=1,nnz
           ug(k) = ugcont
           vg(k) = vgcont
-        enddo
+        end do
 
         do iz=izs,ize
 
@@ -595,9 +595,9 @@ c ---------------- initial guess for pressure
           do iy=iys,iye
             do ix=1,nnx
               p(ix,iy,iz) = 0.0
-            enddo
-          enddo
-        enddo
+            end do
+          end do
+        end do
 
         return
 c ---------------------------- process errors
@@ -674,17 +674,17 @@ c ------------ read 3d fields
               wf(i,j,k)   = temp(6,i,j)
               e(i,j,k)    = temp(nvar+3,i,j)
               gm(i,j,k,5) = temp(nvar+4,i,j)
-            enddo
-          enddo
+            end do
+          end do
           do is = 1,nscl
             do j = iys,iye
               do i = 1,nnx
                 t(i,j,is,k) = temp(6+is,i,j)
-              enddo
-            enddo
-          enddo
+              end do
+            end do
+          end do
 
-        enddo
+        end do
 
 c ---- close file
 
@@ -724,9 +724,9 @@ c -------- hand coded changes to restart if needed
 
 c --------- flaw in t_zero ... fix in later runs
 
-        if(iti .lt. move_step) then
+        if(iti < move_step) then
           t_zero = time
-        endif
+        end if
 
         if(l_root) write(6,4012) time, t_zero, dt, dt1, dt_new
         if(l_root) write(6,4013) qstar(1) , nmatch, case, zo
@@ -831,74 +831,74 @@ c -------------- pick a y-z plane of data (can add more)
 
 c ------ find total number of z's turned on and open file once
 
-        if(ionce_z .eq. 0) then
+        if(ionce_z == 0) then
           npln_z = 0
           do k=1,nnz
-            if(iz_pick(k) .eq. k) then
+            if(iz_pick(k) == k) then
               npln_z = npln_z + 1
               iz_order(k) = npln_z
-            endif
-          enddo
+            end if
+          end do
           ionce_z = 1
           iviz_z =  -npln_z
-          if(npln_z .ne. 0) then
+          if(npln_z /= 0) then
             call mpi_file_open(mpi_comm_world, path_viz_xy,
      +          mpi_mode_create+mpi_mode_rdwr,
      +          mpi_info_null, nviz_z, ierr)
             disp = 0
             call mpi_file_set_view(nviz_z,disp,mpi_real4,mpi_real4,
      +          'native',mpi_info_null,ierr)
-          endif
-        endif
+          end if
+        end if
 
 c ------ find total number of y's turned on and open file once
 
-        if (ionce_y .eq. 0) then
+        if (ionce_y == 0) then
           npln_y = 0
           do j=1,nny
-            if(iy_pick(j) .eq. j) then
+            if(iy_pick(j) == j) then
               npln_y = npln_y + 1
               iy_order(j) = npln_y
-            endif
-          enddo
+            end if
+          end do
           ionce_y = 1
           iviz_y  = -npln_y
-          if(npln_y .ne. 0) then
+          if(npln_y /= 0) then
             call mpi_file_open(mpi_comm_world, path_viz_xz,
      +          mpi_mode_create+mpi_mode_rdwr,
      +          mpi_info_null, nviz_y, ierr)
             disp = 0
             call mpi_file_set_view(nviz_y,disp,mpi_real4,mpi_real4,
      +          'native',mpi_info_null,ierr)
-          endif
-        endif
+          end if
+        end if
 
 c ------ find total number of x's turned on and open file once
 
-        if(ionce_x .eq. 0) then
+        if(ionce_x == 0) then
           npln_x = 0
           do i=1,nnx
-            if(ix_pick(i) .eq. i) then
+            if(ix_pick(i) == i) then
               npln_x = npln_x + 1
               ix_order(i) = npln_x
-            endif
-          enddo
+            end if
+          end do
           ionce_x = 1
           iviz_x  = -npln_x
-          if(npln_x .ne. 0) then
+          if(npln_x /= 0) then
             call mpi_file_open(mpi_comm_world, path_viz_yz,
      +          mpi_mode_create+mpi_mode_rdwr,
      +          mpi_info_null, nviz_x, ierr)
             disp = 0
             call mpi_file_set_view(nviz_x,disp,mpi_real4,mpi_real4,
      +          'native',mpi_info_null,ierr)
-          endif
-        endif
+          end if
+        end if
 
-        if(istuff .eq. 0 .and. l_root) then
+        if(istuff == 0 .and. l_root) then
           open(nviz_s,file=path_stuf)
           istuff = 1
-        endif
+        end if
 
 c --------- write data, subtract t_ref to increase
 c           resolution on 32 bit machines
@@ -910,7 +910,7 @@ c ---------- xy planes of data
         nsize2  = int(nvar_o,k8)*nnx*(iys-1)
         n_write = nvar_o*nnx*(iye+1-iys)
         do k=izs,ize
-          if(iz_pick(k) .eq. k) then
+          if(iz_pick(k) == k) then
             km1 = k - 1
             do j=iys,iye
               do i=1,nnx
@@ -926,17 +926,17 @@ c ---------- get the pressure field assumes flux form for advection
 c ---------- get the flux velocity minus the grid speed
 
                 temp_z(6,i,j) = wf(i,j,k) - gm(i,j,k,5)
-              enddo
-            enddo
+              end do
+            end do
 #if defined(SWAP)
             call byteswap(temp_z)
 #endif
             offset = int((iviz_z + iz_order(k) - 1),k8)*nsize + nsize2
             call mpi_file_write_at(nviz_z,offset,temp_z,n_write,
      +          mpi_real4,istatus,ierr)
-            if (ierr .ne. 0) go to 9991
-          endif
-        enddo
+            if (ierr /= 0) go to 9991
+          end if
+        end do
 
 c ---------- xz planes of data
 
@@ -945,7 +945,7 @@ c ---------- xz planes of data
         nsize2 = int(nvar_o1,k8)*nnx*(izs-1)
         nwrite = (nvar_o1)*nnx*(ize+1-izs)
         do j=iys,iye
-          if(iy_pick(j) .eq. j) then
+          if(iy_pick(j) == j) then
             do k=izs,ize
               km1 = k - 1
               do i=1,nnx
@@ -966,17 +966,17 @@ c ---------- the shape of the gridlines
 
                 temp_y(7,i,k) =  0.5*(zgrid_w(i,j,km1,1) +
      +              zgrid_w(i,j,k,1))
-              enddo
-            enddo
+              end do
+            end do
 #if defined(SWAP)
             call byteswap(temp_y)
 #endif
             offset = int((iviz_y + iy_order(j) - 1),k8)*nsize + nsize2
             call mpi_file_write_at(nviz_y,offset,temp_y,nwrite,
      +          mpi_real4,istatus,ierr)
-            if (ierr .ne. 0) goto 9992
-          endif
-        enddo
+            if (ierr /= 0) goto 9992
+          end if
+        end do
 
 c ---------- yz planes that cut across all processors
 c            just have root node on that slab write data
@@ -987,7 +987,7 @@ c            just have root node on that slab write data
         nsize2  = int(nvar_o1,k8)*nny*(izs-1)
         n_send  = nvar_o1*(ize+1-izs)*(iye+1-iys)
         do i=1,nnx
-          if(ix_pick(i) .eq. i) then
+          if(ix_pick(i) == i) then
 
 c ----------- build send buffer
 
@@ -1011,9 +1011,9 @@ c ---------- shape of the gridlines
 
                 buf_send(7,j,k) = 0.5*(zgrid_w(i,j,km1,1) +
      +              zgrid_w(i,j,k,1))
-              enddo
-            enddo
-            if(myid .ne. iss) then
+              end do
+            end do
+            if(myid /= iss) then
               call mpi_send(buf_send(1,iys,izs),n_send,
      +            mpi_real8,iss,1,
      +            mpi_comm_world,ierr)
@@ -1022,23 +1022,23 @@ c ---------- shape of the gridlines
                 do j=iys,iye
                   do ii=1,nvar_o1
                     temp_x(ii,j,k) = buf_send(ii,j,k)
-                  enddo
-                enddo
-              enddo
+                  end do
+                end do
+              end do
               do l=iss+1,ise
                 call recv_yz_var(temp_x,nvar_o1,nny,
      +              iy_s(l),iy_e(l),izs,ize,l)
-              enddo
+              end do
 #if defined(SWAP)
               call byteswap(temp_x)
 #endif
               offset = int((iviz_x + ix_order(i) - 1),k8)*nsize + nsize2
               call mpi_file_write_at(nviz_x,offset,temp_x,n_write,
      +            mpi_real4,istatus,ierr)
-              if (ierr .ne. 0) goto 9993
-            endif
-          endif
-        enddo
+              if (ierr /= 0) goto 9993
+            end if
+          end if
+        end do
 
 c ------------- ascii file with facts in it that goes
 c               with visualization
@@ -1046,28 +1046,28 @@ c               with visualization
         if(l_root) then
           write(nviz_s,5000) time, amonin, zi, utau
  5000     format(4e20.8)
-        endif
+        end if
 
 c ---- last time step or hit mtape close the files
 
-        if (it .eq. itmax .or. mtape) then
-          if(npln_z .ne. 0) then
+        if (it == itmax .or. mtape) then
+          if(npln_z /= 0) then
             call mpi_file_close(nviz_z, ierr)
             ionce_z = 0
-          endif
-          if(npln_y .ne. 0) then
+          end if
+          if(npln_y /= 0) then
             call mpi_file_close(nviz_y, ierr)
             ionce_y = 0
-          endif
-          if(npln_x .ne. 0) then
+          end if
+          if(npln_x /= 0) then
             call mpi_file_close(nviz_x, ierr)
             ionce_x = 0
-          endif
+          end if
           if(l_root) then
             close(nviz_s)
             istuff = 0
-          endif
-        endif
+          end if
+        end if
 
         return
 c --------------------------  errors in writing viz file
@@ -1129,7 +1129,7 @@ c ------ open file once
 c     write(nprt,4341) nbndy, path_bndy
  4341   format(' 4341 nbndy = ',i5,' path_bndy = ',a80)
 
-        if(ionce_z .eq. 0) then
+        if(ionce_z == 0) then
           ionce_z = 1
           call mpi_file_open(mpi_comm_world, path_bndy,
      +        mpi_mode_create+mpi_mode_rdwr,
@@ -1137,7 +1137,7 @@ c     write(nprt,4341) nbndy, path_bndy
           disp = 0
           call mpi_file_set_view(nbndy,disp,mpi_real4,mpi_real4,
      +        'native',mpi_info_null,ierr)
-        endif
+        end if
 
 c ---------- xy plane of data
 
@@ -1146,7 +1146,7 @@ c ---------- xy plane of data
         nsize2  = int(nvar_o,k8)*nnx*(iys-1)
         n_write = nvar_o*nnx*(iye+1-iys)
 
-        if(iss .ne. 0) go to 999
+        if(iss /= 0) go to 999
 
         k = 0
 
@@ -1154,25 +1154,25 @@ c ---------- xy plane of data
           do i=1,nnx
             temp_z(1,i,j) = bndy_t(i,j,1)
             temp_z(2,i,j) = gm(i,j,k,5)
-          enddo
-        enddo
+          end do
+        end do
 #if defined(SWAP)
         call byteswap(temp_z)
 #endif
         offset = int((iviz_z - 1),k8)*nsize + nsize2
         call mpi_file_write_at(nbndy,offset,temp_z,n_write,
      +      mpi_real4,istatus,ierr)
-        if (ierr .ne. 0) go to 9991
+        if (ierr /= 0) go to 9991
 
   999   continue
 
 c ---- last time step or hit mtape close the files
 
-        if(it .eq. itmax .or. mtape) then
+        if(it == itmax .or. mtape) then
           call mpi_file_close(nbndy, ierr)
           ionce_z = 0
           iviz_z  = 0
-        endif
+        end if
 
         return
 c --------------------------  errors in writing bndy file
@@ -1231,15 +1231,15 @@ c ---- write data
               temp(6,i,j)      = wf(i,j,k)
               temp(nvar+3,i,j) = e(i,j,k)
               temp(nvar+4,i,j) = gm(i,j,k,5)
-            enddo
-          enddo
+            end do
+          end do
           do is = 1,nscl
             do j = iys,iye
               do i = 1,nnx
                 temp(6+is,i,j) = t(i,j,is,k)
-              enddo
-            enddo
-          enddo
+              end do
+            end do
+          end do
 #if defined(SWAP)
           call byteswap(temp)
 #endif
@@ -1249,7 +1249,7 @@ c ---- write data
      +        mpi_real8,status,ierr)
           if (ierr /= 0) goto 9991
 
-        enddo
+        end do
 
 c ---- close file
 
@@ -1263,9 +1263,9 @@ c ---- check file
             write(6,8000) nvel,myid
             call mpi_finalize(ierr)
             stop
-          endif
+          end if
           write(6,7000) it,path_sav_v
-        endif
+        end if
 
         deallocate(temp)
 
@@ -1310,7 +1310,7 @@ c ---- open file
           write(6,8001) path_sav_c
           call mpi_finalize(ierr)
           stop
-        endif
+        end if
 c -----------------------------  output ok message
         write(6,7001) path_sav_c
 
@@ -1365,15 +1365,15 @@ c ---- write data
           do j=iys,iye
             do i=1,nnx
               temp(i,j) = p(i,j,k)
-            enddo
-          enddo
+            end do
+          end do
 #if defined(SWAP)
           call byteswap(temp)
 #endif
           offset = int((k-1),k8)*nsize + nsize2
           call mpi_file_write_at(npre,offset,temp,n_write,
      +        mpi_real8,status,ierr)
-        enddo
+        end do
 
 c ---- close file
 
@@ -1387,9 +1387,9 @@ c ---- check file
             write(6,8000) path_sav_p
             call mpi_finalize(ierr)
             stop
-          endif
+          end if
           write(6,7000) path_sav_p
-        endif
+        end if
 
         return
 c -------------------- process write errors
@@ -1442,7 +1442,11 @@ c ----------- build file names for velocity, pressure, and constants
 c --------------- build character strings for file name
 
         cgrid = '.le.'
-        write(num,'(i3.3)') itn
+        if (itn > 999) then
+          num = "OVR"
+        else
+          write(num,'(i3.3)') itn
+        end if
         call blnk(path_sav_v)
         call blnk(path_sav_p)
         call blnk(path_sav_c)
@@ -1506,7 +1510,7 @@ c ----------------- save data in directory
           open(nhisp,err=4000,file=path_sav_hp,
      +        form='unformatted',access='direct',recl=isize*j_recl,
      +        status='unknown')
-        endif
+        end if
 
         return
 c ------------------- process errors
