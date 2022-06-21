@@ -187,6 +187,10 @@ c
             call read_part_res
           end if
 
+          if (inetcdf .eq. 1) then
+             call netcdf_res
+          endif
+
         end if
 
 

@@ -249,24 +249,73 @@ subroutine open_his_netcdf
       call netcdf_check( nf90_open(path_netcdf_his,NF90_WRITE,ncid) )
 
 end subroutine open_his_netcdf
-subroutine netcdf_restart
+subroutine netcdf_res
+!https://www.unidata.ucar.edu/software/netcdf/docs-fortran/f90-use-of-the-netcdf-library.html#f90-writing-data-in-an-existing-netcdf-dataset
       use netcdf
       use pars
       implicit none
 
+      integer :: dimids(1),dimids_zu(2),dimids_zw(2),dimids_zu_s(3),dimids_zw_s(3)
+      integer :: Ntime
 
-      path_netcdf_his = trim(adjustl(path_his))//"history.nc"
+      path_netcdf_his = trim(adjustl(path_seed))//"history.nc"
+
       call netcdf_check( nf90_open(path_netcdf_his,NF90_WRITE,ncid) )
 
-      !Could get the length of the time dimension to initialize his_counter
-      !call netcdf_check( nf90_inq_dimlen(ncid,
+      call netcdf_check (nf90_inq_dimid(ncid,'time',time_dimid) )
+      call netcdf_check (nf90_inq_dimid(ncid,'zu',zu_dimid) )
+      call netcdf_check (nf90_inq_dimid(ncid,'zw',zw_dimid) )
+      call netcdf_check (nf90_inq_dimid(ncid,'nscl',s_dimid) )
 
-      !... but realized that I would need to somehow populate all of the dimids
-      !and vids! Can I loop through all of the vars in the file? How to do
-      !this efficienetly?
+      dimids = (/ time_dimid /)
+      dimids_zu = (/ zu_dimid, time_dimid/)
+      dimids_zw = (/ zw_dimid, time_dimid/)
+      dimids_zu_s = (/ zu_dimid, s_dimid, time_dimid/)
+      dimids_zw_s = (/ zw_dimid, s_dimid, time_dimid/)
 
+      !Get the length of the unlimited time dimension
+      call netcdf_check( nf90_inquire_dimension(ncid=ncid,dimid=time_dimid,len=Ntime) )
+      his_counter = Ntime + 1
 
-end subroutine netcdf_restart
+      if (myid==0) write(*,*) 'Restart his_counter for netCDF = ',his_counter
 
+!!! Single quantities
+      call netcdf_check( nf90_inq_varid(ncid,"time",time_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"dt",dt_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"utau",utau_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"uwsfc",uwsfc_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"tnumpart",tnumpart_vid) )
+!!! Profiles
+      call netcdf_check( nf90_inq_varid(ncid,"zu",zu_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"zw",zw_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"uxym",uxym_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vxym",vxym_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"wxym",wxym_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"txym",txym_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"ups",ups_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vps",vps_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"wps",wps_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"tps",tps_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"uwle",uwle_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"uwsb",uwsb_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vwle",vwle_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vwsb",vwsb_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"wtle",wtle_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"wtsb",wtsb_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"zconc",zconc_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vp1mean",vp1mean_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vp2mean",vp2mean_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vp3mean",vp3mean_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vp1msqr",vp1msqr_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vp2msqr",vp2msqr_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vp3msqr",vp3msqr_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"Tpmean",Tpmean_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"Tpmsqr",Tpmsqr_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"Tfmean",Tfmean_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"qfmean",qfmean_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"radmean",radmean_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"rad2mean",rad2mean_vid) )
+
+end subroutine netcdf_res
 
 end module netcdf_io
