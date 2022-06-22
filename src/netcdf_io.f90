@@ -4,7 +4,7 @@ implicit none
 integer :: ncid
 integer :: time_dimid,zu_vid,zu_dimid,s_dimid
 integer :: time_vid,dt_vid
-integer :: utau_vid,uwsfc_vid
+integer :: utau_vid,uwsfc_vid,drg_x_vid,drg_y_vid
 integer :: tnumpart_vid
 integer :: zw_vid,zw_dimid
 integer :: uxym_vid,vxym_vid,wxym_vid,txym_vid
@@ -65,10 +65,16 @@ subroutine netcdf_init
       call netcdf_check( nf90_put_att(ncid,dt_vid,"title","Model time step") )
 
       call netcdf_check( nf90_def_var(ncid, "utau", NF90_REAL, dimids,utau_vid) )
-      call netcdf_check( nf90_put_att(ncid,utau_vid,"title","Friction velocity ustar") )
+      call netcdf_check( nf90_put_att(ncid,utau_vid,"title","Friction velocity ustar (no pressure)") )
 
       call netcdf_check( nf90_def_var(ncid, "uwsfc", NF90_REAL, dimids,uwsfc_vid) )
-      call netcdf_check( nf90_put_att(ncid,uwsfc_vid,"title","Lower surface stress") )
+      call netcdf_check( nf90_put_att(ncid,uwsfc_vid,"title","Lower surface friction stress (no pressure)") )
+
+      call netcdf_check( nf90_def_var(ncid, "drg_x", NF90_REAL, dimids,drg_x_vid) )
+      call netcdf_check( nf90_put_att(ncid,drg_x_vid,"title","Form stress in x due to pressure") )
+
+      call netcdf_check( nf90_def_var(ncid, "drg_y", NF90_REAL, dimids,drg_y_vid) )
+      call netcdf_check( nf90_put_att(ncid,drg_y_vid,"title","Form stress in y due to pressure") )
 
       call netcdf_check( nf90_def_var(ncid, "tnumpart", NF90_REAL, dimids,tnumpart_vid) )
       call netcdf_check( nf90_put_att(ncid,tnumpart_vid,"title","Total number of particles") )
@@ -182,6 +188,8 @@ subroutine write_his_netcdf
 
       call netcdf_check( nf90_put_var(ncid, utau_vid, real(utau),start=(/his_counter/)) )
       call netcdf_check( nf90_put_var(ncid, uwsfc_vid, real(uwsfc),start=(/his_counter/)) )
+      call netcdf_check( nf90_put_var(ncid, drg_x_vid, real(drg_x),start=(/his_counter/)) )
+      call netcdf_check( nf90_put_var(ncid, drg_y_vid, real(drg_y),start=(/his_counter/)) )
       call netcdf_check( nf90_put_var(ncid, tnumpart_vid, real(tnumpart),start=(/his_counter/)) )
 
       call netcdf_check( nf90_put_var(ncid, zu_vid, real(zz(1:nnz)),start=(/1, his_counter/)) )
