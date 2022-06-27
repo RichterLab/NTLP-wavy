@@ -292,8 +292,8 @@ subroutine netcdf_res
       call netcdf_check( nf90_inq_varid(ncid,"dt",dt_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"utau",utau_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"uwsfc",uwsfc_vid) )
-      call netcdf_check( nf90_inq_varid(ncid,"drg_x",uwsfc_vid) )
-      call netcdf_check( nf90_inq_varid(ncid,"drg_y",uwsfc_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"drg_x",drg_x_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"drg_y",drg_y_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"tnumpart",tnumpart_vid) )
 !!! Profiles
       call netcdf_check( nf90_inq_varid(ncid,"zu",zu_vid) )
