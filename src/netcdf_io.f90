@@ -4,7 +4,7 @@ implicit none
 integer :: ncid
 integer :: time_dimid,zu_vid,zu_dimid,s_dimid
 integer :: time_vid,dt_vid
-integer :: utau_vid,uwsfc_vid,drg_x_vid,drg_y_vid
+integer :: utau_vid,uwsfc_vid,vwsfc_vid,drg_x_vid,drg_y_vid
 integer :: tnumpart_vid
 integer :: zw_vid,zw_dimid
 integer :: uxym_vid,vxym_vid,wxym_vid,txym_vid
@@ -68,7 +68,10 @@ subroutine netcdf_init
       call netcdf_check( nf90_put_att(ncid,utau_vid,"title","Friction velocity ustar (no pressure)") )
 
       call netcdf_check( nf90_def_var(ncid, "uwsfc", NF90_REAL, dimids,uwsfc_vid) )
-      call netcdf_check( nf90_put_att(ncid,uwsfc_vid,"title","Lower surface friction stress (no pressure)") )
+      call netcdf_check( nf90_put_att(ncid,uwsfc_vid,"title","Lower surface friction stress in x-dir (no pressure)") )
+
+      call netcdf_check( nf90_def_var(ncid, "vwsfc", NF90_REAL, dimids,vwsfc_vid) )
+      call netcdf_check( nf90_put_att(ncid,vwsfc_vid,"title","Lower surface friction stress in y-dir (no pressure)") )
 
       call netcdf_check( nf90_def_var(ncid, "drg_x", NF90_REAL, dimids,drg_x_vid) )
       call netcdf_check( nf90_put_att(ncid,drg_x_vid,"title","Form stress in x due to pressure") )
@@ -188,6 +191,7 @@ subroutine write_his_netcdf
 
       call netcdf_check( nf90_put_var(ncid, utau_vid, real(utau),start=(/his_counter/)) )
       call netcdf_check( nf90_put_var(ncid, uwsfc_vid, real(uwsfc),start=(/his_counter/)) )
+      call netcdf_check( nf90_put_var(ncid, vwsfc_vid, real(vwsfc),start=(/his_counter/)) )
       call netcdf_check( nf90_put_var(ncid, drg_x_vid, real(drg_x),start=(/his_counter/)) )
       call netcdf_check( nf90_put_var(ncid, drg_y_vid, real(drg_y),start=(/his_counter/)) )
       call netcdf_check( nf90_put_var(ncid, tnumpart_vid, real(tnumpart),start=(/his_counter/)) )
@@ -292,6 +296,7 @@ subroutine netcdf_res
       call netcdf_check( nf90_inq_varid(ncid,"dt",dt_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"utau",utau_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"uwsfc",uwsfc_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"vwsfc",vwsfc_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"drg_x",drg_x_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"drg_y",drg_y_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"tnumpart",tnumpart_vid) )
