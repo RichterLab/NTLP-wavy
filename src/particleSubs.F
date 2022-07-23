@@ -75,12 +75,23 @@
         real :: ddx, pi
         integer :: ix
         integer :: num_reals
+        character*4 :: myid_char
+        character*80 :: traj_file
 
       !First set up the neighbors for the interpolation stage:
         call assign_nbrs
 
       !Also assign the x,y,z max and mins to track particles leaving
         call set_bounds
+
+      !Set up the path for the trajectory files
+      if (itrajout) then
+      write(myid_char,'(i4.4)') myid
+      path_traj = 
+     + trim(adjustl(path_seed))//"particle_traj/"//myid_char//".dat"
+      ntraj = 128
+      open(ntraj,file=path_traj,form='formatted',status='replace')
+      end if
 
         num_reintro = 0
         tot_reintro = 0
@@ -2186,3 +2197,30 @@
 
 
               end subroutine update_particle_stats
+
+      subroutine particle_write_traj(it)
+      use con_data
+      use pars
+      use particles
+      implicit none
+
+      integer :: it
+
+
+      part => first_particle
+      do while (associated(part))
+
+      if (mod(part%pidx,10) .eq. 0) then
+          write(ntraj,'(2i,8e15.6)') part%pidx,part%procidx,
+     +    time,part%xp(1),part%xp(2),part%xp(3),part%vp(1),part%vp(2),
+     +    part%vp(3),part%radius
+      end if
+
+      part => part%next
+      end do
+
+      if (it .ge. itmax) then
+         close(ntraj)
+      end if
+
+      end subroutine particle_write_traj

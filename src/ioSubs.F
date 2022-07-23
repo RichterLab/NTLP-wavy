@@ -12,7 +12,8 @@
         namelist /step_params/ iti,itmax,imean,ihst,itape,
      +      itstr,it_his,it_viz,iviz,itn
 
-        namelist /io_params/ inetcdf,ifields,path_seed,path_part,
+        namelist /io_params/ inetcdf,ifields,itrajout,
+     +      path_seed,path_part,
      +      path_res,path_ran
 
         namelist /computational_params/ iradup,ifilt,itcut,isubs,ibrcl,

@@ -21,6 +21,7 @@ itn    = 1       !Start index for u.le.wav files (0 -> u.le.wav000 is often used
 !! Output paths must be in scratch directory)                  !!
 !!=============================================================!!
 &io_params
+itrajout  = 1    ! write particle trajectories to a folder "particle_traj" in path_seed
 inetcdf   = 0    ! write history file to netcdf format rather than original binary
 ifields   = 0    ! read the initial condition from path_ran
 path_seed="/scratch365/user/NTLP-wavy/case1/"

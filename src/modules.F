@@ -12,7 +12,7 @@ c ----------------------------------------------------------------------
      +      i3d_surf,i_pm,lpbc,k_stab,
      +      no_pgrad,ispray,iDNS,
      +      ifields,ievap,i_tank,i_zeta,
-     +      inetcdf,pinertia,verb
+     +      inetcdf,itrajout,pinertia,verb
 
 c
 c -------- j_recl = record length in "bytes" for history file
@@ -53,7 +53,7 @@ c ----------------------------------------------------------------------
         character case*3
 c ----------------------------------------------------------------------
         integer  ::   nvel, npre, nhis1, nprt,
-     +      nhisp, nvelc,
+     +      nhisp, nvelc, ntraj,
      +      nviz_z, nviz_y,
      +      nviz_x, nviz_s, ngrd, nbndy,
      +      kfile, jfile, ibcl, ibcu,
@@ -109,7 +109,7 @@ c ----------------------------------------------------------------------
      +      path_sav_v, path_sav_c, path_part,
      +      path_sav_p, path_sav_h, path_sav_part,
      +      path_sav_hp, path_sav_g, path_bndy,path_ran,
-     +      path_histog, path_sav_hist
+     +      path_histog, path_sav_hist,path_traj
         character case_inp*3
         character*80 path_viz_xy, path_viz_xz, path_viz_yz, path_stuf,
      +      path_seed

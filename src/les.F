@@ -398,6 +398,10 @@ c
  8999   continue
         call get_max
         call get_dt(it)
+
+        if (mhis .and. itrajout) then
+           call particle_write_traj(it)
+        end if
 c
         if (it>=itmax) go to 99000
         go to 9000
