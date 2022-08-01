@@ -379,7 +379,7 @@
         real :: Rep,diff(3),diffnorm,corrfac,myRep_avg,xtmp(3),vtmp(3)
         real :: Nup,Tptmp,taup_i,rhop,Volp,radiustmp,Shp
         real :: TfC,einf,TpC,Lv,Eff_C,Eff_S,estar
-        real :: yp1,ypn,hpart,xpart(nnx),yspln(nnx),ddx
+        real :: yp1,ypn,hpart,xpart(nnx),yspln(nnx),ddx,mod_magnus
 
         real :: t_s,t_f,t_s1,t_f1
 
@@ -472,7 +472,8 @@
 
           !Mass Transfer calculations
           TfC = part%Tf-273.15
-          einf = 610.94*EXP(17.6257*TfC/(TfC+243.04))
+          !einf = 610.94*EXP(17.6257*TfC/(TfC+243.04))
+          einf = mod_magnus(part%Tf)
           TpC = part%Tp-273.15
           Lv =(25.0 - 0.02274*26.0)*10.0**5
 

@@ -136,6 +136,8 @@ c
         call gridd
         call setcon
         call set_paths
+
+        call change_RH_bcs_to_q
 c
 c -------------- scratch run
 c
@@ -165,6 +167,8 @@ c
           else
             if (ifields == 1) then
               call get_fields
+          t(:,:,1,:) = 300.0
+          t(:,:,2,:) = 0.23e-01
             else
               call random
                !call random_f
@@ -178,6 +182,7 @@ c
         else ! (iti\=0)
           igrdr = 3
           call restart
+
           call get_max
           call setup(it)
           call mesh

@@ -5578,7 +5578,7 @@ c           fix here if specified surface value
             call mo(ibuoy,isfc,ismlt,vk,batag,zody,z1b(i,j),
      +          wind(i,j), ustar(i,j), nscl,
      +          tlv1(1), tsurf(1), qflux(1),
-     +          zol, cd, ch, amol(i,j),RHbot)
+     +          zol, cd, ch, amol(i,j),RHB)
 
 c ------------ build the momentum fluxes
 
@@ -5606,7 +5606,7 @@ c ------------ build the momentum fluxes
       end
       subroutine mo(ibuoy,isfc,ismlt,vk,batag,zody,z1,
      +      wind,utau,nscl,t1xy,tsfcc,qstar,
-     +      zeta,cd,ch,amonin,RHbot)
+     +      zeta,cd,ch,amonin,RHB)
         use particles
 
 c ---------- routine to find surface fluxes and values
@@ -5623,9 +5623,8 @@ c    can add more scalars using definition below
 
         parameter (iter_mo = 30, zeta_min = -6.0, zeta_max = 3.0)
         parameter (wind_min = 0.00001)
-        real t1xy(nscl), tsfcc(nscl), qstar(nscl)
+        real t1xy(nscl), tsfcc(nscl), qstar(nscl), RHB
         integer isfc(nscl)
-        real botC,RHB,RHbot
 
         if(ismlt == 1) then
           vk74in = 0.74/vk
@@ -5701,14 +5700,12 @@ c --------- check if neutral surface layer
       !Do the lower BC for RH:
 
         if (isfc(2) == 0) then  !Set surface flux, solve for tsfcc
+
           thstar = -qstar(2)/utau
           tsfcc(2) = t1xy(2) - thstar*dnom
         else if (isfc(2) == 1) then !Set tsfcc, solve for qstar
-          botC=(tsfcc(1)-273.15)
-          RHB = RHbot/100.0
-          tsfcc(2) =  RHB*Mw/Ru/tsfcc(1)*610.94*
-     +        EXP(17.6257*botC/(botC+243.04))/rhoa
 
+          tsfcc(2) = RHB/100.0*Mw/Ru/tsfcc(1)*mod_magnus(tsfcc(1))/rhoa
           thstar = (t1xy(2) - tsfcc(2))/dnom
           qstar(2) = -utau*thstar
         end if
@@ -8546,8 +8543,6 @@ c ------- end of x-y loops
         use con_data
         use con_stats
 
-        real :: RHT,RHB,topC,botC
-
         pi   = 4.0*atan(1.0)
         pi2  = 2.0*pi
         bfac = 1.0
@@ -8583,13 +8578,6 @@ c ---------- if stretched grid specify location of first point
           fcor_h  = 0.0
 
 c ----------- wind tunnel simulation
-         !Convert RH at bottom (given by scalar (2)) to specific humidity:
-          RHbot = tsfcc(2)  !Store the RH for use later
-          botC=(tsfcc(1)-273.15)
-          RHB = tsfcc(2)/100.0
-
-          tsfcc(2) =  RHB*Mw/Ru/tsfcc(1)*610.94*
-     +        EXP(17.6257*botC/(botC+243.04))/rhoa
 
           wtsfc(1)=qstar(1)
           wtsfc(2)=qstar(2)
@@ -12149,8 +12137,8 @@ c ------- indices for indexing array stat(.,.)
 c         js = number of non-scalar stats
 c         ns = number of scalar stats
 
-        parameter(js = 37, ns = 6, nstat = js + ns*nscl)
-        real stat(1:nnz,nstat), buf(4)
+        parameter(js = 38, ns = 6, nstat = js + ns*nscl)
+        real stat(1:nnz,nstat), buf(4), RHtmp, mod_magnus
 
 c -------- stat(.,1) = u*u = ups
 c          stat(.,2) = v*v = vps
@@ -12189,6 +12177,7 @@ c          stat(.,34) = zconc_U
 c          stat(.,35) = pflux
 c          stat(.,36) = pfluxup
 c          stat(.,37) = pfluxdn
+c          stat(.,38) = mean RH
 c          stat(.,m1) = resolved scalar flux w_ft at zw = wtle
 c          stat(.,m2) = resolved scalar flux u_ft at zu = utle
 c          stat(.,m3) = resolved scalar flux v_ft at zu = vtle
@@ -12281,6 +12270,11 @@ c --------- get drag [p(z)*z_xi(1), p(z)*z_eta(1)]
               stat(k,35) = stat(k,35) + partflux(i,j,k)
               stat(k,36) = stat(k,36) + partfluxup(i,j,k)
               stat(k,37) = stat(k,37) + partfluxdn(i,j,k)
+
+              RHtmp = t(i,j,1,k)*t(i,j,2,k)*
+     +                Ru/Mw/mod_magnus(t(i,j,1,k))*rhoa*100.0
+
+              stat(k,38) = stat(k,38) + RHtmp
             end do
           end do
 
@@ -12397,6 +12391,7 @@ c ------ fill arrays for printout and constant file
           pflux(k)   = stat(k,35)
           pfluxup(k)   = stat(k,36)
           pfluxdn(k)   = stat(k,37)
+          RHxym(k)    = stat(k,38)*fnxy
 
 c ------------ get scalar resolved fluxes and variances
 
@@ -14077,6 +14072,44 @@ c ------ myid is in the bottom row, send to everyone else
         return
       end
 
+      subroutine change_RH_bcs_to_q
+      !This converts the RH provided in the params file to a value of q that code needs
+      use pars
+      use con_data
+      use particles
+      implicit none
+      real :: mod_magnus
+
+      !Assuming tsfcc(2),Ttop(2),Tbot(2) in params.in are giving RH:
+      if (iDNS .eq. 1) then
+
+         RHT = Ttop(2)
+         RHB = Tbot(2)
+
+         !Convert RH given in input file into specific humidity
+         Ttop(2) = RHT/100.0*Mw/Ru/Ttop(1)*mod_magnus(Ttop(1))/rhoa
+         Tbot(2) = RHB/100.0*Mw/Ru/Tbot(1)*mod_magnus(Tbot(1))/rhoa
+
+         if (myid==0) then
+           write(*,*) 'SURFACE HUMIDITY: %RH, q = ',RHB,Tbot(2)
+         end if
+
+      else !(doing LES)
+
+         RHB = tsfcc(2)
+
+         tsfcc(2) = RHB/100.0*Mw/Ru/tsfcc(1)*mod_magnus(tsfcc(1))/rhoa
+
+         if (myid==0) then
+           write(*,*) 'SURFACE HUMIDITY: %RH, q = ',RHB,tsfcc(2)
+         end if
+
+      end if
+
+
+
+      end subroutine change_RH_bcs_to_q      
+
       function ran2(idum)
         integer :: idum,IM1,IM2,IMM1,IA1,IA2,IQ1,IQ2,IR1,IR2,NTAB,NDIV
         real :: ran2,AM,EPS,RNMX
@@ -14148,3 +14181,15 @@ c ------ myid is in the bottom row, send to everyone else
         dy_dx = (ya(i2)-ya(i1))/(xa(i2)-xa(i1))
         return
       end
+
+      function mod_magnus(T)
+      implicit none
+
+      !Take in T in Kelvin and return saturation vapor pressure using function of Alduchov and Eskridge, 1996
+      real,intent(in) :: T
+      real :: mod_magnus
+
+      mod_magnus = 610.94 *exp((17.6257*(T-273.15))/(243.04+(T-273.15)))
+
+
+      end function mod_magnus

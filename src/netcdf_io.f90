@@ -7,7 +7,7 @@ integer :: time_vid,dt_vid
 integer :: utau_vid,uwsfc_vid,vwsfc_vid,drg_x_vid,drg_y_vid
 integer :: tnumpart_vid
 integer :: zw_vid,zw_dimid
-integer :: uxym_vid,vxym_vid,wxym_vid,txym_vid
+integer :: uxym_vid,vxym_vid,wxym_vid,txym_vid,RHxym_vid
 integer :: ups_vid,vps_vid,wps_vid,tps_vid
 integer :: wtle_vid,wtsb_vid
 integer :: uwle_vid,uwsb_vid
@@ -99,6 +99,9 @@ subroutine netcdf_init
 
       call netcdf_check( nf90_def_var(ncid,"txym",NF90_REAL, dimids_zu_s,txym_vid) )
       call netcdf_check( nf90_put_att(ncid,txym_vid,"title","Horiz. avg. scalars") )
+
+      call netcdf_check( nf90_def_var(ncid,"RHxym",NF90_REAL, dimids_zu,RHxym_vid) )
+      call netcdf_check( nf90_put_att(ncid,RHxym_vid,"title","Horiz. avg. relative humidity") )
 
       call netcdf_check( nf90_def_var(ncid,"ups",NF90_REAL, dimids_zu,ups_vid) )
       call netcdf_check( nf90_put_att(ncid,ups_vid,"title","Fluctuating velocity <u'^2>") )
@@ -203,6 +206,7 @@ subroutine write_his_netcdf
       call netcdf_check( nf90_put_var(ncid,vxym_vid,real(vxym(1:nnz)),start=(/1, his_counter/)) )
       call netcdf_check( nf90_put_var(ncid,wxym_vid,real(wxym(0:nnz)),start=(/1, his_counter/)) )
       call netcdf_check( nf90_put_var(ncid,txym_vid,real(txym(1:nnz,1:nscl)),start=(/1,1,his_counter/)) )
+      call netcdf_check( nf90_put_var(ncid,RHxym_vid,real(RHxym(1:nnz)),start=(/1, his_counter/)) )
 
       call netcdf_check( nf90_put_var(ncid,ups_vid,real(ups(1:nnz)),start=(/1, his_counter/)) )
       call netcdf_check( nf90_put_var(ncid,vps_vid,real(vps(1:nnz)),start=(/1, his_counter/)) )
@@ -307,6 +311,7 @@ subroutine netcdf_res
       call netcdf_check( nf90_inq_varid(ncid,"vxym",vxym_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"wxym",wxym_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"txym",txym_vid) )
+      call netcdf_check( nf90_inq_varid(ncid,"RHxym",RHxym_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"ups",ups_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"vps",vps_vid) )
       call netcdf_check( nf90_inq_varid(ncid,"wps",wps_vid) )

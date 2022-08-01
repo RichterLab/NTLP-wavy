@@ -34,6 +34,7 @@ c
         real :: Uo,Ttop(nscl),Tbot(nscl),qstar(nscl),tsfcc(nscl),RHbot
         real :: ugcont,vgcont,fcor,t00,grav,ustar_tank,waveslope
         real :: zi, zl, xl, yl, zw1, zo, dt_new
+        real :: RHT, RHB
         integer :: isfc(nscl)
 
 c
@@ -368,7 +369,7 @@ c ----------------------------------------------------------------------
      +        Tpmean(maxnz),Tpmsqr(maxnz),wpTpm(maxnz),
      +        Tfmean(maxnz),qfmean(maxnz),radmean(maxnz),
      +        rad2mean(maxnz),qstarmean(maxnz),pflux(maxnz),
-     +        pfluxup(maxnz),pfluxdn(maxnz)
+     +        pfluxup(maxnz),pfluxdn(maxnz),RHxym(maxnz)
           real ::  xkn(maxnx),ykn(maxny),
      +        xk(maxnx),yk(maxny),
      +        xkk(maxnx),ykk(maxny),
@@ -404,7 +405,7 @@ c ----------------------------------------------------------------------
      +      Tpmean(:),Tpmsqr(:),wpTpm(:),
      +      Tfmean(:),qfmean(:),radmean(:),
      +      rad2mean(:),qstarmean(:),pflux(:),
-     +      pfluxup(:),pfluxdn(:)
+     +      pfluxup(:),pfluxdn(:),RHxym(:)
         real, pointer ::
      +      xkn(:), ykn(:), xk(:), yk(:), xkk(:), ykk(:),
      +      xks(:,:), wavexy(:,:)
@@ -495,6 +496,7 @@ c
           pflux => c_s%pflux; isize = isize + size(pflux)
           pfluxup => c_s%pfluxup; isize = isize + size(pfluxup)
           pfluxdn => c_s%pfluxdn; isize = isize + size(pfluxdn)
+          RHxym => c_s%RHxym; isize = isize + size(RHxym)
           xkn      => c_s%xkn
           ykn      => c_s%ykn
           xk       => c_s%xk
