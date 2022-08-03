@@ -3387,6 +3387,11 @@ c ----------- SGS z-contributions
      +            weitm(km1)*gm(i,j,km1,1)*gm(i,j,km1,3)
               tflx_up    = tflx(i,j,1,2)*gm_xu + tflx(i,j,2,2)*gm_yu +
      +            tflx(i,j,3,2)
+              !A hack to enforce a constant flux of heat/moisture
+              !through the domain
+              if (iz==nnz) then
+                 tflx_up = wtsfc(iscl)
+              end if
               tflx_lo    = tflx(i,j,1,1)*gm_xl + tflx(i,j,2,1)*gm_yl +
      +            tflx(i,j,3,1)
               r4(i,j,iscl,k) = r4(i,j,iscl,k) +
@@ -3467,8 +3472,9 @@ c ----------- z-direction special with monotone
                 do i=1,nnx
                   wflx_l      = wf(i,j,km1) - gm(i,j,km1,5)
                   wflx_u      = wf(i,j,k) - gm(i,j,k,5)
-                  flux_u(i,j) = sgn*0.5*wflx_u*
-     +                (t(i,j,iscl,kp1)+t(i,j,iscl,k))
+!                  flux_u(i,j) = sgn*0.5*wflx_u*
+!     +                (t(i,j,iscl,kp1)+t(i,j,iscl,k))
+                  flux_u(i,j) = wtsfc(iscl)
                   flux_l(i,j) =
      +                amax1(sgn*wflx_l,0.)*(t(i,j,iscl,km1) +
      +                rlim(t(i,j,iscl,k),t(i,j,iscl,km1),
@@ -5308,6 +5314,8 @@ c ------------ initialize u, v, w, t and derivatives at km1
           end do
 
         end if ! end of if block for root row
+
+        call mpi_bcast(wtsfc,2,mpi_real8,0,mpi_comm_world,ierr)
 
         return
       end

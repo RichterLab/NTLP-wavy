@@ -167,8 +167,6 @@ c
           else
             if (ifields == 1) then
               call get_fields
-          t(:,:,1,:) = 300.0
-          t(:,:,2,:) = 0.23e-01
             else
               call random
                !call random_f
