@@ -9366,7 +9366,7 @@ c ------------ get (u,w) components of surface velocity and wave
 c              height. Make h, hdot, uo, wo match
 
         call gal_interp (u_tank_f, trigx(1,1),xkn, t_bndy, u_tank_i)
-        call gal_interp (w_tank_f, trigx(1,1),xkn, t_bndy, w_tank_i) !  KDRB 2/2022
+        !call gal_interp (w_tank_f, trigx(1,1),xkn, t_bndy, w_tank_i) !  KDRB 2/2022
         call gal_interp (z_tank_f, trigx(1,1),xkn, t_bndy, z_tank_i)
         call hdot_interp(z_tank_f, trigx(1,1),xkn, t_bndy, hdot_i)
         call hx_deriv   (z_tank_i, trigx(1,1),xkn, nnx, hx_i)
@@ -9413,8 +9413,8 @@ c -------- use w_o = hdot + u_o*h_x + v_o*h_y
         do j=iys,iye
           do i=1,nnx
             hdot(i,j)    = hdot_i(i)*ampl_fac
-            !w_orbit(i,j) = hdot(i,j) + u_orbit(i,j)*hx_i(i)*ampl_fac !replace with below line
-            w_orbit(i,j) = w_tank_i(i)*ampl_fac ! not sure what that above eq is about... - KDRB 2/2022
+            w_orbit(i,j) = hdot(i,j) + u_orbit(i,j)*hx_i(i)*ampl_fac !replace with below line
+            !w_orbit(i,j) = w_tank_i(i)*ampl_fac ! not sure what that above eq is about... - KDRB 2/2022
           end do
         end do
 

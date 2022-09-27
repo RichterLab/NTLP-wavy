@@ -556,7 +556,7 @@
         !if (myid==5) write(*,*) 'time bc_non:', t_f - t_s
 
         if (istage == 1) tot_reintro = 0
-        call particle_reintro
+        if (istage == 3) call particle_reintro(it,istage)
         if (istage == 3) his_reintro = tot_reintro
 
         !Check to see if particles left processor
@@ -816,101 +816,9 @@
 
       end subroutine particle_bcs_nonperiodic
 
-       !  subroutine particle_reintro(istage)
-       !    use particles
-       !    use pars
-       !    use con_data
-       !    use tank_pars
-       !    implicit none
-       !    include 'mpif.h'
-       !    integer :: ierr,randproc,np,tmp_reintro,istage,ix
-       !    real :: xv,yv,zv,ran2,vinj,t_bndy,uorb,worb
-       !    real :: xpart(nnx),yspln(nnx),yp1,ypn,ddx
-       !    real :: u2part(nnx),w2part(nnx)
-       !
-       !    real, dimension(4) :: S2_U10_12, S2_U10_16, S2_U10_18,
-       ! +                        S2_U10_20, uStar_U10_12, uStar_U10_16,
-       ! +                        uStar_U10_18, uStar_U10_20
-       !    real, dimension(6) :: r80, TotPart
-       !    real, dimension(3) :: sigma,mu, FPs, FS
-       !    integer :: FPss, i, rlength
-       !    real :: S2, u_star, ViscAir, g, Xp, tau, dfdr1, dfdr2, dfdr3,
-       ! +          dist, newRad
-       !    real, dimension(:), allocatable :: Sum_dFdr
-       !    S2_U10_12    = (/ 0.039, 0.053, 0.047, 0.03 /)
-       !    S2_U10_16    = (/ 0.056, 0.063, 0.087, 0.046/)
-       !    S2_U10_18    = (/ 0.062, 0.066, 0.08,  0.055 /)
-       !    S2_U10_20    = (/ 0.073, 0.072, 0.078, 0.065 /)
-       !    uStar_U10_12 = (/ 0.54,  0.52,  0.46,  0.48 /)
-       !    uStar_U10_16 = (/ 0.75,  0.76,  0.8,   0.66 /)
-       !    uStar_U10_18 = (/ 0.89,  0.85,  0.89,  0.79 /)
-       !    uStar_U10_20 = (/ 1.05,  1.01,  1.00,  0.90 /)
-       !    S2 = S2_U10_20(3)
-       !    u_star = uStar_U10_20(3)
-       !    r80 = (/ 5, 10, 15, 20, 25, 30 /)
-       !    dist = r80(2) - r80(3)
-       !    FPss = 0;
-       !    ViscAir = 1.470e-5
-       !    g = 9.81
-       !    sigma = (/ 2.1, 7., 12. /)
-       !    mu = (/ 2.5, 7., 25. /)
-       !    Xp = (u_star**3/(ViscAir*g))*S2
-       !    FPs = (/ 437*Xp**0.92, 68.4*Xp**1.41, 4.75*Xp**1.11 /)
-       !    FS = (/ 4.94e7*S2**2.45, 7.88e7*S2**2.3, 1.3e7*S2**2.39 /)
-       !    tau = 3.53
-       !    t_bndy = t_stage - t_zero
-       !    !Set up xpart for interpolation of h:
-       !    yp1 = 2.0e+30
-       !    ypn = yp1
-       !    ddx = xl/float(nnx)
-       !    do ix=1,nnx
-       !      xpart(ix) = float(ix-1)*ddx
-       !    end do
-       !    call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
-       !    ! INTRODUCE FUNCTION HERE
-       !    rlength = size(r80)
-       !    allocate(Sum_dFdr(rlength))
-       !    tot_reintro = 0
-       !    do i = 1, rlength
-       !      if (FPss == 1) then
-       !        dfdr1 =(FPs(1)/(sigma(1)*sqrt(2*3.14)*tau))
-       !        dfdr1 = dfdr1*exp(-0.5*((r80(i) - mu(1))/sigma(1))**2)
-       !        dfdr2 = (FPs(2)/(sigma(2)*sqrt(2*3.14)*tau))
-       !        dfdr1 = dfdr1*exp(-0.5*((r80(i) - mu(2))/sigma(2))**2)
-       !        dfdr3 = (FPs(3)/(sigma(3)*sqrt(2*3.14)*tau))
-       !        dfdr1 = dfdr1*exp(-0.5*((r80(3) - mu(3))/sigma(3))**2)
-       !      else
-       !        dfdr1 =(FS(1)/(sigma(1)*sqrt(2*3.14)*tau))
-       !        dfdr1 = dfdr1*exp(-0.5*((r80(i) - mu(1))/sigma(1))**2)
-       !        dfdr2 = (FS(2)/(sigma(2)*sqrt(2*3.14)*tau))
-       !        dfdr1 = dfdr1*exp(-0.5*((r80(i) - mu(2))/sigma(2))**2)
-       !        dfdr3 = (FS(3)/(sigma(3)*sqrt(2*3.14)*tau))
-       !        dfdr1 = dfdr1*exp(-0.5*((r80(3) - mu(3))/sigma(3))**2)
-       !      end if
-       !      Sum_dFdr(i) = dfdr1 + dfdr2 + dfdr3
-       !      TotPart(i) = dist*Sum_dFdr(i)*xl*yl
-       !      tot_reintro = tot_reintro + TotPart(i)
-       !      do np=1,TotPart(i)
-       !        ! Determine Position and Velocity
-       !        xv = ran2(iseed)*(xmax-xmin) + xmin
-       !        yv = ran2(iseed)*(ymax-ymin) + ymin
-       !        !call linInterp(xpart,u_tank_i,nnx,xv,uorb) ! switch to spline at some point
-       !        !call linInterp(xpart,w_tank_i,nnx,xv,worb)
-       !        uorb = 0
-       !        worb = 0
-       !        vinj = worb + ran2(iseed)*Vpmax
-       !        zv = zw1
-       !        newRad = ran2(iseed)*(dist) + r80(i)
-       !        call create_particle((/xv,yv,zv/),(/uorb,0.0,vinj/),300.0,
-       ! +          newRad,ngidx,z_tank_i(1:nnx),xpart(1:nnx),
-       ! +          yspln(1:nnx),t_stage)
-       !        ngidx = ngidx + 1
-       !      end do
-       !    end do
-       !    if (myid==0) write(*,*) 'time,tot_reintro: ',time,tot_reintro
-       !  end subroutine particle_reintro
 
-      subroutine particle_reintro(istage)
+      ! Recently Implemented SSGFs (refer to Bruch et al. 2019)
+      subroutine particle_reintro(it,istage)
         use particles
         use pars
         use con_data
@@ -918,61 +826,189 @@
         implicit none
         include 'mpif.h'
 
-        integer :: ierr,randproc,np,tmp_reintro,istage,ix
+        integer :: ierr,randproc,np,tmp_reintro,istage,ix,it
         real :: xv,yv,zv,ran2,vinj,t_bndy,uorb,worb,yp1,ypn,ddx
         real :: xpart(nnx),yspln(nnx),dyspln(nnx),dy2spln(nnx)
         real :: u2part(nnx),w2part(nnx)
+        real, dimension(4) :: S2_U10_12, S2_U10_16, S2_U10_18,
+     +                        S2_U10_20, uStar_U10_12, uStar_U10_16,
+     +                        uStar_U10_18, uStar_U10_20
+        integer, dimension(6) :: tot_part
+        integer :: FPss, i, j, rlength, nmax, nth
+        real :: dfdr1a, dfdr2a, dfdr3a
+        real, dimension(6) :: r80, dfdr1, dfdr2, dfdr3
+        real, dimension(3) :: sigma, mu, FPs, FS
+        real :: S2, u_star, ViscAir, g, Xp, tau, dist, newRad
+        real, dimension(:), allocatable :: sum_dfdr
 
+        S2_U10_12 = (/ 0.039, 0.053, 0.047, 0.030 /)
+        S2_U10_16 = (/ 0.056, 0.063, 0.087, 0.046 /)
+        S2_U10_18 = (/ 0.062, 0.066, 0.080, 0.055 /)
+        S2_U10_20 = (/ 0.073, 0.072, 0.078, 0.065 /)
+
+        uStar_U10_12 = (/ 0.54,  0.52,  0.46,  0.48 /)
+        uStar_U10_16 = (/ 0.75,  0.76,  0.80,  0.66 /)
+        uStar_U10_18 = (/ 0.89,  0.85,  0.89,  0.79 /)
+        uStar_U10_20 = (/ 1.05,  1.01,  1.00,  0.90 /)
+
+        S2 = S2_U10_20(2)   ! refer to Table 1 in Bruch's paper
+        u_star = uStar_U10_20(2)   ! refer to Table 1 in Bruch's paper
+        r80 = (/ 5, 10, 15, 20, 25, 30 /)
+        dist = r80(2) - r80(1)
+        FPss = 1   ! 1 or 2 to choose which functions - refer to Table 2 in Bruch's paper
+        ViscAir = 1.470e-5
+        g = 9.81
+        sigma = (/ 2.1, 7., 12. /)
+        mu = (/ 2.5, 7., 25. /)
+        Xp = (u_star**3/(ViscAir*g))*S2
+        FPs = (/ 437*Xp**0.92, 68.4*Xp**1.41, 4.75*Xp**1.11 /)
+        FS = (/ 4.94e7*S2**2.45, 7.88e7*S2**2.3, 1.3e7*S2**2.39 /)
+        tau = 3.53
         t_bndy = t_stage - t_zero
 
-        call mpi_allreduce(num_reintro,tmp_reintro,1,mpi_integer,
-     +      mpi_sum,mpi_comm_world,ierr)
-        tot_reintro = tot_reintro + tmp_reintro
-        if (myid==0) write(*,*) 'time,tmp_reintro: ',time,tmp_reintro
+        nth = 250   ! turn on SSGF every nth time steps (from trial and error)
 
-        !Set up xpart for interpolation of h:
+        ! Set up xpart for interpolation of h:
         yp1 = 2.0e+30
         ypn = yp1
         ddx = xl/float(nnx)
+
         do ix=1,nnx
           xpart(ix) = float(ix-1)*ddx
         end do
+
         call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
         call spline(xpart,hx_i,nnx,yp1,ypn,dyspln)
         call spline(xpart,hx2_i,nnx,yp1,ypn,dy2spln)
 
-       !Now everyone knows how many total particles need to be reintroduced
-       !For each one to be reintroduced, get a random processor who creates it:
-        do np=1,tmp_reintro
+        ! INTRODUCING FUNCTIONS HERE
+        rlength = size(r80)
+        allocate(sum_dfdr(rlength))
+        tot_reintro = 0
 
-          !Proc 0 gets a random proc ID, broadcasts it out:
-          if (myid==0) randproc = floor(ran2(iseed)*numprocs)
-          call mpi_bcast(randproc,1,mpi_integer,0,mpi_comm_world,ierr)
+        do i = 1, rlength
+          if (FPss == 1) then
+            dfdr1a = (FPs(1)/(sigma(1)*sqrt(2*3.14)*tau))
+            dfdr1  = dfdr1a*exp(-0.5*((r80(i) - mu(1))/sigma(1))**2)
+            dfdr2a = (FPs(2)/(sigma(2)*sqrt(2*3.14)*tau))
+            dfdr2  = dfdr2a*exp(-0.5*((r80(i) - mu(2))/sigma(2))**2)
+            dfdr3a = (FPs(3)/(sigma(3)*sqrt(2*3.14)*tau))
+            dfdr3  = dfdr3a*exp(-0.5*((r80(i) - mu(3))/sigma(3))**2)
+          else if (FPss == 2) then
+            dfdr1a = (FS(1)/(sigma(1)*sqrt(2*3.14)*tau))
+            dfdr1  = dfdr1a*exp(-0.5*((r80(i) - mu(1))/sigma(1))**2)
+            dfdr2a = (FS(2)/(sigma(2)*sqrt(2*3.14)*tau))
+            dfdr2  = dfdr2a*exp(-0.5*((r80(i) - mu(2))/sigma(2))**2)
+            dfdr3a = (FS(3)/(sigma(3)*sqrt(2*3.14)*tau))
+            dfdr3  = dfdr3a*exp(-0.5*((r80(i) - mu(3))/sigma(3))**2)
+          end if
 
-          if (myid==randproc) then
+          sum_dfdr(i) = dfdr1(i) + dfdr2(i) + dfdr3(i)
+
+          if (mod(it, nth)==0) then
+            tot_part(i) = (nth*dt)*dist*sum_dfdr(i)*(xmax-xmin)*
+     +                    (ymax-ymin)
+          else
+            tot_part(i) = 0
+          end if
+
+          tot_reintro = tot_reintro + tot_part(i)
+
+          ! Determine Position and Velocity
+          do np = 1, tot_part(i)
             xv = ran2(iseed)*(xmax-xmin) + xmin
             yv = ran2(iseed)*(ymax-ymin) + ymin
-            !Local orbital velocity as well as a random component for ejection
-
-            ! call linInterp(xpart,u_tank_i,nnx,xv,uorb)
-            ! call linInterp(xpart,w_tank_i,nnx,xv,worb)
-            ! vinj = worb + ran2(iseed)*Vpmax
-            uorb = 0.0
-            vinj = ran2(iseed)*Vpmax
-
+            !call linInterp(xpart,u_tank_i,nnx,xv,uorb)   ! switch to spline at some point
+            !call linInterp(xpart,w_tank_i,nnx,xv,worb)
+            uorb = 0
+            worb = 0
+            vinj = worb + ran2(iseed)*Vpmax
             zv = zw1
+            newRad = (ran2(iseed)*(dist) + r80(i))*1e-6   ! made changes to the sizes of particles
 
             call create_particle((/xv,yv,zv/),(/uorb,0.0,vinj/),300.0,
-     +          radius_init,ngidx,xpart(1:nnx),z_tank_i(1:nnx),
+     +          newRad,ngidx,xpart(1:nnx),z_tank_i(1:nnx),
      +          hx_i(1:nnx),hx2_i(1:nnx),yspln(1:nnx),dyspln(1:nnx),
      +          dy2spln(1:nnx),t_stage)
+
             ngidx = ngidx + 1
 
+          end do
 
-          end if
         end do
 
+        tot_reintro = tot_reintro * numprocs
+
+        if (myid==0) write(*,*) 'tot_part: ', tot_part   !*numprocs
+        if (myid==0) write(*,*) 'time,tot_reintro: ',time, tot_reintro
+
       end subroutine particle_reintro
+
+
+      ! subroutine particle_reintro(istage)
+        ! use particles
+        ! use pars
+        ! use con_data
+        ! use tank_pars
+        ! implicit none
+        ! include 'mpif.h'
+
+        ! integer :: ierr,randproc,np,tmp_reintro,istage,ix
+        ! real :: xv,yv,zv,ran2,vinj,t_bndy,uorb,worb,yp1,ypn,ddx
+        ! real :: xpart(nnx),yspln(nnx),dyspln(nnx),dy2spln(nnx)
+        ! real :: u2part(nnx),w2part(nnx)
+
+        ! t_bndy = t_stage - t_zero
+
+        ! call mpi_allreduce(num_reintro,tmp_reintro,1,mpi_integer,
+!      +      mpi_sum,mpi_comm_world,ierr)
+        ! tot_reintro = tot_reintro + tmp_reintro
+        ! if (myid==0) write(*,*) 'time,tmp_reintro: ',time,tmp_reintro
+
+        ! !Set up xpart for interpolation of h:
+        ! yp1 = 2.0e+30
+        ! ypn = yp1
+        ! ddx = xl/float(nnx)
+        ! do ix=1,nnx
+          ! xpart(ix) = float(ix-1)*ddx
+        ! end do
+        ! call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
+        ! call spline(xpart,hx_i,nnx,yp1,ypn,dyspln)
+        ! call spline(xpart,hx2_i,nnx,yp1,ypn,dy2spln)
+
+       ! !Now everyone knows how many total particles need to be reintroduced
+       ! !For each one to be reintroduced, get a random processor who creates it:
+        ! do np=1,tmp_reintro
+
+          ! !Proc 0 gets a random proc ID, broadcasts it out:
+          ! if (myid==0) randproc = floor(ran2(iseed)*numprocs)
+          ! call mpi_bcast(randproc,1,mpi_integer,0,mpi_comm_world,ierr)
+
+          ! if (myid==randproc) then
+            ! xv = ran2(iseed)*(xmax-xmin) + xmin
+            ! yv = ran2(iseed)*(ymax-ymin) + ymin
+            ! !Local orbital velocity as well as a random component for ejection
+
+            ! ! call linInterp(xpart,u_tank_i,nnx,xv,uorb)
+            ! ! call linInterp(xpart,w_tank_i,nnx,xv,worb)
+            ! ! vinj = worb + ran2(iseed)*Vpmax
+            ! uorb = 0.0
+            ! vinj = ran2(iseed)*Vpmax
+
+            ! zv = zw1
+
+            ! call create_particle((/xv,yv,zv/),(/uorb,0.0,vinj/),300.0,
+!      +          radius_init,ngidx,xpart(1:nnx),z_tank_i(1:nnx),
+!      +          hx_i(1:nnx),hx2_i(1:nnx),yspln(1:nnx),dyspln(1:nnx),
+!      +          dy2spln(1:nnx),t_stage)
+            ! ngidx = ngidx + 1
+
+
+          ! end if
+        ! end do
+
+      ! end subroutine particle_reintro
+
 
       subroutine particle_bcs_periodic
         use particles
@@ -2211,7 +2247,7 @@
       part => first_particle
       do while (associated(part))
 
-      if (mod(part%pidx,10) .eq. 0) then
+      if (mod(part%pidx,100000) .eq. 0) then
           write(ntraj,'(2i,8e15.6)') part%pidx,part%procidx,
      +    time,part%xp(1),part%xp(2),part%xp(3),part%vp(1),part%vp(2),
      +    part%vp(3),part%radius
