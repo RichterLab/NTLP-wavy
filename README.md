@@ -22,7 +22,7 @@ to create a new run called RUN1 based on ExRun_Real, but change the number
 of particles and the number of time steps:  
 
 ---
-./copyRun ExRun_Real RUN1 -tnumpart 9e6 -itmax 100000  
+./copyRun ExRun_Real run1 -tnumpart 9e6 -itmax 100000  
 
 ---
 
