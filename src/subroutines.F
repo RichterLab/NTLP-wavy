@@ -300,7 +300,7 @@ c ------- with effectively flat just use 2 iterations
           ptol    = 1.0e-07
 c        ptol    = 1.0e-20
 
-          if(i3d_surf == 3) then   !  strategy for breaking waves in tank
+          if(i3d_surf == 3 .or. i3d_surf == 4) then   !  strategy for breaking waves in tank
             ptol      = 1.0e-10
             ip_max    = 50
             ip_max    = 35
@@ -346,6 +346,10 @@ c                in routines exp_grid, exp_grid2
           a_decay     = 3.0
         else if(i3d_surf == 3) then
 c           a_exp_grd   = 50.00
+          a_exp_grd   = 11.65
+          a_exp_grd2  = -1000.0 ! fix for tank simulations
+          a_decay     = 3.0
+        else if(i3d_surf == 4) then
           a_exp_grd   = 11.65
           a_exp_grd2  = -1000.0 ! fix for tank simulations
           a_decay     = 3.0
@@ -424,7 +428,7 @@ c ------------ turn on new sgs model at a particular step
             call print(nprt,it,izs,ize)
           end if
         end if
-c     if(ifilt.eq.1)call filter
+c     if(ifilt==1)call filter
         if(l_root) then
           write(6,1) nnx,nny,nnz,ismlt,ifilt,iti,itmax,
      +        iupwnd,ibuoy,itcut,
@@ -553,6 +557,8 @@ c --------- special for moving 3d surface
           call surf_setup_gabls
         else if(i3d_surf == 3) then
           call surf_setup_tank
+        else if(i3d_surf == 4) then
+          call surf_setup_real
         end if
 
 c --------- can add a time factor so as to skip into any part of
@@ -4024,7 +4030,7 @@ c -------- see par statments for setting k_stab
           else
             dfack = dfac(k)
           end if
-c     if(ivis .eq. 1 .and. k .le. nmatch) then
+c     if(ivis == 1 .and. k .le. nmatch) then
 
           if(k <= k_stab) then
 
@@ -5085,6 +5091,8 @@ c         get back
           call get_surf_gabls(t_bndy)
         else if(i3d_surf == 3) then
           call get_surf_tank(t_bndy)
+        else if(i3d_surf == 4) then
+          call get_surf_real(t_bndy)
         end if
 
 c     call dealias_grid_speed
@@ -5351,6 +5359,8 @@ c         get back
           call get_surf_gabls(t_bndy)
         else if(i3d_surf == 3) then
           call get_surf_tank(t_bndy)
+        else if(i3d_surf == 4) then
+          call get_surf_real(t_bndy)
         end if
 
 c ----- broadcast level 1 data to processors above root
@@ -9123,6 +9133,134 @@ c     ix_cut   = 44
 
         return
       end
+      subroutine surf_setup_real
+
+c ------- basic parameters of wavy surface from lab experiments
+
+        use pars
+        use fields
+        use fftwk
+        use con_data
+        use con_stats
+        use wavy_pars
+        use tank_pars
+
+        real xx(nx_tank), zz_tank(nx_tank), us(nx_tank), ws(nx_tank),
+     +      y2(nx_tank), u2(nx_tank), w2(nx_tank), xles(nnx)
+
+c --------- allocate surface arrays
+
+        allocate(z_tank(nnx), u_tank(nnx), w_tank(nnx),
+     +      z_tank_f(nnx), u_tank_f(nnx), w_tank_f(nnx),
+     +      z_tank_i(nnx), u_tank_i(nnx), w_tank_i(nnx),
+     +      hdot_i(nnx), hx_i(nnx), hx2_i(nnx))
+
+        lut    = 89
+        close(lut)
+        if(i_tank == 1) then     ! no breaking case
+          open(lut,file='./les_tank_nobreak.dat')
+          npts_t  = 1485
+          wave_l  = 0.232780E+02*0.01
+          c_speed = 0.602861E+00
+          wave_k  = pi2/wave_l
+          ustar_tank = 0.381 ! from table 2 of banner 1990
+        else if(i_tank == 10) then !7/12/18: Particle-laden monochromatic turbulence
+          open(lut,file='./monochromatic.dat')
+          npts_t  = 128
+          wave_k  = pi2/wave_l
+        else if(i_tank == 13) then !7/12/18: Particle-laden real wave
+          open(lut,file='./polychromatic.dat')
+          npts_t  = 1000
+          wave_k  = pi2/wave_l
+        end if
+
+        do i=1,4
+          read(lut,'(a1)') idum
+        end do
+        do i=1,npts_t
+          read(lut,*) xx(i), zz_tank(i), us(i), ws(i)
+        end do
+        if (myid==0) write(*,*) 'Finished reading tank data'
+
+        write(nprt,1001) (i,xx(i), zz_tank(i),us(i),ws(i),
+     +      i=1,nnx)
+ 1001   format(' 1001: tank ',/,
+     +      ' i ',5x,' xx ',5x,' zz ',5x,' us ',5x,
+     +      ' ws ',/,(i5,4e15.6))
+
+c ---------- fit a spline to the data
+
+        yp1 = 2.0e+30
+        ypn = yp1
+        call spline(xx,zz_tank,npts_t,yp1,ypn,y2)
+        ! call spline(xx,us,npts_t,yp1,ypn,u2)
+        ! call spline(xx,ws,npts_t,yp1,ypn,w2)
+
+c ---------- interpolate into the spline function at les points
+
+        ddx = xl/float(nnx)
+        do i=1,nnx
+          xles(i) = float(i-1)*ddx
+          call splint(xx,zz_tank,y2,npts_t,xles(i),z_tank(i))
+          ! call splint(xx,us,u2,npts_t,xles(i),u_tank(i))
+          ! call splint(xx,ws,w2,npts_t,xles(i),w_tank(i))
+        end do
+
+        sum = 0.0
+        do i=1,nnx
+          sum = sum + z_tank(i)
+        end do
+        sum = sum/float(nnx)
+        do i=1,nnx
+          z_tank(i) = z_tank(i) - sum
+        end do
+
+c --------- force mean w = 0 from the data
+
+        ! sum_w = 0.0
+        ! do i=1,nnx
+        !   sum_w = sum_w + w_tank(i)
+        ! end do
+        ! sum_w = sum_w/float(nnx)
+        ! do i=1,nnx
+        !   w_tank(i) = w_tank(i) - sum_w
+        ! end do
+        do i=1,nnx
+          u_tank(i) = 0.0
+          w_tank(i) = 0.0
+        end do
+        !!!!!!!!!!!!! KDRB start at zeros
+
+        write(nprt,4001) sum, sum_w
+ 4001   format(' Mean wave height = ',e15.6,' sum w = ',e15.6)
+
+c --------- get fourier coefficients at t = 0
+c           to use in building shape at t > 0
+
+        fnx = 1.0/float(nnx)
+        do i=1,nnx
+          z_tank_f(i) = z_tank(i)*fnx
+          ! u_tank_f(i) = u_tank(i)*fnx
+          ! w_tank_f(i) = w_tank(i)*fnx
+        end do
+        call rfftf(nnx,z_tank_f(1),trigx(1,1))
+        ! call rfftf(nnx,u_tank_f(1),trigx(1,1))
+        ! call rfftf(nnx,w_tank_f(1),trigx(1,1))
+
+c ------ dealias the inputs to match the grid resolution
+c        careful with the indices, match fftpack order
+
+        ix_cut   = 2*int(float(nnx)/3.) + 2
+c     ix_cut   = 44
+
+        do i=ix_cut,nnx
+          z_tank_f(i) = 0.0
+          ! u_tank_f(i) = 0.0
+          ! w_tank_f(i) = 0.0
+        end do
+
+        return
+      end
       subroutine get_surf(t_bndy)
 
 c ------- generate new surface at t = t_bndy
@@ -9366,7 +9504,6 @@ c ------------ get (u,w) components of surface velocity and wave
 c              height. Make h, hdot, uo, wo match
 
         call gal_interp (u_tank_f, trigx(1,1),xkn, t_bndy, u_tank_i)
-        !call gal_interp (w_tank_f, trigx(1,1),xkn, t_bndy, w_tank_i) !  KDRB 2/2022
         call gal_interp (z_tank_f, trigx(1,1),xkn, t_bndy, z_tank_i)
         call hdot_interp(z_tank_f, trigx(1,1),xkn, t_bndy, hdot_i)
         call hx_deriv   (z_tank_i, trigx(1,1),xkn, nnx, hx_i)
@@ -9413,8 +9550,7 @@ c -------- use w_o = hdot + u_o*h_x + v_o*h_y
         do j=iys,iye
           do i=1,nnx
             hdot(i,j)    = hdot_i(i)*ampl_fac
-            w_orbit(i,j) = hdot(i,j) + u_orbit(i,j)*hx_i(i)*ampl_fac !replace with below line
-            !w_orbit(i,j) = w_tank_i(i)*ampl_fac ! not sure what that above eq is about... - KDRB 2/2022
+            w_orbit(i,j) = hdot(i,j) + u_orbit(i,j)*hx_i(i)*ampl_fac
           end do
         end do
 
@@ -9434,6 +9570,159 @@ c ----------- make sure mean of w_orbit = 0
             w_orbit(i,j)    = w_orbit(i,j) - sum_w
           end do
         end do
+
+        ! if (myid==0) then
+        !   write(*,*) "z_tank_i u_orbit w_orbit"
+        !   do i=1,nnx
+        !     write(*,*) z_tank_i(i), u_orbit(i,iys), w_orbit(i,iys)
+        !   end do
+        ! end if
+
+        return
+      end
+      subroutine get_surf_real(t_bndy)
+
+c ------- generate new surface at t = t_bndy
+c         for the laboratory wave. Build w_o and hdot so
+c         that they satisfy the inputs for u_o and h
+c         with fix sr. hx_deriv
+
+        use pars
+        use fields
+        use fftwk
+        use con_data
+        use con_stats
+        use wavy_pars
+        use tank_pars
+
+c ------------ for doing restart with gradually growing bumps
+c              specify initial and end times to blend over
+c              more aggressive strategy to trigger turbulence
+
+c     t1_st  = 0.85340788E+01 + 0.01 ! time from volume ub1020
+        t1_st  =  0.0 ! time relative to t_zero set by move_step
+c     t1_st  = 100000.0 ! to make surface always flat for initialization
+
+        t1_en  = t1_st + 0.25
+        b_rate = 1.0/(t1_en - t1_st)
+
+c --------- for debug turn on waves right away
+
+        if(t_bndy < t1_st) then
+          ampl_fac  = 0.0
+          ampl_rate = 0.0
+        else if(t_bndy >= t1_st .and. t_bndy < t1_en) then
+          ampl_fac  = amax1((b_rate*(t_bndy - t1_st)),0.0)
+          ampl_rate = b_rate
+        else if(t_bndy >= t1_en) then
+          ampl_fac  = 1.0
+          ampl_rate = 0.0
+        end if
+
+c ------------ get (u,w) components of surface velocity and wave
+c              height. Make h, hdot, uo, wo match
+
+        call gal_interp (z_tank_f, trigx(1,1),xkn, t_bndy, z_tank_i)
+        call hdot_interp(z_tank_f, trigx(1,1),xkn, t_bndy, hdot_i)
+        call hx_deriv   (z_tank_i, trigx(1,1),xkn, nnx, hx_i)
+        call hx_deriv   (hx_i,     trigx(1,1),xkn, nnx, hx2_i)
+
+        sum   = 0.0
+        sum_w = 0.0
+        do i=1,nnx
+          sum = sum + z_tank_i(i)
+        end do
+        sum = sum/float(nnx)
+
+        ampl_fac = 1.0
+
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        fnx = 1.0/float(nnx)
+        do i=1,nnx
+          u_tank_i(i) = hdot_i(i)*fnx  ! pre-normalize as rfftf does not
+        end do
+        call rfftf(nnx,u_tank_i,trigx)
+
+        !! Terrible with semi-linear
+        ! do i=2,nnx-1 !! Looks good with this, hx_deriv and only linear
+        !   u_tank_i(i) = u_tank_i(i)/abs(xkn(i)) ! divide by k as per equation
+        ! end do
+
+        !! Terrible with semi-linear
+        j = 1 !! also looks good, hx_deriv and only linear
+        do i=2, nnx-1, 2
+          j = j + 1
+          u_tank_i(i)   = u_tank_i(i)   / abs(xkn(j))
+          u_tank_i(i+1) = u_tank_i(i+1) / abs(xkn(j))
+        enddo
+
+        call rfftb(nnx,u_tank_i,trigx)
+        call hx_deriv(u_tank_i, trigx, xkn, nnx, u_tank_f)
+
+        do j=iys,iye
+          do i=1,nnx
+            u_orbit(i,j) = u_tank_f(i)
+     +          - (hdot_i(i) + hx_i(i)*u_tank_f(i)) / (1 + hx_i(i)**2)
+            v_orbit(i,j) = 0.0
+            bndy(i,j)    = z_tank_i(i)*ampl_fac
+          end do
+        end do
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+c -------- get variance of surface
+
+        sumb = 0.0
+        do j=iys,iye
+          do i=1,nnx
+            sumb = sumb + bndy(i,j)
+          end do
+        end do
+        sumb = sumb*fnxy
+        call mpi_sum_xy(sumb,myid,iss,ise,1)
+
+        varb = 0.0
+        do j=iys,iye
+          do i=1,nnx
+            varb = varb + (bndy(i,j) - sumb)**2
+          end do
+        end do
+        varb = varb*fnxy
+        call mpi_sum_xy(varb,myid,iss,ise,1)
+
+c -------- use w_o = hdot + u_o*h_x + v_o*h_y
+
+        do j=iys,iye
+          do i=1,nnx
+            hdot(i,j)    = hdot_i(i)*ampl_fac
+            w_orbit(i,j) = hdot(i,j) + u_orbit(i,j)*hx_i(i)*ampl_fac
+          end do
+        end do
+
+c ----------- make sure mean of w_orbit = 0
+
+        sum_w = 0.0
+        do j=iys,iye
+          do i=1,nnx
+            sum_w = sum_w + w_orbit(i,j)
+          end do
+        end do
+        sum_w = sum_w*fnxy
+        call mpi_sum_xy(sum_w,myid,iss,ise,1)
+
+        do j=iys,iye
+          do i=1,nnx
+            w_orbit(i,j)    = w_orbit(i,j) - sum_w
+          end do
+        end do
+
+        ! if (myid==0) then
+        !   write(*,*) "z_tank_i u_orbit w_orbit"
+        !   do i=1,nnx
+        !     write(*,*) z_tank_i(i), u_orbit(i,iys), w_orbit(i,iys)
+        !   end do
+        ! end if
 
         return
       end
@@ -9939,17 +10228,15 @@ c     gm(.,.,.,5)  = z_t = grid speed; zeta_t = - z_t*J
      +        ' t_zero = ',e15.6)
 
           if(i3d_surf == 0) then
-
             call l_bndy(t_bndy)
           else if(i3d_surf == 1) then
-
             call get_surf(t_bndy)
           else if(i3d_surf == 2) then
-
             call get_surf_gabls(t_bndy)
           else if(i3d_surf == 3) then
-
             call get_surf_tank(t_bndy)
+          else if(i3d_surf == 4) then
+            call get_surf_real(t_bndy)
           end if
 
 c -------- initial guess for stretching factor
@@ -10127,14 +10414,12 @@ c ----------- save the grid file
         call mpi_file_open(mpi_comm_world, path_sav_g,
      +      mpi_mode_create+mpi_mode_rdwr,
      +      mpi_info_null, ngrd, ierr)
-        ! write(*,*) "KDRB mpi_file_open ierr", ierr
 
 c ---- set file view
 
         disp = 0
         call mpi_file_set_view(ngrd,disp,mpi_real8,mpi_real8,
      +      'native',mpi_info_null,ierr)
-        ! write(*,*) "KDRB mpi_file_set_view ierr", ierr
 
 c ---- write data
 
@@ -10167,7 +10452,6 @@ c -------- mpi i/o with non-uniform blocks of data use _at
 
           call mpi_file_write_at(ngrd,offset,temp,n_write,
      +        mpi_real8,status,ierr)
-          ! write(*,*) "KDRB mpi_file_write_at ierr", ierr
           if (ierr /= 0) goto 9991
 
         end do
@@ -10301,6 +10585,8 @@ c           at t = t_stage3
           call get_surf_gabls(t_bndy)
         else if(i3d_surf == 3) then
           call get_surf_tank(t_bndy)
+        else if(i3d_surf == 4) then
+          call get_surf_real(t_bndy)
         end if
 
 c -------- initial guess for stretching factor
@@ -10491,6 +10777,8 @@ c           at t = t_stage2
           call get_surf_gabls(t_bndy)
         else if(i3d_surf == 3) then
           call get_surf_tank(t_bndy)
+        else if(i3d_surf == 4) then
+          call get_surf_real(t_bndy)
         end if
 
 c -------- initial guess for stretching factor
@@ -14089,7 +14377,7 @@ c ------ myid is in the bottom row, send to everyone else
       real :: mod_magnus
 
       !Assuming tsfcc(2),Ttop(2),Tbot(2) in params.in are giving RH:
-      if (iDNS .eq. 1) then
+      if (iDNS == 1) then
 
          RHT = Ttop(2)
          RHB = Tbot(2)
@@ -14116,7 +14404,7 @@ c ------ myid is in the bottom row, send to everyone else
 
 
 
-      end subroutine change_RH_bcs_to_q      
+      end subroutine change_RH_bcs_to_q
 
       function ran2(idum)
         integer :: idum,IM1,IM2,IMM1,IA1,IA2,IQ1,IQ2,IR1,IR2,NTAB,NDIV
