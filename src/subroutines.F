@@ -9215,21 +9215,12 @@ c ---------- interpolate into the spline function at les points
           z_tank(i) = z_tank(i) - sum
         end do
 
-c --------- force mean w = 0 from the data
+c --------- zero orbitals for calculation
 
-        ! sum_w = 0.0
-        ! do i=1,nnx
-        !   sum_w = sum_w + w_tank(i)
-        ! end do
-        ! sum_w = sum_w/float(nnx)
-        ! do i=1,nnx
-        !   w_tank(i) = w_tank(i) - sum_w
-        ! end do
         do i=1,nnx
           u_tank(i) = 0.0
           w_tank(i) = 0.0
         end do
-        !!!!!!!!!!!!! KDRB start at zeros
 
         write(nprt,4001) sum, sum_w
  4001   format(' Mean wave height = ',e15.6,' sum w = ',e15.6)
@@ -9595,6 +9586,8 @@ c         with fix sr. hx_deriv
         use wavy_pars
         use tank_pars
 
+        real gam, k_main, f_main
+
 c ------------ for doing restart with gradually growing bumps
 c              specify initial and end times to blend over
 c              more aggressive strategy to trigger turbulence
@@ -9618,7 +9611,7 @@ c --------- for debug turn on waves right away
           ampl_fac  = 1.0
           ampl_rate = 0.0
         end if
-
+c
 c ------------ get (u,w) components of surface velocity and wave
 c              height. Make h, hdot, uo, wo match
 
@@ -9636,27 +9629,20 @@ c              height. Make h, hdot, uo, wo match
 
         ampl_fac = 1.0
 
-
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+c
+c ------------- Calculate u_orbit with semilinear eq 7 from Grue 2008
+c       ! note: using u_tank_[fi] as calculation vars
         fnx = 1.0/float(nnx)
         do i=1,nnx
           u_tank_i(i) = hdot_i(i)*fnx  ! pre-normalize as rfftf does not
         end do
         call rfftf(nnx,u_tank_i,trigx)
-
-        !! Terrible with semi-linear
-        ! do i=2,nnx-1 !! Looks good with this, hx_deriv and only linear
-        !   u_tank_i(i) = u_tank_i(i)/abs(xkn(i)) ! divide by k as per equation
-        ! end do
-
-        !! Terrible with semi-linear
-        j = 1 !! also looks good, hx_deriv and only linear
+        j = 1
         do i=2, nnx-1, 2
           j = j + 1
-          u_tank_i(i)   = u_tank_i(i)   / abs(xkn(j))
-          u_tank_i(i+1) = u_tank_i(i+1) / abs(xkn(j))
+          u_tank_i(i)   = u_tank_i(i)   / xkn(j)
+          u_tank_i(i+1) = u_tank_i(i+1) / xkn(j)
         enddo
-
         call rfftb(nnx,u_tank_i,trigx)
         call hx_deriv(u_tank_i, trigx, xkn, nnx, u_tank_f)
 
@@ -9668,28 +9654,6 @@ c              height. Make h, hdot, uo, wo match
             bndy(i,j)    = z_tank_i(i)*ampl_fac
           end do
         end do
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-
-c -------- get variance of surface
-
-        sumb = 0.0
-        do j=iys,iye
-          do i=1,nnx
-            sumb = sumb + bndy(i,j)
-          end do
-        end do
-        sumb = sumb*fnxy
-        call mpi_sum_xy(sumb,myid,iss,ise,1)
-
-        varb = 0.0
-        do j=iys,iye
-          do i=1,nnx
-            varb = varb + (bndy(i,j) - sumb)**2
-          end do
-        end do
-        varb = varb*fnxy
-        call mpi_sum_xy(varb,myid,iss,ise,1)
 
 c -------- use w_o = hdot + u_o*h_x + v_o*h_y
 
@@ -9717,12 +9681,37 @@ c ----------- make sure mean of w_orbit = 0
           end do
         end do
 
-        ! if (myid==0) then
-        !   write(*,*) "z_tank_i u_orbit w_orbit"
-        !   do i=1,nnx
-        !     write(*,*) z_tank_i(i), u_orbit(i,iys), w_orbit(i,iys)
-        !   end do
-        ! end if
+c ----------- add drift velocity to u_orbit
+
+        gam = 0.5           ! set gamma here
+        k_main = 2*pi/2.35  ! set dominant wavelength
+        f_main = sqrt(grav*k_main)
+        do j=iys,iye
+          do i = 1, nnx
+            u_orbit(i,j) = u_orbit(i,j)
+     +        + gam * (1 + cos(k_main*bndy(i,j) - f_main*t_bndy))
+          end do
+        end do
+
+c -------- get variance of surface
+
+        sumb = 0.0
+        do j=iys,iye
+          do i=1,nnx
+            sumb = sumb + bndy(i,j)
+          end do
+        end do
+        sumb = sumb*fnxy
+        call mpi_sum_xy(sumb,myid,iss,ise,1)
+
+        varb = 0.0
+        do j=iys,iye
+          do i=1,nnx
+            varb = varb + (bndy(i,j) - sumb)**2
+          end do
+        end do
+        varb = varb*fnxy
+        call mpi_sum_xy(varb,myid,iss,ise,1)
 
         return
       end
