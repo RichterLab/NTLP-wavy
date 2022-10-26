@@ -6,8 +6,8 @@ in a terminal and run the following commands:
 ---
 git clone https://www.github.com/RichterLab/NTLP-wavy  
 cd NTLP-wavy/build  
-module load intel  
-module load mvapich2  
+module load intel 
+module load mvapich2 #For Cheyenne: module load impi
 module load netcdf  
 make  
 cd ../  
@@ -18,7 +18,7 @@ You can use the copyRun script to create new runs based on the files and
 parameters of an old run.  The script automatically updates path_seed in
 params.in and the job name in les.run.  The command syntax is ``` ./copyRun
 oldRun newRun -param1 value -param2 value -paramN value ```.  For example, 
-to create a new run called RUN1 based on ExRun_Real, but change the number 
+to create a new run called run1 based on ExRun_Real, but change the number 
 of particles and the number of time steps:  
 
 ---
