@@ -26,7 +26,7 @@ time=0000000
 runout=$case.out.$time # output file 
 parent=$(basename $(dirname $(pwd)))
 datadir=/scratch365/$USER/$parent/$case
-mkdir -p $datadir
+mkdir -p $datadir/particle_traj
 cd $homedir
 
 module load mvapich2

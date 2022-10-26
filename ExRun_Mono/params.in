@@ -18,7 +18,7 @@ itn    = 1       !Start index for u.le.wav files (0 -> u.le.wav000 is often used
 
 !!=============================================================!!
 !! IO_PARAMS                                                   !!
-!! Output paths must be in scratch directory)                  !!
+!! Output paths must be in scratch directory                   !!
 !!=============================================================!!
 &io_params
 itrajout  = 1    ! write particle trajectories to a folder "particle_traj" in path_seed
@@ -50,7 +50,7 @@ ifree     = 2     ! Use average or point-by-point velocitytemp for MO?
 iupwnd    = 1     ! 0 use skew-symmetric for derivatives in scalar equations; 1 use hybrid upwind scheme in scalar equations
 iskew     = 1     ! 0 use skew symmetric form for advection in (u,v,w) eqns; 1 use hybrid upwind scheme for advection in momentum
 ibuoy     = 1     ! 0 no buoyancy term; 1 turn buoyancy on
-ifix_dt   = 1
+ifix_dt   = 0
 move_step = 0
 method    = 3
 iz_space  = 5     ! Grid stretching options
