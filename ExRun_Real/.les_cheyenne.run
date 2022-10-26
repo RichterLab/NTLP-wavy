@@ -7,7 +7,7 @@
 #PBS -j oe
 #PBS -A UNDM0005
 # Select = number of cores
-#PBS -l select=8:ncpus=36:mpiprocs=36
+#PBS -l select=4:ncpus=36:mpiprocs=36
 #PBS -l walltime=4:00:00
 
 
@@ -30,7 +30,7 @@ time=0000000
 runout=$case.out.$time # output file 
 parent=$(basename $(dirname $(pwd)))
 datadir=/glade/scratch/$USER/$parent/$case
-mkdir -p $datadir
+mkdir -p $datadir/particle_traj
 cd $homedir
 
 module load impi
@@ -41,4 +41,4 @@ imachine=0
 echo $imachine > ./mach.file
 echo $datadir >> ./mach.file
 
-mpirun -n 288 $homedir/../build/lesmpi.a $homedir/params.in > $datadir/$runout
+mpirun -n 144 $homedir/../build/lesmpi.a $homedir/params.in > $datadir/$runout
