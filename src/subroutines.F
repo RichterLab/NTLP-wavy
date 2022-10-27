@@ -14411,43 +14411,6 @@ c ------ myid is in the bottom row, send to everyone else
         return
       end function ran2
 
-      subroutine linInterp(xa,ya,n,x,y)
-        integer n
-        real x, xper, y, xa(n), ya(n)
-        integer i1, i2
-        xper = x
-      ! enforce periodic domain
-        if (xper >= xa(n)) then
-          xper = xper-xa(n)
-        elseif (xper < 0) then
-          xper = xa(n)+xper
-        endif
-      ! calc neighboring indices
-        i1 = floor((n-1)*xper/xa(n)) + 1
-        i2 = i1+1
-        y = ya(i1) + (xper-xa(i1))*(ya(i2)-ya(i1))/(xa(i2)-xa(i1))
-        return
-      end
-
-      subroutine linInterpSlope(xa,ya,n,x,dy_dx)
-        integer n
-        real x, xper, dy_dx, xa(n), ya(n)
-        integer i1, i2
-        xper = x
-      ! enforce periodic domain
-        if (xper >= xa(n)) then
-          xper = xper-xa(n)
-        elseif (xper < 0) then
-          xper = xa(n)+xper
-        endif
-      ! calc neighboring indices
-        i1 = floor((n-1)*xper/xa(n)) + 1
-        i2 = i1+1
-
-        dy_dx = (ya(i2)-ya(i1))/(xa(i2)-xa(i1))
-        return
-      end
-
       function mod_magnus(T)
         implicit none
 

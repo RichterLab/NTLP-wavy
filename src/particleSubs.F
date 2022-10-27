@@ -768,12 +768,6 @@
               beg_phase=mod((part%xp_0(1)+xl)-wave_local,wave_l)/wave_l
             endif
 
-       ! now get slope from paricle
-       !        call linInterpSlope(xpart,z_tank_i,nnx,part%xp(1),
-       ! +          wave_slope)
-       !        wave_slope = atan(wave_slope)
-
-
             wave_local = mod(c_speed*t_bndy,xl)
             if (part%xp(1) > wave_local) then
               end_phase = mod(part%xp(1)-wave_local,wave_l)/wave_l
@@ -922,8 +916,6 @@
           do np = 1, tot_part(i)
             xv = ran2(iseed)*(xmax-xmin) + xmin
             yv = ran2(iseed)*(ymax-ymin) + ymin
-            !call linInterp(xpart,u_tank_i,nnx,xv,uorb)   ! switch to spline at some point
-            !call linInterp(xpart,w_tank_i,nnx,xv,worb)
             uorb = 0
             worb = 0
             vinj = worb + ran2(iseed)*Vpmax
@@ -993,8 +985,6 @@
             yv = ran2(iseed)*(ymax-ymin) + ymin
             !Local orbital velocity as well as a random component for ejection
 
-            ! call linInterp(xpart,u_tank_i,nnx,xv,uorb)
-            ! call linInterp(xpart,w_tank_i,nnx,xv,worb)
             ! vinj = worb + ran2(iseed)*Vpmax
             uorb = 0.0
             vinj = ran2(iseed)*Vpmax
