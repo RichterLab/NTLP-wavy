@@ -26,7 +26,7 @@
         numpart = tnumpart/numprocs
         if (myid==0) then
           numpart = numpart + mod(tnumpart,numprocs)
-        end if
+        endif
 
       !Initialize the linked list of particles:
         nullify(part,first_particle)
@@ -37,7 +37,7 @@
         ddx = xl/float(nnx)
         do ix=1,nnx
           xpart(ix) = float(ix-1)*ddx
-        end do
+        enddo
         call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
         call spline(xpart,hx_i,nnx,yp1,ypn,dyspln)
         call spline(xpart,hx2_i,nnx,yp1,ypn,dy2spln)
@@ -53,7 +53,7 @@
      +        hx2_i(1:nnx),yspln(1:nnx),dyspln(1:nnx),dy2spln(1:nnx),
      +        0.0)
           ngidx = ngidx + 1
-        end do
+        enddo
 
         partTsrc = 0.0
         partTsrc_t = 0.0
@@ -85,13 +85,13 @@
         call set_bounds
 
       !Set up the path for the trajectory files
-      if (itrajout) then
-      write(myid_char,'(i4.4)') myid
-      path_traj =
-     + trim(adjustl(path_seed))//"particle_traj/"//myid_char//".dat"
-      ntraj = 128
-      open(ntraj,file=path_traj,form='formatted',status='replace')
-      end if
+        if (itrajout) then
+          write(myid_char,'(i4.4)') myid
+          path_traj =trim(adjustl(path_seed))//"particle_traj/"//
+     +        myid_char//".dat"
+          ntraj = 128
+          open(ntraj,file=path_traj,form='formatted',status='replace')
+        endif
 
         num_reintro = 0
         tot_reintro = 0
@@ -145,8 +145,8 @@
             write(*,*) 'mpi_type_get_true_extent(particletype) = ',
      +          extent2
             write(*,*) 'mpi_type_get_extent(particletype) = ',extent
-          end if
-        end if
+          endif
+        endif
 
       !Need to compute any padding which may exist in particle struct:
         pad_diff = extent-extent2
@@ -155,13 +155,13 @@
           write(*,*) 'mpi_get_true_extent = ',extent2
           write(*,*) 'sizeof(part) = ',sizeof(part)
           write(*,*) 'DIFF = ',pad_diff
-        end if
+        endif
         if (pad_diff < 0) then
           write(*,*) 'WARNING: mpi_get_extent -
      +        mpi_get_true_extent LT 0!'
           call mpi_finalize(ierr)
           stop
-        end if
+        endif
 
 
         call mpi_type_commit(particletype,ierr)
@@ -189,7 +189,7 @@
             bproc = myid-ncpu_s
             brproc = myid-ncpu_s - ncpu_s+1
          !On the bottom:
-          else if ( myid < ncpu_s ) then
+          elseif ( myid < ncpu_s ) then
             rproc = myid-ncpu_s+1
             trproc = myid+1
             tproc = myid+ncpu_s
@@ -208,10 +208,10 @@
             blproc = myid-ncpu_s-1
             bproc = myid-ncpu_s
             brproc = myid-ncpu_s - ncpu_s+1
-          end if
+          endif
 
       !On the left boundary:
-        else if ( mod(myid,ncpu_s) == 0) then
+        elseif ( mod(myid,ncpu_s) == 0) then
          !On the top:
           if ( myid >= ncpu_s*(ncpu_z-1) ) then
             rproc = myid+1
@@ -223,7 +223,7 @@
             bproc = myid-ncpu_s
             brproc = myid-ncpu_s+1
          !On the bottom:
-          else if ( myid < ncpu_s ) then
+          elseif ( myid < ncpu_s ) then
             rproc = myid+1
             trproc = myid+ncpu_s+1
             tproc = myid+ncpu_s
@@ -242,9 +242,9 @@
             blproc = myid-1
             bproc = myid-ncpu_s
             brproc = myid-ncpu_s+1
-          end if
+          endif
       !On the top boundary
-        else if ( myid >= ncpu_s*(ncpu_z-1) ) then
+        elseif ( myid >= ncpu_s*(ncpu_z-1) ) then
          !Only check if in the middle:
           if ( .NOT. ( mod(myid,ncpu_s) == 0) ) then
             if ( .NOT. (mod(myid+1,ncpu_s) == 0) ) then
@@ -256,10 +256,10 @@
               blproc = myid-ncpu_s-1
               bproc = myid-ncpu_s
               brproc = myid-ncpu_s+1
-            end if
-          end if
+            endif
+          endif
       !On the bottom boundary
-        else if ( myid < ncpu_s) then
+        elseif ( myid < ncpu_s) then
           if ( .NOT. ( mod(myid,ncpu_s) == 0) ) then
             if ( .NOT. (mod(myid+1,ncpu_s) == 0) ) then
               rproc = myid+1
@@ -270,8 +270,8 @@
               blproc = myid+ncpu_s*(ncpu_z-1)-1
               bproc = myid+ncpu_s*(ncpu_z-1)
               brproc = myid+ncpu_s*(ncpu_z-1)+1
-            end if
-          end if
+            endif
+          endif
       !Everywhere else:
         else
           rproc = myid+1
@@ -282,7 +282,7 @@
           blproc = myid-ncpu_s-1
           bproc = myid-ncpu_s
           brproc = myid-ncpu_s+1
-        end if
+        endif
 
         return
       end subroutine assign_nbrs
@@ -328,7 +328,7 @@
           part%prev%next => part
           part => first_particle
           nullify(part%prev)
-        end if
+        endif
 
         pi   = 4.0*atan(1.0)
 
@@ -398,7 +398,7 @@
         ddx = xl/float(nnx)
         do ix=1,nnx
           xpart(ix) = float(ix-1)*ddx
-        end do
+        enddo
         call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
 
       !update xip since waves have moved since last particle
@@ -409,9 +409,9 @@
           part%xip(1:3) = part%xp(1:3)
           if (iz_space == 5) then    !Algebraic stretching to smooth out waves
             call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
-          end if
+          endif
           part => part%next
-        end do
+        enddo
 
       !Apply bottom boundary conditions here since mesh will have moved from previous:
         num_reintro = 0
@@ -423,7 +423,7 @@
           partflux_t = 0.0
           partfluxup_t = 0.0
           partfluxdn_t = 0.0
-        end if
+        endif
         vpsum_t = 0.0
         upwp_t = 0.0
         vpsqrsum_t = 0.0
@@ -453,7 +453,7 @@
           if (it <= 1) then
             part%vp(1:3) = part%uf
             part%Tp = part%Tf
-          end if
+          endif
 
           diff(1:3) = part%vp - part%uf
           diffnorm = sqrt(diff(1)**2 + diff(2)**2 + diff(3)**2)
@@ -501,7 +501,7 @@
      +          taup_i*(part%qinf-part%qstar) !assumes qinf=rhov/rhoa rather than rhov/rhom
           else
             part%radrhs = 0.0
-          end if
+          endif
 
           part%Tprhs_s = -Nup/3.0/Pra*CpaCpp*
      +        rhop/rhow*taup_i*(part%Tp-part%Tf)
@@ -512,7 +512,7 @@
           if (istage==1) then
             part%xip_i(1:3) = part%xip(1:3)
             part%xp_i(1:3) = part%xp(1:3)
-          end if
+          endif
 
           part%xp(1:3) = xtmp(1:3) + dt*gama(istage)*part%xrhs(1:3)
 
@@ -520,7 +520,7 @@
             part%vp(1:3) = vtmp(1:3) + dt*gama(istage)*part%vrhs(1:3)
           else
             part%vp = part%uf - part_grav/taup_i
-          end if
+          endif
           part%Tp = Tptmp + dt*gama(istage)*part%Tprhs_s
           part%Tp = part%Tp + dt*gama(istage)*part%Tprhs_L
           part%radius = radiustmp + dt*gama(istage)*part%radrhs
@@ -531,14 +531,14 @@
           part%xip(1:3) = part%xp(1:3)
           if (iz_space == 5) then    !Algebraic stretching to smooth out waves
             call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
-          end if
+          endif
 
           !Keep track of max height particle reaches during lifetime
           if (part%xip(3) > part%zpmax) part%zpmax = part%xip(3)
 
 
           part => part%next
-        end do
+        enddo
         !t_f1 = mpi_wtime()
         !write(*,*) 'proc,loop time: ',myid,t_f1-t_s
         !call mpi_barrier(mpi_comm_world,ierr)
@@ -558,9 +558,9 @@
         if (istage == 1) tot_reintro = 0
         if (ispray == 1) then
           call part_reintro
-        else if (ispray == 2) then
+        elseif (ispray == 2) then
           if (istage == 3) call part_reintro_ssgf(it,istage)
-        end if
+        endif
         if (istage == 3) his_reintro = tot_reintro
 
         !Check to see if particles left processor
@@ -693,7 +693,7 @@
      +        qstarsum(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
      +        mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
      +        ncpu_s,numprocs)
-        end if
+        endif
 
       !t_s = mpi_wtime
       !Get particle count:
@@ -702,7 +702,7 @@
         do while (associated(part))
           numpart = numpart + 1
           part => part%next
-        end do
+        enddo
       !call mpi_barrier(mpi_comm_world,ierr)
       !t_f = mpi_wtime()
       !if (myid==5) write(*,*) 'time numpart: ', t_f - t_s
@@ -738,7 +738,7 @@
         ddx = xl/float(nnx)
         do ix=1,nnx
           xpart(ix) = float(ix-1)*ddx
-        end do
+        enddo
 
 
         part => first_particle
@@ -754,7 +754,7 @@
             part%xp(3) = top - (part%xp(3)-top)
             part%vp(3) = -part%vp(3)
             part => part%next
-          else if (part%xip(3) < bot) then
+          elseif (part%xip(3) < bot) then
 
             restime = t_stage - part%t0
 
@@ -766,7 +766,7 @@
             else
          !Particle behind wave phase inside domain
               beg_phase=mod((part%xp_0(1)+xl)-wave_local,wave_l)/wave_l
-            end if
+            endif
 
        ! now get slope from paricle
        !        call linInterpSlope(xpart,z_tank_i,nnx,part%xp(1),
@@ -779,7 +779,7 @@
               end_phase = mod(part%xp(1)-wave_local,wave_l)/wave_l
             else
               end_phase = mod((part%xp(1)+xl)-wave_local,wave_l)/wave_l
-            end if
+            endif
 
          !write(*,'(a5,2e15.6)') 'loc:',beg_phase,end_phase
          !write(*,'(a5,2e15.6)') 'res:',hist_restime,beg_phase
@@ -814,9 +814,9 @@
 
           else
             part => part%next
-          end if
+          endif
 
-        end do
+        enddo
 
       end subroutine particle_bcs_nonperiodic
 
@@ -835,8 +835,8 @@
         real :: xpart(nnx),yspln(nnx),dyspln(nnx),dy2spln(nnx)
         real :: u2part(nnx),w2part(nnx)
         real, dimension(4) :: S2_U10_12, S2_U10_16, S2_U10_18,
-     +                        S2_U10_20, uStar_U10_12, uStar_U10_16,
-     +                        uStar_U10_18, uStar_U10_20
+     +      S2_U10_20, uStar_U10_12, uStar_U10_16,
+     +      uStar_U10_18, uStar_U10_20
         integer, dimension(6) :: tot_part
         integer :: FPss, i, j, rlength, nmax, nth
         real :: dfdr1a, dfdr2a, dfdr3a
@@ -879,7 +879,7 @@
 
         do ix=1,nnx
           xpart(ix) = float(ix-1)*ddx
-        end do
+        enddo
 
         call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
         call spline(xpart,hx_i,nnx,yp1,ypn,dyspln)
@@ -898,23 +898,23 @@
             dfdr2  = dfdr2a*exp(-0.5*((r80(i) - mu(2))/sigma(2))**2)
             dfdr3a = (FPs(3)/(sigma(3)*sqrt(2*3.14)*tau))
             dfdr3  = dfdr3a*exp(-0.5*((r80(i) - mu(3))/sigma(3))**2)
-          else if (FPss == 2) then
+          elseif (FPss == 2) then
             dfdr1a = (FS(1)/(sigma(1)*sqrt(2*3.14)*tau))
             dfdr1  = dfdr1a*exp(-0.5*((r80(i) - mu(1))/sigma(1))**2)
             dfdr2a = (FS(2)/(sigma(2)*sqrt(2*3.14)*tau))
             dfdr2  = dfdr2a*exp(-0.5*((r80(i) - mu(2))/sigma(2))**2)
             dfdr3a = (FS(3)/(sigma(3)*sqrt(2*3.14)*tau))
             dfdr3  = dfdr3a*exp(-0.5*((r80(i) - mu(3))/sigma(3))**2)
-          end if
+          endif
 
           sum_dfdr(i) = dfdr1(i) + dfdr2(i) + dfdr3(i)
 
           if (mod(it, nth)==0) then
             tot_part(i) = (nth*dt)*dist*sum_dfdr(i)*(xmax-xmin)*
-     +                    (ymax-ymin)
+     +          (ymax-ymin)
           else
             tot_part(i) = 0
-          end if
+          endif
 
           tot_reintro = tot_reintro + tot_part(i)
 
@@ -937,9 +937,9 @@
 
             ngidx = ngidx + 1
 
-          end do
+          enddo
 
-        end do
+        enddo
 
         tot_reintro = tot_reintro * numprocs
 
@@ -975,7 +975,7 @@
         ddx = xl/float(nnx)
         do ix=1,nnx
           xpart(ix) = float(ix-1)*ddx
-        end do
+        enddo
         call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
         call spline(xpart,hx_i,nnx,yp1,ypn,dyspln)
         call spline(xpart,hx2_i,nnx,yp1,ypn,dy2spln)
@@ -1008,8 +1008,8 @@
             ngidx = ngidx + 1
 
 
-          end if
-        end do
+          endif
+        enddo
 
       end subroutine part_reintro
 
@@ -1030,19 +1030,19 @@
 
           if (part%xp(1) > xl) then
             part%xp(1) = part%xp(1)-xl
-          else if (part%xp(1) < 0) then
+          elseif (part%xp(1) < 0) then
             part%xp(1) = xl + part%xp(1)
-          end if
+          endif
 
           if (part%xp(2) > yl) then
             part%xp(2) = part%xp(2)-yl
-          else if (part%xp(2) < 0) then
+          elseif (part%xp(2) < 0) then
             part%xp(2) = yl + part%xp(2)
-          end if
+          endif
 
           part => part%next
 
-        end do
+        enddo
 
 
       end subroutine particle_bcs_periodic
@@ -1081,445 +1081,445 @@
           if (part%xp(2) > ymax) then
             if (part%xp(1) > xmax) then !top right
               ptr_s = ptr_s + 1
-            else if (part%xp(1) < xmin) then !bottom right
+            elseif (part%xp(1) < xmin) then !bottom right
               pbr_s = pbr_s + 1
             else  !right
               pr_s = pr_s + 1
-            end if
-          else if (part%xp(2) < ymin) then
+            endif
+          elseif (part%xp(2) < ymin) then
             if (part%xp(1) > xmax) then !top left
               ptl_s = ptl_s + 1
-            else if (part%xp(1) < xmin) then !bottom left
+            elseif (part%xp(1) < xmin) then !bottom left
               pbl_s = pbl_s + 1
             else  !left
               pl_s = pl_s + 1
-            end if
-          else if ( (part%xp(1) > xmax) .AND.
-     +          (part%xp(2) < ymax) .AND.
-     +          (part%xp(2) > ymin) ) then !top
-              pt_s = pt_s + 1
-            else if ( (part%xp(1) < xmin) .AND.
-     +            (part%xp(2) < ymax) .AND.
-     +            (part%xp(2) > ymin) ) then !bottom
-                pb_s = pb_s + 1
-              end if
+            endif
+          elseif ( (part%xp(1) > xmax) .AND.
+     +        (part%xp(2) < ymax) .AND.
+     +        (part%xp(2) > ymin) ) then !top
+            pt_s = pt_s + 1
+          elseif ( (part%xp(1) < xmin) .AND.
+     +        (part%xp(2) < ymax) .AND.
+     +        (part%xp(2) > ymin) ) then !bottom
+            pb_s = pb_s + 1
+          endif
 
-              part => part%next
-            end do
+          part => part%next
+        enddo
 
       !Now allocate the send buffers based on these counts:
-            allocate(rbuf_s(pr_s),trbuf_s(ptr_s),tbuf_s(pt_s),tlbuf_s(
-     +          ptl_s))
-            allocate(lbuf_s(pl_s),blbuf_s(pbl_s),bbuf_s(pb_s),brbuf_s(
-     +          pbr_s))
+        allocate(rbuf_s(pr_s),trbuf_s(ptr_s),tbuf_s(pt_s),tlbuf_s(
+     +      ptl_s))
+        allocate(lbuf_s(pl_s),blbuf_s(pbl_s),bbuf_s(pb_s),brbuf_s(
+     +      pbr_s))
 
       !Now loop back through the particles and fill the buffers:
       !NOTE: If it finds one, add it to buffer and REMOVE from list
-            ir=1;itr=1;itop=1;itl=1;il=1;ibl=1;ib=1;ibr=1
+        ir=1;itr=1;itop=1;itl=1;il=1;ibl=1;ib=1;ibr=1
 
-            part => first_particle
-            do while (associated(part))
+        part => first_particle
+        do while (associated(part))
 
-              if (part%xp(2) > ymax) then
-                if (part%xp(1) > xmax) then !top right
+          if (part%xp(2) > ymax) then
+            if (part%xp(1) > xmax) then !top right
 !               write(*,*) 'Proc',myid,'about to send part to
 !     +proc',trproc,'TOP RIGHT'
-                  trbuf_s(itr) = part
-                  call destroy_particle
-                  itr = itr + 1
-                else if (part%xp(1) < xmin) then !bottom right
+              trbuf_s(itr) = part
+              call destroy_particle
+              itr = itr + 1
+            elseif (part%xp(1) < xmin) then !bottom right
 !               write(*,*) 'Proc',myid,'about to send part to
 !     +proc',brproc,'BOTTOM RIGHT'
-                  brbuf_s(ibr) = part
-                  call destroy_particle
-                  ibr = ibr + 1
-                else   !right
+              brbuf_s(ibr) = part
+              call destroy_particle
+              ibr = ibr + 1
+            else   !right
 !               write(*,*) 'Proc',myid,'about to send part to
 !     +proc',rproc,'RIGHT'
-                  rbuf_s(ir) = part
-                  call destroy_particle
-                  ir = ir + 1
-                end if
-              else if (part%xp(2) < ymin) then
-                if (part%xp(1) > xmax) then !top left
+              rbuf_s(ir) = part
+              call destroy_particle
+              ir = ir + 1
+            endif
+          elseif (part%xp(2) < ymin) then
+            if (part%xp(1) > xmax) then !top left
 !               write(*,*) 'Proc',myid,'about to send part to
 !     +proc',tlproc,'TOP LEFT'
-                  tlbuf_s(itl) = part
-                  call destroy_particle
-                  itl = itl + 1
-                else if (part%xp(1) < xmin) then !bottom left
+              tlbuf_s(itl) = part
+              call destroy_particle
+              itl = itl + 1
+            elseif (part%xp(1) < xmin) then !bottom left
 !               write(*,*) 'Proc',myid,'about to send part to
 !     +proc',blproc,'BOTTOM LEFT'
-                  blbuf_s(ibl) = part
-                  call destroy_particle
-                  ibl = ibl + 1
-                else  !left
+              blbuf_s(ibl) = part
+              call destroy_particle
+              ibl = ibl + 1
+            else  !left
 !               write(*,*) 'Proc',myid,'about to send part to
 !     +proc',lproc,'LEFT'
-                  lbuf_s(il) = part
-                  call destroy_particle
-                  il = il + 1
-                end if
-              else if ( (part%xp(1) > xmax) .AND.
-     +              (part%xp(2) < ymax) .AND.
-     +              (part%xp(2) > ymin) ) then !top
+              lbuf_s(il) = part
+              call destroy_particle
+              il = il + 1
+            endif
+          elseif ( (part%xp(1) > xmax) .AND.
+     +        (part%xp(2) < ymax) .AND.
+     +        (part%xp(2) > ymin) ) then !top
 !               write(*,*) 'Proc',myid,'about to send part to
 !     +proc',tproc,'TOP'
-                  tbuf_s(itop) = part
-                  call destroy_particle
-                  itop = itop + 1
-                else if ( (part%xp(1) < xmin) .AND.
-     +                (part%xp(2) < ymax) .AND.
-     +                (part%xp(2) > ymin) ) then !bottom
+            tbuf_s(itop) = part
+            call destroy_particle
+            itop = itop + 1
+          elseif ( (part%xp(1) < xmin) .AND.
+     +        (part%xp(2) < ymax) .AND.
+     +        (part%xp(2) > ymin) ) then !bottom
 !               write(*,*) 'Proc',myid,'about to send part to
 !     +proc',bproc,'BOTTOM'
-                    bbuf_s(ib) = part
-                    call destroy_particle
-                    ib = ib + 1
-                  else
-                    part => part%next
-                  end if
+            bbuf_s(ib) = part
+            call destroy_particle
+            ib = ib + 1
+          else
+            part => part%next
+          endif
 
-                end do
+        enddo
 
       !Now everyone exchanges the counts with all neighbors:
       !Left/right:
-                call MPI_Sendrecv(pr_s,1,mpi_integer,rproc,3,pl_r,1,
-     +              mpi_integer,lproc,3,mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(pr_s,1,mpi_integer,rproc,3,pl_r,1,
+     +      mpi_integer,lproc,3,mpi_comm_world,istatus,ierr)
 
-                call MPI_Sendrecv(pl_s,1,mpi_integer,lproc,4,pr_r,1,
-     +              mpi_integer,rproc,4,mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(pl_s,1,mpi_integer,lproc,4,pr_r,1,
+     +      mpi_integer,rproc,4,mpi_comm_world,istatus,ierr)
 
       !Top/bottom:
-                call MPI_Sendrecv(pt_s,1,mpi_integer,tproc,5,pb_r,1,
-     +              mpi_integer,bproc,5,mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(pt_s,1,mpi_integer,tproc,5,pb_r,1,
+     +      mpi_integer,bproc,5,mpi_comm_world,istatus,ierr)
 
-                call MPI_Sendrecv(pb_s,1,mpi_integer,bproc,6,pt_r,1,
-     +              mpi_integer,tproc,6,mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(pb_s,1,mpi_integer,bproc,6,pt_r,1,
+     +      mpi_integer,tproc,6,mpi_comm_world,istatus,ierr)
 
       !Top right/bottom left:
-                call MPI_Sendrecv(ptr_s,1,mpi_integer,trproc,7,
-     +              pbl_r,1,mpi_integer,blproc,7,
-     +              mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(ptr_s,1,mpi_integer,trproc,7,
+     +      pbl_r,1,mpi_integer,blproc,7,
+     +      mpi_comm_world,istatus,ierr)
 
-                call MPI_Sendrecv(pbl_s,1,mpi_integer,blproc,8,
-     +              ptr_r,1,mpi_integer,trproc,8,
-     +              mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(pbl_s,1,mpi_integer,blproc,8,
+     +      ptr_r,1,mpi_integer,trproc,8,
+     +      mpi_comm_world,istatus,ierr)
 
        !Top left/bottom right:
-                call MPI_Sendrecv(ptl_s,1,mpi_integer,tlproc,9,
-     +              pbr_r,1,mpi_integer,brproc,9,
-     +              mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(ptl_s,1,mpi_integer,tlproc,9,
+     +      pbr_r,1,mpi_integer,brproc,9,
+     +      mpi_comm_world,istatus,ierr)
 
-                call MPI_Sendrecv(pbr_s,1,mpi_integer,brproc,10,
-     +              ptl_r,1,mpi_integer,tlproc,10,
-     +              mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(pbr_s,1,mpi_integer,brproc,10,
+     +      ptl_r,1,mpi_integer,tlproc,10,
+     +      mpi_comm_world,istatus,ierr)
 
       !Now everyone has the number of particles arriving from every neighbor
       !If the count is greater than zero, exchange:
 
       !Allocate room to receive from each side
-                allocate(rbuf_r(pr_r),trbuf_r(ptr_r),tbuf_r(pt_r),
-     +              tlbuf_r(ptl_r))
-                allocate(lbuf_r(pl_r),blbuf_r(pbl_r),bbuf_r(pb_r),
-     +              brbuf_r(pbr_r))
+        allocate(rbuf_r(pr_r),trbuf_r(ptr_r),tbuf_r(pt_r),
+     +      tlbuf_r(ptl_r))
+        allocate(lbuf_r(pl_r),blbuf_r(pbl_r),bbuf_r(pb_r),
+     +      brbuf_r(pbr_r))
 
       !Send to right:
-                if (pr_s > 0) then
-                  call mpi_isend(rbuf_s,pr_s,particletype,rproc,11,
-     +                mpi_comm_world,req(1),ierr)
-                else
-                  req(1) = mpi_request_null
-                end if
+        if (pr_s > 0) then
+          call mpi_isend(rbuf_s,pr_s,particletype,rproc,11,
+     +        mpi_comm_world,req(1),ierr)
+        else
+          req(1) = mpi_request_null
+        endif
 
       !Receive from left:
-                if (pl_r > 0) then
-                  call mpi_irecv(lbuf_r,pl_r,particletype,lproc,11,
-     +                mpi_comm_world,req(2),ierr)
-                else
-                  req(2) = mpi_request_null
-                end if
+        if (pl_r > 0) then
+          call mpi_irecv(lbuf_r,pl_r,particletype,lproc,11,
+     +        mpi_comm_world,req(2),ierr)
+        else
+          req(2) = mpi_request_null
+        endif
 
       !Send to left:
-                if (pl_s > 0) then
-                  call mpi_isend(lbuf_s,pl_s,particletype,lproc,12,
-     +                mpi_comm_world,req(3),ierr)
-                else
-                  req(3) = mpi_request_null
-                end if
+        if (pl_s > 0) then
+          call mpi_isend(lbuf_s,pl_s,particletype,lproc,12,
+     +        mpi_comm_world,req(3),ierr)
+        else
+          req(3) = mpi_request_null
+        endif
 
       !Receive from right:
-                if (pr_r > 0) then
-                  call mpi_irecv(rbuf_r,pr_r,particletype,rproc,12,
-     +                mpi_comm_world,req(4),ierr)
-                else
-                  req(4) = mpi_request_null
-                end if
+        if (pr_r > 0) then
+          call mpi_irecv(rbuf_r,pr_r,particletype,rproc,12,
+     +        mpi_comm_world,req(4),ierr)
+        else
+          req(4) = mpi_request_null
+        endif
 
       !Send to top:
-                if (pt_s > 0) then
-                  call mpi_isend(tbuf_s,pt_s,particletype,tproc,13,
-     +                mpi_comm_world,req(5),ierr)
-                else
-                  req(5) = mpi_request_null
-                end if
+        if (pt_s > 0) then
+          call mpi_isend(tbuf_s,pt_s,particletype,tproc,13,
+     +        mpi_comm_world,req(5),ierr)
+        else
+          req(5) = mpi_request_null
+        endif
 
       !Receive from bottom:
-                if (pb_r > 0) then
-                  call mpi_irecv(bbuf_r,pb_r,particletype,bproc,13,
-     +                mpi_comm_world,req(6),ierr)
-                else
-                  req(6) = mpi_request_null
-                end if
+        if (pb_r > 0) then
+          call mpi_irecv(bbuf_r,pb_r,particletype,bproc,13,
+     +        mpi_comm_world,req(6),ierr)
+        else
+          req(6) = mpi_request_null
+        endif
 
       !Send to bottom:
-                if (pb_s > 0) then
-                  call mpi_isend(bbuf_s,pb_s,particletype,bproc,14,
-     +                mpi_comm_world,req(7),ierr)
-                else
-                  req(7) = mpi_request_null
-                end if
+        if (pb_s > 0) then
+          call mpi_isend(bbuf_s,pb_s,particletype,bproc,14,
+     +        mpi_comm_world,req(7),ierr)
+        else
+          req(7) = mpi_request_null
+        endif
 
       !Recieve from top:
-                if (pt_r > 0) then
-                  call mpi_irecv(tbuf_r,pt_r,particletype,tproc,14,
-     +                mpi_comm_world,req(8),ierr)
-                else
-                  req(8) = mpi_request_null
-                end if
+        if (pt_r > 0) then
+          call mpi_irecv(tbuf_r,pt_r,particletype,tproc,14,
+     +        mpi_comm_world,req(8),ierr)
+        else
+          req(8) = mpi_request_null
+        endif
 
       !Send to top right:
-                if (ptr_s > 0) then
-                  call mpi_isend(trbuf_s,ptr_s,particletype,trproc,15,
-     +                mpi_comm_world,req(9),ierr)
-                else
-                  req(9) = mpi_request_null
-                end if
+        if (ptr_s > 0) then
+          call mpi_isend(trbuf_s,ptr_s,particletype,trproc,15,
+     +        mpi_comm_world,req(9),ierr)
+        else
+          req(9) = mpi_request_null
+        endif
 
       !Receive from bottom left:
-                if (pbl_r > 0) then
-                  call mpi_irecv(blbuf_r,pbl_r,particletype,blproc,15,
-     +                mpi_comm_world,req(10),ierr)
-                else
-                  req(10) = mpi_request_null
-                end if
+        if (pbl_r > 0) then
+          call mpi_irecv(blbuf_r,pbl_r,particletype,blproc,15,
+     +        mpi_comm_world,req(10),ierr)
+        else
+          req(10) = mpi_request_null
+        endif
 
       !Send to bottom left:
-                if (pbl_s > 0) then
-                  call mpi_isend(blbuf_s,pbl_s,particletype,blproc,16,
-     +                mpi_comm_world,req(11),ierr)
-                else
-                  req(11) = mpi_request_null
-                end if
+        if (pbl_s > 0) then
+          call mpi_isend(blbuf_s,pbl_s,particletype,blproc,16,
+     +        mpi_comm_world,req(11),ierr)
+        else
+          req(11) = mpi_request_null
+        endif
 
       !Receive from top right:
-                if (ptr_r > 0) then
-                  call mpi_irecv(trbuf_r,ptr_r,particletype,trproc,16,
-     +                mpi_comm_world,req(12),ierr)
-                else
-                  req(12) = mpi_request_null
-                end if
+        if (ptr_r > 0) then
+          call mpi_irecv(trbuf_r,ptr_r,particletype,trproc,16,
+     +        mpi_comm_world,req(12),ierr)
+        else
+          req(12) = mpi_request_null
+        endif
 
       !Send to top left:
-                if (ptl_s > 0) then
-                  call mpi_isend(tlbuf_s,ptl_s,particletype,tlproc,17,
-     +                mpi_comm_world,req(13),ierr)
-                else
-                  req(13) = mpi_request_null
-                end if
+        if (ptl_s > 0) then
+          call mpi_isend(tlbuf_s,ptl_s,particletype,tlproc,17,
+     +        mpi_comm_world,req(13),ierr)
+        else
+          req(13) = mpi_request_null
+        endif
 
       !Receive from bottom right:
-                if (pbr_r > 0) then
-                  call mpi_irecv(brbuf_r,pbr_r,particletype,brproc,17,
-     +                mpi_comm_world,req(14),ierr)
-                else
-                  req(14) = mpi_request_null
-                end if
+        if (pbr_r > 0) then
+          call mpi_irecv(brbuf_r,pbr_r,particletype,brproc,17,
+     +        mpi_comm_world,req(14),ierr)
+        else
+          req(14) = mpi_request_null
+        endif
 
       !Send to bottom right:
-                if (pbr_s > 0) then
-                  call mpi_isend(brbuf_s,pbr_s,particletype,brproc,18,
-     +                mpi_comm_world,req(15),ierr)
-                else
-                  req(15) = mpi_request_null
-                end if
+        if (pbr_s > 0) then
+          call mpi_isend(brbuf_s,pbr_s,particletype,brproc,18,
+     +        mpi_comm_world,req(15),ierr)
+        else
+          req(15) = mpi_request_null
+        endif
 
       !Receive from top left:
-                if (ptl_r > 0) then
-                  call mpi_irecv(tlbuf_r,ptl_r,particletype,tlproc,18,
-     +                mpi_comm_world,req(16),ierr)
-                else
-                  req(16) = mpi_request_null
-                end if
+        if (ptl_r > 0) then
+          call mpi_irecv(tlbuf_r,ptl_r,particletype,tlproc,18,
+     +        mpi_comm_world,req(16),ierr)
+        else
+          req(16) = mpi_request_null
+        endif
 
-                call mpi_waitall(16,req,status_array,ierr)
+        call mpi_waitall(16,req,status_array,ierr)
 
       !Now add incoming particles to linked list:
       !NOTE: add them to beginning since it's easiest to access (first_particle)
 
       !Form one large buffer to loop through and add:
-                psum = pr_r+ptr_r+pt_r+ptl_r+pl_r+pbl_r+pb_r+pbr_r
-                csum = 0
-                allocate(totalbuf(psum))
-                if (pr_r > 0) then
-                  totalbuf(1:pr_r) = rbuf_r(1:pr_r)
-                  csum = csum + pr_r
-                end if
-                if (ptr_r > 0) then
-                  totalbuf(csum+1:csum+ptr_r) = trbuf_r(1:ptr_r)
-                  csum = csum + ptr_r
-                end if
-                if (pt_r > 0) then
-                  totalbuf(csum+1:csum+pt_r) = tbuf_r(1:pt_r)
-                  csum = csum + pt_r
-                end if
-                if (ptl_r > 0) then
-                  totalbuf(csum+1:csum+ptl_r) = tlbuf_r(1:ptl_r)
-                  csum = csum + ptl_r
-                end if
-                if (pl_r > 0) then
-                  totalbuf(csum+1:csum+pl_r) = lbuf_r(1:pl_r)
-                  csum = csum + pl_r
-                end if
-                if (pbl_r > 0) then
-                  totalbuf(csum+1:csum+pbl_r) = blbuf_r(1:pbl_r)
-                  csum = csum + pbl_r
-                end if
-                if (pb_r > 0) then
-                  totalbuf(csum+1:csum+pb_r) = bbuf_r(1:pb_r)
-                  csum = csum + pb_r
-                end if
-                if (pbr_r > 0) then
-                  totalbuf(csum+1:csum+pbr_r) = brbuf_r(1:pbr_r)
-                  csum = csum + pbr_r
-                end if
+        psum = pr_r+ptr_r+pt_r+ptl_r+pl_r+pbl_r+pb_r+pbr_r
+        csum = 0
+        allocate(totalbuf(psum))
+        if (pr_r > 0) then
+          totalbuf(1:pr_r) = rbuf_r(1:pr_r)
+          csum = csum + pr_r
+        endif
+        if (ptr_r > 0) then
+          totalbuf(csum+1:csum+ptr_r) = trbuf_r(1:ptr_r)
+          csum = csum + ptr_r
+        endif
+        if (pt_r > 0) then
+          totalbuf(csum+1:csum+pt_r) = tbuf_r(1:pt_r)
+          csum = csum + pt_r
+        endif
+        if (ptl_r > 0) then
+          totalbuf(csum+1:csum+ptl_r) = tlbuf_r(1:ptl_r)
+          csum = csum + ptl_r
+        endif
+        if (pl_r > 0) then
+          totalbuf(csum+1:csum+pl_r) = lbuf_r(1:pl_r)
+          csum = csum + pl_r
+        endif
+        if (pbl_r > 0) then
+          totalbuf(csum+1:csum+pbl_r) = blbuf_r(1:pbl_r)
+          csum = csum + pbl_r
+        endif
+        if (pb_r > 0) then
+          totalbuf(csum+1:csum+pb_r) = bbuf_r(1:pb_r)
+          csum = csum + pb_r
+        endif
+        if (pbr_r > 0) then
+          totalbuf(csum+1:csum+pbr_r) = brbuf_r(1:pbr_r)
+          csum = csum + pbr_r
+        endif
 
-                do idx = 1,psum
-                  if (.NOT. associated(first_particle)) then
-                    allocate(first_particle)
-                    first_particle = totalbuf(idx)
-                    nullify(first_particle%next,first_particle%prev)
-                  else
-                    allocate(first_particle%prev)
-                    tmp => first_particle%prev
-                    tmp = totalbuf(idx)
-                    tmp%next => first_particle
-                    nullify(tmp%prev)
-                    first_particle => tmp
-                    nullify(tmp)
-                  end if
-                end do
+        do idx = 1,psum
+          if (.NOT. associated(first_particle)) then
+            allocate(first_particle)
+            first_particle = totalbuf(idx)
+            nullify(first_particle%next,first_particle%prev)
+          else
+            allocate(first_particle%prev)
+            tmp => first_particle%prev
+            tmp = totalbuf(idx)
+            tmp%next => first_particle
+            nullify(tmp%prev)
+            first_particle => tmp
+            nullify(tmp)
+          endif
+        enddo
 
-                deallocate(rbuf_s,trbuf_s,tbuf_s,tlbuf_s)
-                deallocate(lbuf_s,blbuf_s,bbuf_s,brbuf_s)
-                deallocate(rbuf_r,trbuf_r,tbuf_r,tlbuf_r)
-                deallocate(lbuf_r,blbuf_r,bbuf_r,brbuf_r)
-                deallocate(totalbuf)
+        deallocate(rbuf_s,trbuf_s,tbuf_s,tlbuf_s)
+        deallocate(lbuf_s,blbuf_s,bbuf_s,brbuf_s)
+        deallocate(rbuf_r,trbuf_r,tbuf_r,tlbuf_r)
+        deallocate(lbuf_r,blbuf_r,bbuf_r,brbuf_r)
+        deallocate(totalbuf)
 
-              end subroutine particle_exchange
-              subroutine destroy_particle
-                use particles
-                implicit none
+      end subroutine particle_exchange
+      subroutine destroy_particle
+        use particles
+        implicit none
 
-                type(particle), pointer :: tmp
+        type(particle), pointer :: tmp
 
       !Is it the first and last in the list?
-                if (associated(part,first_particle) .AND.
-     +              (.NOT. associated(part%next)) ) then
-                  nullify(first_particle)
-                  deallocate(part)
-                else
-                  if (associated(part,first_particle)) then !Is it the first particle?
-                    first_particle => part%next
-                    part => first_particle
-                    deallocate(part%prev)
-                  else if (.NOT. associated(part%next)) then !Is it the last particle?
-                    nullify(part%prev%next)
-                    deallocate(part)
-                  else
-                    tmp => part
-                    part => part%next
-                    tmp%prev%next => tmp%next
-                    tmp%next%prev => tmp%prev
-                    deallocate(tmp)
-                  end if
-                end if
+        if (associated(part,first_particle) .AND.
+     +      (.NOT. associated(part%next)) ) then
+          nullify(first_particle)
+          deallocate(part)
+        else
+          if (associated(part,first_particle)) then !Is it the first particle?
+            first_particle => part%next
+            part => first_particle
+            deallocate(part%prev)
+          elseif (.NOT. associated(part%next)) then !Is it the last particle?
+            nullify(part%prev%next)
+            deallocate(part)
+          else
+            tmp => part
+            part => part%next
+            tmp%prev%next => tmp%next
+            tmp%next%prev => tmp%prev
+            deallocate(tmp)
+          endif
+        endif
 
-              end subroutine destroy_particle
+      end subroutine destroy_particle
 
-              subroutine fill_ext
-                use pars
-                use particles
-                use fields
-                use con_stats
-                use con_data
-                implicit none
-                include 'mpif.h'
+      subroutine fill_ext
+        use pars
+        use particles
+        use fields
+        use con_stats
+        use con_data
+        implicit none
+        include 'mpif.h'
 
-                integer :: istatus(mpi_status_size),ierr
-                integer :: ix,iy,iz
+        integer :: istatus(mpi_status_size),ierr
+        integer :: ix,iy,iz
       !preceding letter: r=right,l=left,t=top,b=bot.
       !_s: buf of things to send TO r,l,t,b
       !_r: buf of things to recv FROM r,l,t,b
-                real :: tbuf_s(nnz+2,iye-iys+1,2,5),tbuf_r(nnz+2,iye-
-     +              iys+1,3,5)
-                real :: bbuf_s(nnz+2,iye-iys+1,3,5),bbuf_r(nnz+2,iye-
-     +              iys+1,2,5)
-                real :: rbuf_s(nnz+2,2,mxe-mxs+1,5),rbuf_r(nnz+2,3,mxe-
-     +              mxs+1,5)
-                real :: lbuf_s(nnz+2,3,mxe-mxs+1,5),lbuf_r(nnz+2,2,mxe-
-     +              mxs+1,5)
+        real :: tbuf_s(nnz+2,iye-iys+1,2,5),tbuf_r(nnz+2,iye-
+     +      iys+1,3,5)
+        real :: bbuf_s(nnz+2,iye-iys+1,3,5),bbuf_r(nnz+2,iye-
+     +      iys+1,2,5)
+        real :: rbuf_s(nnz+2,2,mxe-mxs+1,5),rbuf_r(nnz+2,3,mxe-
+     +      mxs+1,5)
+        real :: lbuf_s(nnz+2,3,mxe-mxs+1,5),lbuf_r(nnz+2,2,mxe-
+     +      mxs+1,5)
 
       !Corners:
-                real :: trbuf_s(nnz+2,2,2,5),trbuf_r(nnz+2,3,3,5)
-                real :: brbuf_s(nnz+2,2,3,5),brbuf_r(nnz+2,3,2,5)
-                real :: blbuf_s(nnz+2,3,3,5),blbuf_r(nnz+2,2,2,5)
-                real :: tlbuf_s(nnz+2,3,2,5),tlbuf_r(nnz+2,2,3,5)
+        real :: trbuf_s(nnz+2,2,2,5),trbuf_r(nnz+2,3,3,5)
+        real :: brbuf_s(nnz+2,2,3,5),brbuf_r(nnz+2,3,2,5)
+        real :: blbuf_s(nnz+2,3,3,5),blbuf_r(nnz+2,2,2,5)
+        real :: tlbuf_s(nnz+2,3,2,5),tlbuf_r(nnz+2,2,3,5)
       !MPI send counts:
-                integer :: rc_s,rc_r,trc_s,trc_r,tc_s,tc_r,tlc_s,tlc_r
-                integer :: lc_s,lc_r,blc_s,blc_r,bc_s,bc_r,brc_s,brc_r
+        integer :: rc_s,rc_r,trc_s,trc_r,tc_s,tc_r,tlc_s,tlc_r
+        integer :: lc_s,lc_r,blc_s,blc_r,bc_s,bc_r,brc_s,brc_r
 
       !Debugging:
-                real :: xv,yv,zv
+        real :: xv,yv,zv
 
       !To update the particle ODE in time, need the interpolated
       !velocity field
       !This requires filling uext,vext,wext from nearby procs
-                uext = 0.0
-                vext = 0.0
-                wext = 0.0
-                Text = 0.0
-                T2ext = 0.0
+        uext = 0.0
+        vext = 0.0
+        wext = 0.0
+        Text = 0.0
+        T2ext = 0.0
 
       !First fill the center, since this is just u,v,w on that proc:
 
       !In the column setup, need to tranpose u,v,w first into u_t,v_t,w_t:
-                call xtoz_trans(u(1:nnx,iys:iye,izs-1:ize+1),u_t,nnx,
-     +              nnz,mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
-     +              myid,ncpu_s,numprocs)
-                call xtoz_trans(v(1:nnx,iys:iye,izs-1:ize+1),v_t,nnx,
-     +              nnz,mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
-     +              myid,ncpu_s,numprocs)
-                call xtoz_trans(w(1:nnx,iys:iye,izs-1:ize+1),w_t,nnx,
-     +              nnz,mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
-     +              myid,ncpu_s,numprocs)
-                call xtoz_trans(t(1:nnx,iys:iye,1,izs-1:ize+1),T_t,nnx,
-     +              nnz,mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
-     +              myid,ncpu_s,numprocs)
-                call xtoz_trans(t(1:nnx,iys:iye,2,izs-1:ize+1),T2_t,nnx,
-     +              nnz,mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
-     +              myid,ncpu_s,numprocs)
+        call xtoz_trans(u(1:nnx,iys:iye,izs-1:ize+1),u_t,nnx,
+     +      nnz,mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
+     +      myid,ncpu_s,numprocs)
+        call xtoz_trans(v(1:nnx,iys:iye,izs-1:ize+1),v_t,nnx,
+     +      nnz,mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
+     +      myid,ncpu_s,numprocs)
+        call xtoz_trans(w(1:nnx,iys:iye,izs-1:ize+1),w_t,nnx,
+     +      nnz,mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
+     +      myid,ncpu_s,numprocs)
+        call xtoz_trans(t(1:nnx,iys:iye,1,izs-1:ize+1),T_t,nnx,
+     +      nnz,mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
+     +      myid,ncpu_s,numprocs)
+        call xtoz_trans(t(1:nnx,iys:iye,2,izs-1:ize+1),T2_t,nnx,
+     +      nnz,mxs,mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,
+     +      myid,ncpu_s,numprocs)
 
-                uext(0:nnz+1,iys:iye,mxs:mxe) = u_t(0:nnz+1,iys:iye,
-     +              mxs:mxe)
-                vext(0:nnz+1,iys:iye,mxs:mxe) = v_t(0:nnz+1,iys:iye,
-     +              mxs:mxe)
-                wext(0:nnz+1,iys:iye,mxs:mxe) = w_t(0:nnz+1,iys:iye,
-     +              mxs:mxe)
-                Text(0:nnz+1,iys:iye,mxs:mxe) = T_t(0:nnz+1,iys:iye,
-     +              mxs:mxe)
-                T2ext(0:nnz+1,iys:iye,mxs:mxe) = T2_t(0:nnz+1,iys:iye,
-     +              mxs:mxe)
+        uext(0:nnz+1,iys:iye,mxs:mxe) = u_t(0:nnz+1,iys:iye,
+     +      mxs:mxe)
+        vext(0:nnz+1,iys:iye,mxs:mxe) = v_t(0:nnz+1,iys:iye,
+     +      mxs:mxe)
+        wext(0:nnz+1,iys:iye,mxs:mxe) = w_t(0:nnz+1,iys:iye,
+     +      mxs:mxe)
+        Text(0:nnz+1,iys:iye,mxs:mxe) = T_t(0:nnz+1,iys:iye,
+     +      mxs:mxe)
+        T2ext(0:nnz+1,iys:iye,mxs:mxe) = T2_t(0:nnz+1,iys:iye,
+     +      mxs:mxe)
 
       !Recall that SR assign_nbrs assigned rproc,lproc, etc.
 
@@ -1528,272 +1528,272 @@
       !Fill the send buffers:
 
       !I know these are redundant, but so I can keep them straight...
-                tc_s = 5*(nnz+2)*2*(iye-iys+1)
-                tc_r = 5*(nnz+2)*3*(iye-iys+1)
-                trc_s = 5*(nnz+2)*2*2
-                trc_r = 5*(nnz+2)*3*3
-                rc_s = 5*(nnz+2)*(mxe-mxs+1)*2
-                rc_r = 5*(nnz+2)*(mxe-mxs+1)*3
-                tlc_s = 5*(nnz+2)*3*2
-                tlc_r = 5*(nnz+2)*2*3
-                bc_s = 5*(nnz+2)*3*(iye-iys+1)
-                bc_r = 5*(nnz+2)*2*(iye-iys+1)
-                blc_s = 5*(nnz+2)*3*3
-                blc_r = 5*(nnz+2)*2*2
-                lc_s = 5*(nnz+2)*(mxe-mxs+1)*3
-                lc_r = 5*(nnz+2)*(mxe-mxs+1)*2
-                brc_s = 5*(nnz+2)*2*3
-                brc_r = 5*(nnz+2)*3*2
+        tc_s = 5*(nnz+2)*2*(iye-iys+1)
+        tc_r = 5*(nnz+2)*3*(iye-iys+1)
+        trc_s = 5*(nnz+2)*2*2
+        trc_r = 5*(nnz+2)*3*3
+        rc_s = 5*(nnz+2)*(mxe-mxs+1)*2
+        rc_r = 5*(nnz+2)*(mxe-mxs+1)*3
+        tlc_s = 5*(nnz+2)*3*2
+        tlc_r = 5*(nnz+2)*2*3
+        bc_s = 5*(nnz+2)*3*(iye-iys+1)
+        bc_r = 5*(nnz+2)*2*(iye-iys+1)
+        blc_s = 5*(nnz+2)*3*3
+        blc_r = 5*(nnz+2)*2*2
+        lc_s = 5*(nnz+2)*(mxe-mxs+1)*3
+        lc_r = 5*(nnz+2)*(mxe-mxs+1)*2
+        brc_s = 5*(nnz+2)*2*3
+        brc_r = 5*(nnz+2)*3*2
 
       !First u:
-                tbuf_s(1:nnz+2,1:iye-iys+1,1:2,1)=u_t(0:nnz+1,iys:iye,
-     +              mxe-1:mxe)
-                trbuf_s(1:nnz+2,1:2,1:2,1) = u_t(0:nnz+1,iye-1:iye,mxe-
-     +              1:mxe)
-                rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,1)=u_t(0:nnz+1,iye-1:iye,
-     +              mxs:mxe)
-                brbuf_s(1:nnz+2,1:2,1:3,1) = u_t(0:nnz+1,iye-1:iye,
-     +              mxs:mxs+2)
-                bbuf_s(1:nnz+2,1:iye-iys+1,1:3,1)=u_t(0:nnz+1,iys:iye,
-     +              mxs:mxs+2)
-                blbuf_s(1:nnz+2,1:3,1:3,1) = u_t(0:nnz+1,iys:iys+2,
-     +              mxs:mxs+2)
-                lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,1)=u_t(0:nnz+1,iys:iys+2,
-     +              mxs:mxe)
-                tlbuf_s(1:nnz+2,1:3,1:2,1) = u_t(0:nnz+1,iys:iys+2,mxe-
-     +              1:mxe)
+        tbuf_s(1:nnz+2,1:iye-iys+1,1:2,1)=u_t(0:nnz+1,iys:iye,
+     +      mxe-1:mxe)
+        trbuf_s(1:nnz+2,1:2,1:2,1) = u_t(0:nnz+1,iye-1:iye,mxe-
+     +      1:mxe)
+        rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,1)=u_t(0:nnz+1,iye-1:iye,
+     +      mxs:mxe)
+        brbuf_s(1:nnz+2,1:2,1:3,1) = u_t(0:nnz+1,iye-1:iye,
+     +      mxs:mxs+2)
+        bbuf_s(1:nnz+2,1:iye-iys+1,1:3,1)=u_t(0:nnz+1,iys:iye,
+     +      mxs:mxs+2)
+        blbuf_s(1:nnz+2,1:3,1:3,1) = u_t(0:nnz+1,iys:iys+2,
+     +      mxs:mxs+2)
+        lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,1)=u_t(0:nnz+1,iys:iys+2,
+     +      mxs:mxe)
+        tlbuf_s(1:nnz+2,1:3,1:2,1) = u_t(0:nnz+1,iys:iys+2,mxe-
+     +      1:mxe)
 
       !v:
-                tbuf_s(1:nnz+2,1:iye-iys+1,1:2,2)=v_t(0:nnz+1,iys:iye,
-     +              mxe-1:mxe)
-                trbuf_s(1:nnz+2,1:2,1:2,2) = v_t(0:nnz+1,iye-1:iye,mxe-
-     +              1:mxe)
-                rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,2)=v_t(0:nnz+1,iye-1:iye,
-     +              mxs:mxe)
-                brbuf_s(1:nnz+2,1:2,1:3,2) = v_t(0:nnz+1,iye-1:iye,
-     +              mxs:mxs+2)
-                bbuf_s(1:nnz+2,1:iye-iys+1,1:3,2)=v_t(0:nnz+1,iys:iye,
-     +              mxs:mxs+2)
-                blbuf_s(1:nnz+2,1:3,1:3,2) = v_t(0:nnz+1,iys:iys+2,
-     +              mxs:mxs+2)
-                lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,2)=v_t(0:nnz+1,iys:iys+2,
-     +              mxs:mxe)
-                tlbuf_s(1:nnz+2,1:3,1:2,2) = v_t(0:nnz+1,iys:iys+2,mxe-
-     +              1:mxe)
+        tbuf_s(1:nnz+2,1:iye-iys+1,1:2,2)=v_t(0:nnz+1,iys:iye,
+     +      mxe-1:mxe)
+        trbuf_s(1:nnz+2,1:2,1:2,2) = v_t(0:nnz+1,iye-1:iye,mxe-
+     +      1:mxe)
+        rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,2)=v_t(0:nnz+1,iye-1:iye,
+     +      mxs:mxe)
+        brbuf_s(1:nnz+2,1:2,1:3,2) = v_t(0:nnz+1,iye-1:iye,
+     +      mxs:mxs+2)
+        bbuf_s(1:nnz+2,1:iye-iys+1,1:3,2)=v_t(0:nnz+1,iys:iye,
+     +      mxs:mxs+2)
+        blbuf_s(1:nnz+2,1:3,1:3,2) = v_t(0:nnz+1,iys:iys+2,
+     +      mxs:mxs+2)
+        lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,2)=v_t(0:nnz+1,iys:iys+2,
+     +      mxs:mxe)
+        tlbuf_s(1:nnz+2,1:3,1:2,2) = v_t(0:nnz+1,iys:iys+2,mxe-
+     +      1:mxe)
 
       !w:
-                tbuf_s(1:nnz+2,1:iye-iys+1,1:2,3)=w_t(0:nnz+1,iys:iye,
-     +              mxe-1:mxe)
-                trbuf_s(1:nnz+2,1:2,1:2,3) = w_t(0:nnz+1,iye-1:iye,mxe-
-     +              1:mxe)
-                rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,3)=w_t(0:nnz+1,iye-1:iye,
-     +              mxs:mxe)
-                brbuf_s(1:nnz+2,1:2,1:3,3) = w_t(0:nnz+1,iye-1:iye,
-     +              mxs:mxs+2)
-                bbuf_s(1:nnz+2,1:iye-iys+1,1:3,3)=w_t(0:nnz+1,iys:iye,
-     +              mxs:mxs+2)
-                blbuf_s(1:nnz+2,1:3,1:3,3) = w_t(0:nnz+1,iys:iys+2,
-     +              mxs:mxs+2)
-                lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,3)=w_t(0:nnz+1,iys:iys+2,
-     +              mxs:mxe)
-                tlbuf_s(1:nnz+2,1:3,1:2,3) = w_t(0:nnz+1,iys:iys+2,mxe-
-     +              1:mxe)
+        tbuf_s(1:nnz+2,1:iye-iys+1,1:2,3)=w_t(0:nnz+1,iys:iye,
+     +      mxe-1:mxe)
+        trbuf_s(1:nnz+2,1:2,1:2,3) = w_t(0:nnz+1,iye-1:iye,mxe-
+     +      1:mxe)
+        rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,3)=w_t(0:nnz+1,iye-1:iye,
+     +      mxs:mxe)
+        brbuf_s(1:nnz+2,1:2,1:3,3) = w_t(0:nnz+1,iye-1:iye,
+     +      mxs:mxs+2)
+        bbuf_s(1:nnz+2,1:iye-iys+1,1:3,3)=w_t(0:nnz+1,iys:iye,
+     +      mxs:mxs+2)
+        blbuf_s(1:nnz+2,1:3,1:3,3) = w_t(0:nnz+1,iys:iys+2,
+     +      mxs:mxs+2)
+        lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,3)=w_t(0:nnz+1,iys:iys+2,
+     +      mxs:mxe)
+        tlbuf_s(1:nnz+2,1:3,1:2,3) = w_t(0:nnz+1,iys:iys+2,mxe-
+     +      1:mxe)
 
       !T:
-                tbuf_s(1:nnz+2,1:iye-iys+1,1:2,4)=T_t(0:nnz+1,iys:iye,
-     +              mxe-1:mxe)
-                trbuf_s(1:nnz+2,1:2,1:2,4) = T_t(0:nnz+1,iye-1:iye,mxe-
-     +              1:mxe)
-                rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,4)=T_t(0:nnz+1,iye-1:iye,
-     +              mxs:mxe)
-                brbuf_s(1:nnz+2,1:2,1:3,4) = T_t(0:nnz+1,iye-1:iye,
-     +              mxs:mxs+2)
-                bbuf_s(1:nnz+2,1:iye-iys+1,1:3,4)=T_t(0:nnz+1,iys:iye,
-     +              mxs:mxs+2)
-                blbuf_s(1:nnz+2,1:3,1:3,4) = T_t(0:nnz+1,iys:iys+2,
-     +              mxs:mxs+2)
-                lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,4)=T_t(0:nnz+1,iys:iys+2,
-     +              mxs:mxe)
-                tlbuf_s(1:nnz+2,1:3,1:2,4) = T_t(0:nnz+1,iys:iys+2,mxe-
-     +              1:mxe)
+        tbuf_s(1:nnz+2,1:iye-iys+1,1:2,4)=T_t(0:nnz+1,iys:iye,
+     +      mxe-1:mxe)
+        trbuf_s(1:nnz+2,1:2,1:2,4) = T_t(0:nnz+1,iye-1:iye,mxe-
+     +      1:mxe)
+        rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,4)=T_t(0:nnz+1,iye-1:iye,
+     +      mxs:mxe)
+        brbuf_s(1:nnz+2,1:2,1:3,4) = T_t(0:nnz+1,iye-1:iye,
+     +      mxs:mxs+2)
+        bbuf_s(1:nnz+2,1:iye-iys+1,1:3,4)=T_t(0:nnz+1,iys:iye,
+     +      mxs:mxs+2)
+        blbuf_s(1:nnz+2,1:3,1:3,4) = T_t(0:nnz+1,iys:iys+2,
+     +      mxs:mxs+2)
+        lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,4)=T_t(0:nnz+1,iys:iys+2,
+     +      mxs:mxe)
+        tlbuf_s(1:nnz+2,1:3,1:2,4) = T_t(0:nnz+1,iys:iys+2,mxe-
+     +      1:mxe)
 
       !T2:
-                tbuf_s(1:nnz+2,1:iye-iys+1,1:2,5) =T2_t(0:nnz+1,iys:iye,
-     +              mxe-1:mxe)
-                trbuf_s(1:nnz+2,1:2,1:2,5) = T2_t(0:nnz+1,iye-1:iye,mxe-
-     +              1:mxe)
-                rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,5) =T2_t(0:nnz+1,iye-
-     +              1:iye,mxs:mxe)
-                brbuf_s(1:nnz+2,1:2,1:3,5) = T2_t(0:nnz+1,iye-1:iye,
-     +              mxs:mxs+2)
-                bbuf_s(1:nnz+2,1:iye-iys+1,1:3,5) =T2_t(0:nnz+1,iys:iye,
-     +              mxs:mxs+2)
-                blbuf_s(1:nnz+2,1:3,1:3,5) = T2_t(0:nnz+1,iys:iys+2,
-     +              mxs:mxs+2)
-                lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,5) =T2_t(0:nnz+1,iys:iys+
-     +              2,mxs:mxe)
-                tlbuf_s(1:nnz+2,1:3,1:2,5) = T2_t(0:nnz+1,iys:iys+2,mxe-
-     +              1:mxe)
+        tbuf_s(1:nnz+2,1:iye-iys+1,1:2,5) =T2_t(0:nnz+1,iys:iye,
+     +      mxe-1:mxe)
+        trbuf_s(1:nnz+2,1:2,1:2,5) = T2_t(0:nnz+1,iye-1:iye,mxe-
+     +      1:mxe)
+        rbuf_s(1:nnz+2,1:2,1:mxe-mxs+1,5) =T2_t(0:nnz+1,iye-
+     +      1:iye,mxs:mxe)
+        brbuf_s(1:nnz+2,1:2,1:3,5) = T2_t(0:nnz+1,iye-1:iye,
+     +      mxs:mxs+2)
+        bbuf_s(1:nnz+2,1:iye-iys+1,1:3,5) =T2_t(0:nnz+1,iys:iye,
+     +      mxs:mxs+2)
+        blbuf_s(1:nnz+2,1:3,1:3,5) = T2_t(0:nnz+1,iys:iys+2,
+     +      mxs:mxs+2)
+        lbuf_s(1:nnz+2,1:3,1:mxe-mxs+1,5) =T2_t(0:nnz+1,iys:iys+
+     +      2,mxs:mxe)
+        tlbuf_s(1:nnz+2,1:3,1:2,5) = T2_t(0:nnz+1,iys:iys+2,mxe-
+     +      1:mxe)
 
       !Zero out recieve buffers
-                rbuf_r=0.0;trbuf_r=0.0;tbuf_r=0.0;tlbuf_r=0.0;lbuf_r=0.0
-                blbuf_r=0.0;bbuf_r=0.0;brbuf_r=0.0
+        rbuf_r=0.0;trbuf_r=0.0;tbuf_r=0.0;tlbuf_r=0.0;lbuf_r=0.0
+        blbuf_r=0.0;bbuf_r=0.0;brbuf_r=0.0
 
       !Left/right:
-                call MPI_Sendrecv(rbuf_s,rc_s,mpi_real8,rproc,3,lbuf_r,
-     +              lc_r,mpi_real8,lproc,3,mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(rbuf_s,rc_s,mpi_real8,rproc,3,lbuf_r,
+     +      lc_r,mpi_real8,lproc,3,mpi_comm_world,istatus,ierr)
 
-                call mpi_barrier(mpi_comm_world,ierr)
-                call MPI_Sendrecv(lbuf_s,lc_s,mpi_real8,lproc,4,rbuf_r,
-     +              rc_r,mpi_real8,rproc,4,mpi_comm_world,istatus,ierr)
+        call mpi_barrier(mpi_comm_world,ierr)
+        call MPI_Sendrecv(lbuf_s,lc_s,mpi_real8,lproc,4,rbuf_r,
+     +      rc_r,mpi_real8,rproc,4,mpi_comm_world,istatus,ierr)
 
       !Top/bottom:
-                call MPI_Sendrecv(tbuf_s,tc_s,mpi_real8,tproc,5,bbuf_r,
-     +              bc_r,mpi_real8,bproc,5,mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(tbuf_s,tc_s,mpi_real8,tproc,5,bbuf_r,
+     +      bc_r,mpi_real8,bproc,5,mpi_comm_world,istatus,ierr)
 
-                call MPI_Sendrecv(bbuf_s,bc_s,mpi_real8,bproc,6,tbuf_r,
-     +              tc_r,mpi_real8,tproc,6,mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(bbuf_s,bc_s,mpi_real8,bproc,6,tbuf_r,
+     +      tc_r,mpi_real8,tproc,6,mpi_comm_world,istatus,ierr)
 
       !Top right/bottom left:
-                call MPI_Sendrecv(trbuf_s,trc_s,mpi_real8,trproc,7,
-     +              blbuf_r,blc_r,mpi_real8,blproc,7,
-     +              mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(trbuf_s,trc_s,mpi_real8,trproc,7,
+     +      blbuf_r,blc_r,mpi_real8,blproc,7,
+     +      mpi_comm_world,istatus,ierr)
 
-                call MPI_Sendrecv(blbuf_s,blc_s,mpi_real8,blproc,8,
-     +              trbuf_r,trc_r,mpi_real8,trproc,8,
-     +              mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(blbuf_s,blc_s,mpi_real8,blproc,8,
+     +      trbuf_r,trc_r,mpi_real8,trproc,8,
+     +      mpi_comm_world,istatus,ierr)
 
        !Top left/bottom right:
-                call MPI_Sendrecv(tlbuf_s,tlc_s,mpi_real8,tlproc,9,
-     +              brbuf_r,brc_r,mpi_real8,brproc,9,
-     +              mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(tlbuf_s,tlc_s,mpi_real8,tlproc,9,
+     +      brbuf_r,brc_r,mpi_real8,brproc,9,
+     +      mpi_comm_world,istatus,ierr)
 
-                call MPI_Sendrecv(brbuf_s,brc_s,mpi_real8,brproc,10,
-     +              tlbuf_r,tlc_r,mpi_real8,tlproc,10,
-     +              mpi_comm_world,istatus,ierr)
+        call MPI_Sendrecv(brbuf_s,brc_s,mpi_real8,brproc,10,
+     +      tlbuf_r,tlc_r,mpi_real8,tlproc,10,
+     +      mpi_comm_world,istatus,ierr)
 
       !Now fill the ext arrays with the recieved buffers:
-                uext(0:nnz+1,iys:iye,mxe+1:mxe+3) =
-     +              tbuf_r(1:nnz+2,1:iye-iys+1,1:3,1)
-                uext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3)=trbuf_r(1:nnz+2,
-     +              1:3,1:3,1)
-                uext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
-     +              rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,1)
-                uext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1)=brbuf_r(1:nnz+2,
-     +              1:3,1:2,1)
-                uext(0:nnz+1,iys:iye,mxs-2:mxs-1) =
-     +              bbuf_r(1:nnz+2,1:iye-iys+1,1:2,1)
-                uext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1)=blbuf_r(1:nnz+2,
-     +              1:2,1:2,1)
-                uext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
-     +              lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,1)
-                uext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3)=tlbuf_r(1:nnz+2,
-     +              1:2,1:3,1)
+        uext(0:nnz+1,iys:iye,mxe+1:mxe+3) =
+     +      tbuf_r(1:nnz+2,1:iye-iys+1,1:3,1)
+        uext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3)=trbuf_r(1:nnz+2,
+     +      1:3,1:3,1)
+        uext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
+     +      rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,1)
+        uext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1)=brbuf_r(1:nnz+2,
+     +      1:3,1:2,1)
+        uext(0:nnz+1,iys:iye,mxs-2:mxs-1) =
+     +      bbuf_r(1:nnz+2,1:iye-iys+1,1:2,1)
+        uext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1)=blbuf_r(1:nnz+2,
+     +      1:2,1:2,1)
+        uext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
+     +      lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,1)
+        uext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3)=tlbuf_r(1:nnz+2,
+     +      1:2,1:3,1)
 
-                vext(0:nnz+1,iys:iye,mxe+1:mxe+3) =
-     +              tbuf_r(1:nnz+2,1:iye-iys+1,1:3,2)
-                vext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3)=trbuf_r(1:nnz+2,
-     +              1:3,1:3,2)
-                vext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
-     +              rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,2)
-                vext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1)=brbuf_r(1:nnz+2,
-     +              1:3,1:2,2)
-                vext(0:nnz+1,iys:iye,mxs-2:mxs-1) =
-     +              bbuf_r(1:nnz+2,1:iye-iys+1,1:2,2)
-                vext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1)=blbuf_r(1:nnz+2,
-     +              1:2,1:2,2)
-                vext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
-     +              lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,2)
-                vext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3)=tlbuf_r(1:nnz+2,
-     +              1:2,1:3,2)
+        vext(0:nnz+1,iys:iye,mxe+1:mxe+3) =
+     +      tbuf_r(1:nnz+2,1:iye-iys+1,1:3,2)
+        vext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3)=trbuf_r(1:nnz+2,
+     +      1:3,1:3,2)
+        vext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
+     +      rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,2)
+        vext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1)=brbuf_r(1:nnz+2,
+     +      1:3,1:2,2)
+        vext(0:nnz+1,iys:iye,mxs-2:mxs-1) =
+     +      bbuf_r(1:nnz+2,1:iye-iys+1,1:2,2)
+        vext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1)=blbuf_r(1:nnz+2,
+     +      1:2,1:2,2)
+        vext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
+     +      lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,2)
+        vext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3)=tlbuf_r(1:nnz+2,
+     +      1:2,1:3,2)
 
-                wext(0:nnz+1,iys:iye,mxe+1:mxe+3) =
-     +              tbuf_r(1:nnz+2,1:iye-iys+1,1:3,3)
-                wext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3)=trbuf_r(1:nnz+2,
-     +              1:3,1:3,3)
-                wext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
-     +              rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,3)
-                wext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1)=brbuf_r(1:nnz+2,
-     +              1:3,1:2,3)
-                wext(0:nnz+1,iys:iye,mxs-2:mxs-1) =
-     +              bbuf_r(1:nnz+2,1:iye-iys+1,1:2,3)
-                wext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1)=blbuf_r(1:nnz+2,
-     +              1:2,1:2,3)
-                wext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
-     +              lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,3)
-                wext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3)=tlbuf_r(1:nnz+2,
-     +              1:2,1:3,3)
+        wext(0:nnz+1,iys:iye,mxe+1:mxe+3) =
+     +      tbuf_r(1:nnz+2,1:iye-iys+1,1:3,3)
+        wext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3)=trbuf_r(1:nnz+2,
+     +      1:3,1:3,3)
+        wext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
+     +      rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,3)
+        wext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1)=brbuf_r(1:nnz+2,
+     +      1:3,1:2,3)
+        wext(0:nnz+1,iys:iye,mxs-2:mxs-1) =
+     +      bbuf_r(1:nnz+2,1:iye-iys+1,1:2,3)
+        wext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1)=blbuf_r(1:nnz+2,
+     +      1:2,1:2,3)
+        wext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
+     +      lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,3)
+        wext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3)=tlbuf_r(1:nnz+2,
+     +      1:2,1:3,3)
 
-                Text(0:nnz+1,iys:iye,mxe+1:mxe+3) =
-     +              tbuf_r(1:nnz+2,1:iye-iys+1,1:3,4)
-                Text(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3)=trbuf_r(1:nnz+2,
-     +              1:3,1:3,4)
-                Text(0:nnz+1,iye+1:iye+3,mxs:mxe) =
-     +              rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,4)
-                Text(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1)=brbuf_r(1:nnz+2,
-     +              1:3,1:2,4)
-                Text(0:nnz+1,iys:iye,mxs-2:mxs-1) =
-     +              bbuf_r(1:nnz+2,1:iye-iys+1,1:2,4)
-                Text(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1)=blbuf_r(1:nnz+2,
-     +              1:2,1:2,4)
-                Text(0:nnz+1,iys-2:iys-1,mxs:mxe) =
-     +              lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,4)
-                Text(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3)=tlbuf_r(1:nnz+2,
-     +              1:2,1:3,4)
+        Text(0:nnz+1,iys:iye,mxe+1:mxe+3) =
+     +      tbuf_r(1:nnz+2,1:iye-iys+1,1:3,4)
+        Text(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3)=trbuf_r(1:nnz+2,
+     +      1:3,1:3,4)
+        Text(0:nnz+1,iye+1:iye+3,mxs:mxe) =
+     +      rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,4)
+        Text(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1)=brbuf_r(1:nnz+2,
+     +      1:3,1:2,4)
+        Text(0:nnz+1,iys:iye,mxs-2:mxs-1) =
+     +      bbuf_r(1:nnz+2,1:iye-iys+1,1:2,4)
+        Text(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1)=blbuf_r(1:nnz+2,
+     +      1:2,1:2,4)
+        Text(0:nnz+1,iys-2:iys-1,mxs:mxe) =
+     +      lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,4)
+        Text(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3)=tlbuf_r(1:nnz+2,
+     +      1:2,1:3,4)
 
-                T2ext(0:nnz+1,iys:iye,mxe+1:mxe+3) =
-     +              tbuf_r(1:nnz+2,1:iye-iys+1,1:3,5)
-                T2ext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3) =trbuf_r(1:nnz+2,
-     +              1:3,1:3,5)
-                T2ext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
-     +              rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,5)
-                T2ext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1) =brbuf_r(1:nnz+2,
-     +              1:3,1:2,5)
-                T2ext(0:nnz+1,iys:iye,mxs-2:mxs-1) =
-     +              bbuf_r(1:nnz+2,1:iye-iys+1,1:2,5)
-                T2ext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1) =blbuf_r(1:nnz+2,
-     +              1:2,1:2,5)
-                T2ext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
-     +              lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,5)
-                T2ext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3) =tlbuf_r(1:nnz+2,
-     +              1:2,1:3,5)
+        T2ext(0:nnz+1,iys:iye,mxe+1:mxe+3) =
+     +      tbuf_r(1:nnz+2,1:iye-iys+1,1:3,5)
+        T2ext(0:nnz+1,iye+1:iye+3,mxe+1:mxe+3) =trbuf_r(1:nnz+2,
+     +      1:3,1:3,5)
+        T2ext(0:nnz+1,iye+1:iye+3,mxs:mxe) =
+     +      rbuf_r(1:nnz+2,1:3,1:mxe-mxs+1,5)
+        T2ext(0:nnz+1,iye+1:iye+3,mxs-2:mxs-1) =brbuf_r(1:nnz+2,
+     +      1:3,1:2,5)
+        T2ext(0:nnz+1,iys:iye,mxs-2:mxs-1) =
+     +      bbuf_r(1:nnz+2,1:iye-iys+1,1:2,5)
+        T2ext(0:nnz+1,iys-2:iys-1,mxs-2:mxs-1) =blbuf_r(1:nnz+2,
+     +      1:2,1:2,5)
+        T2ext(0:nnz+1,iys-2:iys-1,mxs:mxe) =
+     +      lbuf_r(1:nnz+2,1:2,1:mxe-mxs+1,5)
+        T2ext(0:nnz+1,iys-2:iys-1,mxe+1:mxe+3) =tlbuf_r(1:nnz+2,
+     +      1:2,1:3,5)
 
 
-              end subroutine fill_ext
-              subroutine get_zeta_algeb(alpha,L,h,xip)
-                implicit none
+      end subroutine fill_ext
+      subroutine get_zeta_algeb(alpha,L,h,xip)
+        implicit none
 
-                real :: f,fp,h,alpha,tol,err,zeta,zetanew,L,z
-                real, intent(inout) :: xip(1:3)
+        real :: f,fp,h,alpha,tol,err,zeta,zetanew,L,z
+        real, intent(inout) :: xip(1:3)
 
-                err = 1.0
-                z = xip(3)
-                zeta = z
-                do while (err > 1e-10)
-                  f = zeta + h*(1.0 - zeta/L)**alpha - z
-                  fp = 1 - alpha*h/L*(1.0 - zeta/L)**(alpha-1.0)
+        err = 1.0
+        z = xip(3)
+        zeta = z
+        do while (err > 1e-10)
+          f = zeta + h*(1.0 - zeta/L)**alpha - z
+          fp = 1 - alpha*h/L*(1.0 - zeta/L)**(alpha-1.0)
 
-                  zetanew = zeta - f/fp
-                  err = abs(zeta-zetanew)/zeta
-                  zeta = zetanew
-                end do
-                xip(3) = zeta
+          zetanew = zeta - f/fp
+          err = abs(zeta-zetanew)/zeta
+          zeta = zetanew
+        enddo
+        xip(3) = zeta
 
-              end subroutine get_zeta_algeb
-              subroutine uf_interp(hpart)
-                use pars
-                use particles
-                use fields
-                use con_stats
-                use con_data
-                implicit none
+      end subroutine get_zeta_algeb
+      subroutine uf_interp(hpart)
+        use pars
+        use particles
+        use fields
+        use con_stats
+        use con_data
+        implicit none
 
-                integer :: ix,iy,izuv,izw,iz,i,k,j
-                integer :: first,last
-                real :: xkval,xjval,pj,dxvec(2)
-                integer :: ijpts(2,6),kuvpts(6)
-                real :: wt(3,6)
-                real :: ran2,hpart
+        integer :: ix,iy,izuv,izw,iz,i,k,j
+        integer :: first,last
+        real :: xkval,xjval,pj,dxvec(2)
+        integer :: ijpts(2,6),kuvpts(6)
+        real :: wt(3,6)
+        real :: ran2,hpart
 
       !Interpolates to get the fluid velocity
       !NOTE: interpolating in COMPUTATIONAL space!
@@ -1804,49 +1804,49 @@
       !Newton's method to back out the computational location (xi,eta,zeta)
       !into part%xip given h at that location:
 
-                part%xip(1:3) = part%xp(1:3)
-                if (iz_space == 5) then    !Algebraic stretching to smooth out waves
-                  call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
-                end if
+        part%xip(1:3) = part%xp(1:3)
+        if (iz_space == 5) then    !Algebraic stretching to smooth out waves
+          call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
+        endif
 
       !Following Orlando's code, get the "leftmost" node
       !This is just the minimum (i,j,k) on the volume
 
-                ijpts(1,3) = floor(part%xip(1)/dx) + 1
-                ijpts(2,3) = floor(part%xip(2)/dy) + 1
+        ijpts(1,3) = floor(part%xip(1)/dx) + 1
+        ijpts(2,3) = floor(part%xip(2)/dy) + 1
 
-                if (ijpts(1,3) <= 0)  then
-                  write(*,*) 'PROB:',part%xip(1),part%xip(2),part%xip(3)
-                end if
+        if (ijpts(1,3) <= 0)  then
+          write(*,*) 'PROB:',part%xip(1),part%xip(2),part%xip(3)
+        endif
 
       !Fill in the neighbors:
-                ijpts(1,2) = ijpts(1,3)-1
-                ijpts(1,1) = ijpts(1,2)-1
-                ijpts(1,4) = ijpts(1,3)+1
-                ijpts(1,5) = ijpts(1,4)+1
-                ijpts(1,6) = ijpts(1,5)+1
+        ijpts(1,2) = ijpts(1,3)-1
+        ijpts(1,1) = ijpts(1,2)-1
+        ijpts(1,4) = ijpts(1,3)+1
+        ijpts(1,5) = ijpts(1,4)+1
+        ijpts(1,6) = ijpts(1,5)+1
 
-                ijpts(2,2) = ijpts(2,3)-1
-                ijpts(2,1) = ijpts(2,2)-1
-                ijpts(2,4) = ijpts(2,3)+1
-                ijpts(2,5) = ijpts(2,4)+1
-                ijpts(2,6) = ijpts(2,5)+1
+        ijpts(2,2) = ijpts(2,3)-1
+        ijpts(2,1) = ijpts(2,2)-1
+        ijpts(2,4) = ijpts(2,3)+1
+        ijpts(2,5) = ijpts(2,4)+1
+        ijpts(2,6) = ijpts(2,5)+1
 
       !Finding the k-lhnode is different since grid may be stretched
 
       !Do (u,v) loop first:
-                do iz=0,nnz+1
-                  if (zz(iz) > part%xip(3)) go to 1199
-                end do
-1199            continue
+        do iz=0,nnz+1
+          if (zz(iz) > part%xip(3)) go to 1199
+        enddo
+1199    continue
 
-                kuvpts(3) = iz-1
+        kuvpts(3) = iz-1
       !Then fill in the rest:
-                kuvpts(4) = kuvpts(3)+1
-                kuvpts(5) = kuvpts(4)+1
-                kuvpts(6) = kuvpts(5)+1
-                kuvpts(2) = kuvpts(3)-1
-                kuvpts(1) = kuvpts(2)-1
+        kuvpts(4) = kuvpts(3)+1
+        kuvpts(5) = kuvpts(4)+1
+        kuvpts(6) = kuvpts(5)+1
+        kuvpts(2) = kuvpts(3)-1
+        kuvpts(1) = kuvpts(2)-1
 
 
 !---------
@@ -1862,22 +1862,22 @@
 
       !Fill in the weights:
       !First for x and y since they are periodic:
-                wt(1:3,1:6) = 0.0
-                dxvec(1) = dx
-                dxvec(2) = dy
-                do iz = 1,2
-                  do j = 1,6
-                    xjval = dxvec(iz)*(ijpts(iz,j)-1)
-                    pj = 1.0
-                    do k = 1,6
-                      xkval = dxvec(iz)*(ijpts(iz,k)-1)
-                      if (j /= k) then
-                        pj = pj*(part%xip(iz)-xkval)/(xjval-xkval)
-                      end if
-                    end do
-                    wt(iz,j) = pj
-                  end do
-                end do
+        wt(1:3,1:6) = 0.0
+        dxvec(1) = dx
+        dxvec(2) = dy
+        do iz = 1,2
+          do j = 1,6
+            xjval = dxvec(iz)*(ijpts(iz,j)-1)
+            pj = 1.0
+            do k = 1,6
+              xkval = dxvec(iz)*(ijpts(iz,k)-1)
+              if (j /= k) then
+                pj = pj*(part%xip(iz)-xkval)/(xjval-xkval)
+              endif
+            enddo
+            wt(iz,j) = pj
+          enddo
+        enddo
 
        !Now compute weights in z-dir
        !There are 2 sections: weights at (u,v) nodes (kuvpts)
@@ -1885,97 +1885,97 @@
 
        !Compute weights at kuvpts
        !Must check to see how close we are to a top/bot boundary
-                if (kuvpts(3) == 1) then
-                  first = 3
-                  last = 4
+        if (kuvpts(3) == 1) then
+          first = 3
+          last = 4
           !Set these equal to 1 so uext(-1) won't be accessed
           !Note: the value doesn't matter since weight will be 0
-                  kuvpts(1) = 1
-                  kuvpts(2) = 1
-                else if (kuvpts(3) == 0) then
-                  first = 4
-                  last = 5
-                  kuvpts(1) = 1
-                  kuvpts(2) = 1
-                  kuvpts(3) = 1
-                else if (kuvpts(3) < 0) then
-                  first = 0
-                  last = 0
-                else if (kuvpts(3) == 2) then
-                  first = 2
-                  last = 5
+          kuvpts(1) = 1
+          kuvpts(2) = 1
+        elseif (kuvpts(3) == 0) then
+          first = 4
+          last = 5
+          kuvpts(1) = 1
+          kuvpts(2) = 1
+          kuvpts(3) = 1
+        elseif (kuvpts(3) < 0) then
+          first = 0
+          last = 0
+        elseif (kuvpts(3) == 2) then
+          first = 2
+          last = 5
        !Between top cell center and the domain boundary
-                else if (kuvpts(3) == nnz) then
-                  first = 2
-                  last = 3
-                  kuvpts(4) = nnz
-                  kuvpts(5) = nnz
-                  kuvpts(6) = nnz
-                else if (kuvpts(3) > nnz) then
-                  first = 0
-                  last = 0
+        elseif (kuvpts(3) == nnz) then
+          first = 2
+          last = 3
+          kuvpts(4) = nnz
+          kuvpts(5) = nnz
+          kuvpts(6) = nnz
+        elseif (kuvpts(3) > nnz) then
+          first = 0
+          last = 0
        !Between 2nd to last and last cell center at top
-                else if (kuvpts(3) == nnz-1) then
-                  first = 3
-                  last = 4
-                  kuvpts(5) = nnz
-                  kuvpts(6) = nnz
-                else if (kuvpts(3) == nnz-2) then
-                  first = 2
-                  last = 5
-                else
-                  first = 1
-                  last = 6
-                end if
+        elseif (kuvpts(3) == nnz-1) then
+          first = 3
+          last = 4
+          kuvpts(5) = nnz
+          kuvpts(6) = nnz
+        elseif (kuvpts(3) == nnz-2) then
+          first = 2
+          last = 5
+        else
+          first = 1
+          last = 6
+        endif
 
        !Recall that wt has been set to zero, so
        !weights will be zero if (first,last) isn't (1,6)
-                do j = first,last
-                  xjval = zz(kuvpts(j))
-                  pj = 1.0
-                  do k = first,last
-                    xkval = zz(kuvpts(k))
-                    if (j /= k) then
-                      pj = pj*(part%xip(3)-xkval)/(xjval-xkval)
-                    end if
-                  end do
-                  wt(3,j) = pj
-                end do
+        do j = first,last
+          xjval = zz(kuvpts(j))
+          pj = 1.0
+          do k = first,last
+            xkval = zz(kuvpts(k))
+            if (j /= k) then
+              pj = pj*(part%xip(3)-xkval)/(xjval-xkval)
+            endif
+          enddo
+          wt(3,j) = pj
+        enddo
 
       !Now we have the weights - compute the velocity at xp:
-                part%uf(1:3) = 0.0
-                part%Tf = 0.0
-                part%qinf = 0.0
-                do k = 1,6
-                  do j = 1,6
-                    do i = 1,6
-                      ix = ijpts(1,i)
-                      iy = ijpts(2,j)
-                      izuv = kuvpts(k)
-                      part%uf(1) = part%uf(1)+uext(izuv,iy,ix)*wt(1,i)*
-     +                    wt(2,j)*wt(3,k)
-                      part%uf(2) = part%uf(2)+vext(izuv,iy,ix)*wt(1,i)*
-     +                    wt(2,j)*wt(3,k)
-                      part%uf(3) = part%uf(3)+wext(izuv,iy,ix)*wt(1,i)*
-     +                    wt(2,j)*wt(3,k)
-                      part%Tf = part%Tf+Text(izuv,iy,ix)*wt(1,i)*
-     +                    wt(2,j)*wt(3,k)
-                      part%qinf = part%qinf+T2ext(izuv,iy,ix)*wt(1,i)*
-     +                    wt(2,j)*wt(3,k)
-                    end do
-                  end do
-                end do
+        part%uf(1:3) = 0.0
+        part%Tf = 0.0
+        part%qinf = 0.0
+        do k = 1,6
+          do j = 1,6
+            do i = 1,6
+              ix = ijpts(1,i)
+              iy = ijpts(2,j)
+              izuv = kuvpts(k)
+              part%uf(1) = part%uf(1)+uext(izuv,iy,ix)*wt(1,i)*
+     +            wt(2,j)*wt(3,k)
+              part%uf(2) = part%uf(2)+vext(izuv,iy,ix)*wt(1,i)*
+     +            wt(2,j)*wt(3,k)
+              part%uf(3) = part%uf(3)+wext(izuv,iy,ix)*wt(1,i)*
+     +            wt(2,j)*wt(3,k)
+              part%Tf = part%Tf+Text(izuv,iy,ix)*wt(1,i)*
+     +            wt(2,j)*wt(3,k)
+              part%qinf = part%qinf+T2ext(izuv,iy,ix)*wt(1,i)*
+     +            wt(2,j)*wt(3,k)
+            enddo
+          enddo
+        enddo
 
 
-              end subroutine uf_interp
+      end subroutine uf_interp
 
-              subroutine particle_stats(ipt,jpt,kpt)
-                use particles
-                use pars
-                use con_data
-                implicit none
-                integer :: i,ipt,jpt,kpt
-                real :: partmass,Volp,rhop
+      subroutine particle_stats(ipt,jpt,kpt)
+        use particles
+        use pars
+        use con_data
+        implicit none
+        integer :: i,ipt,jpt,kpt
+        real :: partmass,Volp,rhop
 
       !Takes in ipt,jpt,kpt as the node to the "bottom left" of the
       !particle
@@ -1984,11 +1984,11 @@
 
       !partcount_t(kpt,jpt,ipt) = partcount_t(kpt,jpt,ipt) + 1.0
 
-                Volp = pi2*2.0/3.0*part%radius**3
-                rhop = (part%m_s+Volp*rhow)/Volp
-                partmass = rhop*Volp
-                partcount_t(kpt,jpt,ipt) = partcount_t(kpt,jpt,ipt) +
-     +               partmass  !PARTICLE AVERAGES ARE MASS-WEIGHTED
+        Volp = pi2*2.0/3.0*part%radius**3
+        rhop = (part%m_s+Volp*rhow)/Volp
+        partmass = rhop*Volp
+        partcount_t(kpt,jpt,ipt) = partcount_t(kpt,jpt,ipt) +
+     +      partmass  !PARTICLE AVERAGES ARE MASS-WEIGHTED
 
 !      !Get su mean, mean-squared of particle velocities at each level
 !      upwp_t(kpt,jpt,ipt) = upwp_t(kpt,jpt,ipt) +
@@ -2017,15 +2017,15 @@
 !      qstarsum_t(kpt,jpt,ipt) = qstarsum_t(kpt,jpt,ipt) +
 !     +                       partmass*part%qstar
 
-              end subroutine particle_stats
+      end subroutine particle_stats
 
-              subroutine particle_stats_U(ipt,jpt,kpt)
-                use particles
-                use pars
-                use con_data
-                implicit none
-                integer :: i,ipt,jpt,kpt
-                real :: partmass,Volp,rhop
+      subroutine particle_stats_U(ipt,jpt,kpt)
+        use particles
+        use pars
+        use con_data
+        implicit none
+        integer :: i,ipt,jpt,kpt
+        real :: partmass,Volp,rhop
 
       !Takes in ipt,jpt,kpt as the node to the "bottom left" of the
       !particle
@@ -2034,137 +2034,137 @@
 
       !partcount_t(kpt,jpt,ipt) = partcount_t(kpt,jpt,ipt) + 1.0
 
-                Volp = pi2*2.0/3.0*part%radius**3
-                rhop = (part%m_s+Volp*rhow)/Volp
-                partmass = rhop*Volp
-                partcountU_t(kpt,jpt,ipt)=partcountU_t(kpt,jpt,ipt)+
-     +              partmass  !PARTICLE AVERAGES ARE MASS-WEIGHTED
+        Volp = pi2*2.0/3.0*part%radius**3
+        rhop = (part%m_s+Volp*rhow)/Volp
+        partmass = rhop*Volp
+        partcountU_t(kpt,jpt,ipt)=partcountU_t(kpt,jpt,ipt)+
+     +      partmass  !PARTICLE AVERAGES ARE MASS-WEIGHTED
 
       !Get su mean, mean-squared of particle velocities at each level
-                upwp_t(kpt,jpt,ipt) = upwp_t(kpt,jpt,ipt) +
-     +              partmass*part%vp(1)*part%vp(3)
-                do i = 1,3
-                  vpsum_t(kpt,jpt,ipt,i) = vpsum_t(kpt,jpt,ipt,i) +
-     +                part%vp(i)*partmass
-                  vpsqrsum_t(kpt,jpt,ipt,i)=vpsqrsum_t(kpt,jpt,ipt,i)+
-     +                partmass*part%vp(i)**2
-                end do
+        upwp_t(kpt,jpt,ipt) = upwp_t(kpt,jpt,ipt) +
+     +      partmass*part%vp(1)*part%vp(3)
+        do i = 1,3
+          vpsum_t(kpt,jpt,ipt,i) = vpsum_t(kpt,jpt,ipt,i) +
+     +        part%vp(i)*partmass
+          vpsqrsum_t(kpt,jpt,ipt,i)=vpsqrsum_t(kpt,jpt,ipt,i)+
+     +        partmass*part%vp(i)**2
+        enddo
 
-                Tpsum_t(kpt,jpt,ipt) = Tpsum_t(kpt,jpt,ipt) +
-     +              partmass*part%Tp
-                Tpsqrsum_t(kpt,jpt,ipt) = Tpsqrsum_t(kpt,jpt,ipt) +
-     +              partmass*part%Tp**2
-                wpTpsum_t(kpt,jpt,ipt) = wpTpsum_t(kpt,jpt,ipt) +
-     +              partmass*part%Tp*part%vp(3)
-                Tfsum_t(kpt,jpt,ipt) = Tfsum_t(kpt,jpt,ipt) +
-     +              partmass*part%Tf
-                qfsum_t(kpt,jpt,ipt) = qfsum_t(kpt,jpt,ipt) +
-     +              partmass*part%qinf
-                radsum_t(kpt,jpt,ipt) = radsum_t(kpt,jpt,ipt) +
-     +              partmass*part%radius
-                rad2sum_t(kpt,jpt,ipt) = rad2sum_t(kpt,jpt,ipt) +
-     +              partmass*part%radius**2
-                qstarsum_t(kpt,jpt,ipt) = qstarsum_t(kpt,jpt,ipt) +
-     +              partmass*part%qstar
+        Tpsum_t(kpt,jpt,ipt) = Tpsum_t(kpt,jpt,ipt) +
+     +      partmass*part%Tp
+        Tpsqrsum_t(kpt,jpt,ipt) = Tpsqrsum_t(kpt,jpt,ipt) +
+     +      partmass*part%Tp**2
+        wpTpsum_t(kpt,jpt,ipt) = wpTpsum_t(kpt,jpt,ipt) +
+     +      partmass*part%Tp*part%vp(3)
+        Tfsum_t(kpt,jpt,ipt) = Tfsum_t(kpt,jpt,ipt) +
+     +      partmass*part%Tf
+        qfsum_t(kpt,jpt,ipt) = qfsum_t(kpt,jpt,ipt) +
+     +      partmass*part%qinf
+        radsum_t(kpt,jpt,ipt) = radsum_t(kpt,jpt,ipt) +
+     +      partmass*part%radius
+        rad2sum_t(kpt,jpt,ipt) = rad2sum_t(kpt,jpt,ipt) +
+     +      partmass*part%radius**2
+        qstarsum_t(kpt,jpt,ipt) = qstarsum_t(kpt,jpt,ipt) +
+     +      partmass*part%qstar
 
-              end subroutine particle_stats_U
+      end subroutine particle_stats_U
 
-              subroutine update_particle_flux
+      subroutine update_particle_flux
 
-                use particles
-                use pars
-                use con_data
-                use con_stats
-                use tank_pars
-                implicit none
-                include 'mpif.h'
-                real :: rhop,taup_i,partmass
-                real :: xv,yv,zv
-                integer :: i,j,k,ncount,ipt,jpt,kpt,kwpt,kUpt
-                integer :: ix,iy,iz
-                real :: lref,Cvv,Cva,Cpv
-                real :: zu_1,zu_nnz,ztocheck,ztocheck_i
-                integer :: iz_beg,iz_end
-
-
-                part => first_particle
-                do while (associated(part))
-
-                  ipt = floor(part%xp(1)/dx) + 1
-                  jpt = floor(part%xp(2)/dy) + 1
+        use particles
+        use pars
+        use con_data
+        use con_stats
+        use tank_pars
+        implicit none
+        include 'mpif.h'
+        real :: rhop,taup_i,partmass
+        real :: xv,yv,zv
+        integer :: i,j,k,ncount,ipt,jpt,kpt,kwpt,kUpt
+        integer :: ix,iy,iz
+        real :: lref,Cvv,Cva,Cpv
+        real :: zu_1,zu_nnz,ztocheck,ztocheck_i
+        integer :: iz_beg,iz_end
 
 
-                  if (i_zeta == 1) then  !Check fluxes according to zeta levels
-                    ztocheck = part%xip(3)
-                    ztocheck_i = part%xip_i(3)
-                  else if (i_zeta == 0) then
-                    ztocheck = part%xp(3)  !Check fluxes according to z-levels
-                    ztocheck_i = part%xp_i(3)
-                  end if
+        part => first_particle
+        do while (associated(part))
 
-                  kUpt = floor((ztocheck-minwavez)/dz_U) + 1
+          ipt = floor(part%xp(1)/dx) + 1
+          jpt = floor(part%xp(2)/dy) + 1
+
+
+          if (i_zeta == 1) then  !Check fluxes according to zeta levels
+            ztocheck = part%xip(3)
+            ztocheck_i = part%xip_i(3)
+          elseif (i_zeta == 0) then
+            ztocheck = part%xp(3)  !Check fluxes according to z-levels
+            ztocheck_i = part%xp_i(3)
+          endif
+
+          kUpt = floor((ztocheck-minwavez)/dz_U) + 1
 
       !Also compute particle flux statistics, which is slightly more
       !complicated:
-                  zu_1 = minwavez + 0.5*dz_U
-                  zu_nnz = zl - 0.5*dz_U
+          zu_1 = minwavez + 0.5*dz_U
+          zu_nnz = zl - 0.5*dz_U
 
-                  if (ztocheck > minwavez) then
+          if (ztocheck > minwavez) then
       !Compute particle flux statistics based on the move:
-                    if (ztocheck_i < ztocheck) then  !Particle moved up
+            if (ztocheck_i < ztocheck) then  !Particle moved up
 
-                      iz_beg = floor((ztocheck_i-zu_1)/dz_U) + 2
-                      iz_end = floor((ztocheck-zu_1)/dz_U) + 1
+              iz_beg = floor((ztocheck_i-zu_1)/dz_U) + 2
+              iz_end = floor((ztocheck-zu_1)/dz_U) + 1
 
         !Calling this before particle_bcs_nonperiodic, so must account for when particles are below
-                      if (iz_beg < 1) then
-                        iz_beg = 1
-                      end if
+              if (iz_beg < 1) then
+                iz_beg = 1
+              endif
 
-                      do iz=iz_beg,iz_end
+              do iz=iz_beg,iz_end
 
-                        if (iz < 1) then
-                          write(*,*) 'up iz<1:',iz,ztocheck,ztocheck_i
-                        end if
-                        if (iz > nnz) then
-                          write(*,*) 'up iz>nnz:',iz,ztocheck,ztocheck_i
-                        end if
+                if (iz < 1) then
+                  write(*,*) 'up iz<1:',iz,ztocheck,ztocheck_i
+                endif
+                if (iz > nnz) then
+                  write(*,*) 'up iz>nnz:',iz,ztocheck,ztocheck_i
+                endif
 
             !partflux_t(iz,jpt,ipt) = partflux_t(iz,jpt,ipt) + 1.0
             !partfluxup_t(iz,jpt,ipt) = partfluxup_t(iz,jpt,ipt) + 1.0
-                      end do
+              enddo
 
-                    else if (ztocheck_i > ztocheck) then  !Particle moved down
+            elseif (ztocheck_i > ztocheck) then  !Particle moved down
 
-                      iz_beg = floor((ztocheck-zu_1)/dz_U) + 2
-                      iz_end = floor((ztocheck_i-zu_1)/dz_U) + 1
+              iz_beg = floor((ztocheck-zu_1)/dz_U) + 2
+              iz_end = floor((ztocheck_i-zu_1)/dz_U) + 1
 
-                      if (iz_beg < 1) then
-                        iz_beg = 1
-                      end if
+              if (iz_beg < 1) then
+                iz_beg = 1
+              endif
 
-                      do iz=iz_beg,iz_end
+              do iz=iz_beg,iz_end
 
-                        if (iz < 1) then
-                          write(*,*) 'dn iz<1:',iz,ztocheck,ztocheck_i
-                        end if
-                        if (iz > nnz) then
-                          write(*,*) 'dn iz>nnz:',iz,ztocheck,ztocheck_i
-                        end if
+                if (iz < 1) then
+                  write(*,*) 'dn iz<1:',iz,ztocheck,ztocheck_i
+                endif
+                if (iz > nnz) then
+                  write(*,*) 'dn iz>nnz:',iz,ztocheck,ztocheck_i
+                endif
 
             !partflux_t(iz,jpt,ipt) = partflux_t(iz,jpt,ipt) - 1.0
             !partfluxdn_t(iz,jpt,ipt) = partfluxdn_t(iz,jpt,ipt) - 1.0
-                      end do
+              enddo
 
-                    end if
-                  end if
-
-
-                  part => part%next
-                end do
+            endif
+          endif
 
 
-              end subroutine update_particle_flux
+          part => part%next
+        enddo
+
+
+      end subroutine update_particle_flux
 
       subroutine update_particle_stats
 
@@ -2193,9 +2193,9 @@
 
           if (i_zeta == 1) then  !particle stats according to zeta levels
             ztocheck = part%xip(3)
-          else if (i_zeta == 0) then
+          elseif (i_zeta == 0) then
             ztocheck = part%xp(3)  !particle stats according to z-levels
-          end if
+          endif
 
           kUpt = floor((ztocheck-minwavez)/dz_U) + 1
           if (kUpt > nnz+1) then
@@ -2243,34 +2243,34 @@
 !---------
 
           part => part%next
-        end do
+        enddo
 
 
       end subroutine update_particle_stats
 
       subroutine particle_write_traj(it)
-      use con_data
-      use pars
-      use particles
-      implicit none
+        use con_data
+        use pars
+        use particles
+        implicit none
 
-      integer :: it
+        integer :: it
 
 
-      part => first_particle
-      do while (associated(part))
+        part => first_particle
+        do while (associated(part))
 
-      if (mod(part%pidx,100000) .eq. 0) then
-          write(ntraj,'(2i,8e15.6)') part%pidx,part%procidx,
-     +    time,part%xp(1),part%xp(2),part%xp(3),part%vp(1),part%vp(2),
-     +    part%vp(3),part%radius
-      end if
+          if (mod(part%pidx,100000) == 0) then
+            write(ntraj,'(2i,8e15.6)') part%pidx,part%procidx,time,
+     +          part%xp(1),part%xp(2),part%xp(3),part%vp(1),part%vp(2),
+     +          part%vp(3),part%radius
+          endif
 
-      part => part%next
-      end do
+          part => part%next
+        enddo
 
-      if (it .ge. itmax) then
-         close(ntraj)
-      end if
+        if (it >= itmax) then
+          close(ntraj)
+        endif
 
       end subroutine particle_write_traj
