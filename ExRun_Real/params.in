@@ -18,7 +18,7 @@ itn    = 1       !Start index for u.le.wav files (0 -> u.le.wav000 is often used
 
 !!=============================================================!!
 !! IO_PARAMS                                                   !!
-!! Output paths must be in scratch directory)                  !!
+!! Output paths must be in scratch directory                   !!
 !!=============================================================!!
 &io_params
 itrajout  = 1    ! write particle trajectories to a folder "particle_traj" in path_seed
@@ -28,6 +28,7 @@ path_seed="/glade/scratch/rbkyle/NTLP-wavy/maintest/"
 path_part="/glade/scratch/rbkyle/NTLP-wavy/maintest/part.le.wav403"
 path_res="/glade/scratch/rbkyle/NTLP-wavy/maintest/u.le.wav403"
 path_ran="/glade/scratch/rbkyle/NTLP-wavy/maintest/u.le.wav000"
+wave_file="polychromatic.dat"  ! must be in same directory as params.in
 /
 
 !!==============================================!!
@@ -61,7 +62,7 @@ i_pm      = 2
 lpbc      = 2
 k_stab    = -1
 no_pgrad  = 1
-ispray    = 1     ! use particles
+ispray    = 1     ! particle advection strategy (none, original, ssgf)
 iDNS      = 0
 isfc      = 0, 1  ! 0 sets surface flux (qstar), 1 sets surface condition (tsfcc)
 ievap     = 0

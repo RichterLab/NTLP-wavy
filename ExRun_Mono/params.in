@@ -28,7 +28,7 @@ path_seed="/scratch365/user/NTLP-wavy/case1/"
 path_part="/scratch365/user/NTLP-wavy/case1/part.le.wav040"
 path_res="/scratch365/user/NTLP-wavy/case1/u.le.wav040"
 path_ran="/scratch365/user/NTLP-wavy/case1/u.le.wav000"
-wave_file="monochromatic.dat"
+wave_file="monochromatic.dat"  ! must be in same directory as params.in
 /
 
 !!==============================================!!
@@ -57,12 +57,12 @@ move_step = 0
 method    = 3
 iz_space  = 5     ! Grid stretching options
 iflat     = 2     ! 0 flat lower (no press. iteration); 1 curvy lower boundary; 2 time-dependent lower boundary shape
-i3d_surf  = 3     ! Type of lower boundary (moving, time varying, tank)
+i3d_surf  = 3     ! Type of lower boundary (moving, time varying, tank, real)
 i_pm      = 2
 lpbc      = 2
 k_stab    = -1
 no_pgrad  = 1
-ispray    = 1     ! use particles
+ispray    = 0     ! particle advection strategy (none, original, ssgf)
 iDNS      = 0
 isfc      = 0, 1  ! 0 sets surface flux (qstar), 1 sets surface condition (tsfcc)
 ievap     = 0
