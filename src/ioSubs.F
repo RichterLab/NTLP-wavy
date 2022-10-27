@@ -24,7 +24,8 @@
 
         namelist /physical_params/ nuf,Pra,Sc,Cpa,ustar_tank,ugcont,
      +      vgcont,t00,fcor,grav,zl,xl,yl,zo,Uo,qstar,tsfcc,Ttop,Tbot,
-     +      tnumpart,rhoa,rhow,part_grav,Vpmax,Cpp,Mw,Ru,Ms,Sal,Gam,Ion,
+     +      tnumpart,rhoa,rhow,part_grav,Vpmax,Cpp,Mw,Ru,Ms,
+     +      Sal,Gam,Ion,
      +      Os,radius_init,Tp_init,vp_init,waveslope,c_speed,wave_l
 
 

@@ -152,7 +152,7 @@ c
             call netcdf_init
           end if
 
-          if (ispray==1) then
+          if (ispray > 0) then
             call particle_setup
             call particle_init
           end if
@@ -185,7 +185,7 @@ c
           call setup(it)
           call mesh
 
-          if (ispray==1) then
+          if (ispray > 0) then
             call particle_setup
             call read_part_res
           end if
@@ -232,7 +232,7 @@ c
           write(*,*) 'Starting time loop'
           write(*,*) 'it,time = ',it,time
         end if
-        if (ispray==1) then
+        if (ispray > 0) then
           if (it == 1) numpart = 0
           part => first_particle
           do while (associated(part))
@@ -333,7 +333,7 @@ c
             if(myid==0.and.verb>0)write(*,*)'Saving fields and parts'
             call save_v(it)
             call save_p
-            if (ispray==1) call save_particles
+            if (ispray > 0) call save_particles
           end if
           if(msave_v .and. istage == 1) then
             call save_bndy(it)
@@ -373,7 +373,7 @@ c
 c -------- update particles
 c
           if (myid==0.and.verb>0) write(*,*) 'Updating particles'
-          if (ispray==1) then
+          if (ispray > 0) then
          !t_s = mpi_wtime()
             call particle_update_rk3(it,istage)
          !t_f = mpi_wtime()

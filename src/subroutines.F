@@ -13242,7 +13242,7 @@ c ------------- allocate space for grid and metrics
 c ------------- allocate extended arrays for interpolation of
 c               particle/spray location
 
-        if (ispray==1) then
+        if (ispray > 0) then
           allocate(uext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3),
      +        vext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3),
      +        wext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3),

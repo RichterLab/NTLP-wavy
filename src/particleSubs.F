@@ -87,7 +87,7 @@
       !Set up the path for the trajectory files
       if (itrajout) then
       write(myid_char,'(i4.4)') myid
-      path_traj = 
+      path_traj =
      + trim(adjustl(path_seed))//"particle_traj/"//myid_char//".dat"
       ntraj = 128
       open(ntraj,file=path_traj,form='formatted',status='replace')
@@ -556,7 +556,11 @@
         !if (myid==5) write(*,*) 'time bc_non:', t_f - t_s
 
         if (istage == 1) tot_reintro = 0
-        if (istage == 3) call particle_reintro(it,istage)
+        if (ispray == 1) then
+          call part_reintro
+        else if (ispray == 2) then
+          if (istage == 3) call part_reintro_ssgf(it,istage)
+        end if
         if (istage == 3) his_reintro = tot_reintro
 
         !Check to see if particles left processor
@@ -818,7 +822,7 @@
 
 
       ! Recently Implemented SSGFs (refer to Bruch et al. 2019)
-      subroutine particle_reintro(it,istage)
+      subroutine part_reintro_ssgf(it,istage)
         use particles
         use pars
         use con_data
@@ -942,72 +946,72 @@
         if (myid==0) write(*,*) 'tot_part: ', tot_part   !*numprocs
         if (myid==0) write(*,*) 'time,tot_reintro: ',time, tot_reintro
 
-      end subroutine particle_reintro
+      end subroutine part_reintro_ssgf
 
 
-      ! subroutine particle_reintro(istage)
-        ! use particles
-        ! use pars
-        ! use con_data
-        ! use tank_pars
-        ! implicit none
-        ! include 'mpif.h'
+      subroutine part_reintro
+        use particles
+        use pars
+        use con_data
+        use tank_pars
+        implicit none
+        include 'mpif.h'
 
-        ! integer :: ierr,randproc,np,tmp_reintro,istage,ix
-        ! real :: xv,yv,zv,ran2,vinj,t_bndy,uorb,worb,yp1,ypn,ddx
-        ! real :: xpart(nnx),yspln(nnx),dyspln(nnx),dy2spln(nnx)
-        ! real :: u2part(nnx),w2part(nnx)
+        integer :: ierr,randproc,np,tmp_reintro,ix
+        real :: xv,yv,zv,ran2,vinj,t_bndy,uorb,worb,yp1,ypn,ddx
+        real :: xpart(nnx),yspln(nnx),dyspln(nnx),dy2spln(nnx)
+        real :: u2part(nnx),w2part(nnx)
 
-        ! t_bndy = t_stage - t_zero
+        t_bndy = t_stage - t_zero
 
-        ! call mpi_allreduce(num_reintro,tmp_reintro,1,mpi_integer,
-!      +      mpi_sum,mpi_comm_world,ierr)
-        ! tot_reintro = tot_reintro + tmp_reintro
-        ! if (myid==0) write(*,*) 'time,tmp_reintro: ',time,tmp_reintro
+        call mpi_allreduce(num_reintro,tmp_reintro,1,mpi_integer,
+     +      mpi_sum,mpi_comm_world,ierr)
+        tot_reintro = tot_reintro + tmp_reintro
+        if (myid==0) write(*,*) 'time,tmp_reintro: ',time,tmp_reintro
 
-        ! !Set up xpart for interpolation of h:
-        ! yp1 = 2.0e+30
-        ! ypn = yp1
-        ! ddx = xl/float(nnx)
-        ! do ix=1,nnx
-          ! xpart(ix) = float(ix-1)*ddx
-        ! end do
-        ! call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
-        ! call spline(xpart,hx_i,nnx,yp1,ypn,dyspln)
-        ! call spline(xpart,hx2_i,nnx,yp1,ypn,dy2spln)
+        !Set up xpart for interpolation of h:
+        yp1 = 2.0e+30
+        ypn = yp1
+        ddx = xl/float(nnx)
+        do ix=1,nnx
+          xpart(ix) = float(ix-1)*ddx
+        end do
+        call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
+        call spline(xpart,hx_i,nnx,yp1,ypn,dyspln)
+        call spline(xpart,hx2_i,nnx,yp1,ypn,dy2spln)
 
-       ! !Now everyone knows how many total particles need to be reintroduced
-       ! !For each one to be reintroduced, get a random processor who creates it:
-        ! do np=1,tmp_reintro
+       !Now everyone knows how many total particles need to be reintroduced
+       !For each one to be reintroduced, get a random processor who creates it:
+        do np=1,tmp_reintro
 
-          ! !Proc 0 gets a random proc ID, broadcasts it out:
-          ! if (myid==0) randproc = floor(ran2(iseed)*numprocs)
-          ! call mpi_bcast(randproc,1,mpi_integer,0,mpi_comm_world,ierr)
+          !Proc 0 gets a random proc ID, broadcasts it out:
+          if (myid==0) randproc = floor(ran2(iseed)*numprocs)
+          call mpi_bcast(randproc,1,mpi_integer,0,mpi_comm_world,ierr)
 
-          ! if (myid==randproc) then
-            ! xv = ran2(iseed)*(xmax-xmin) + xmin
-            ! yv = ran2(iseed)*(ymax-ymin) + ymin
-            ! !Local orbital velocity as well as a random component for ejection
+          if (myid==randproc) then
+            xv = ran2(iseed)*(xmax-xmin) + xmin
+            yv = ran2(iseed)*(ymax-ymin) + ymin
+            !Local orbital velocity as well as a random component for ejection
 
-            ! ! call linInterp(xpart,u_tank_i,nnx,xv,uorb)
-            ! ! call linInterp(xpart,w_tank_i,nnx,xv,worb)
-            ! ! vinj = worb + ran2(iseed)*Vpmax
-            ! uorb = 0.0
-            ! vinj = ran2(iseed)*Vpmax
+            ! call linInterp(xpart,u_tank_i,nnx,xv,uorb)
+            ! call linInterp(xpart,w_tank_i,nnx,xv,worb)
+            ! vinj = worb + ran2(iseed)*Vpmax
+            uorb = 0.0
+            vinj = ran2(iseed)*Vpmax
 
-            ! zv = zw1
+            zv = zw1
 
-            ! call create_particle((/xv,yv,zv/),(/uorb,0.0,vinj/),300.0,
-!      +          radius_init,ngidx,xpart(1:nnx),z_tank_i(1:nnx),
-!      +          hx_i(1:nnx),hx2_i(1:nnx),yspln(1:nnx),dyspln(1:nnx),
-!      +          dy2spln(1:nnx),t_stage)
-            ! ngidx = ngidx + 1
+            call create_particle((/xv,yv,zv/),(/uorb,0.0,vinj/),300.0,
+     +          radius_init,ngidx,xpart(1:nnx),z_tank_i(1:nnx),
+     +          hx_i(1:nnx),hx2_i(1:nnx),yspln(1:nnx),dyspln(1:nnx),
+     +          dy2spln(1:nnx),t_stage)
+            ngidx = ngidx + 1
 
 
-          ! end if
-        ! end do
+          end if
+        end do
 
-      ! end subroutine particle_reintro
+      end subroutine part_reintro
 
 
       subroutine particle_bcs_periodic
@@ -2162,40 +2166,44 @@
 
               end subroutine update_particle_flux
 
-              subroutine update_particle_stats
+      subroutine update_particle_stats
 
-                use particles
-                use pars
-                use con_data
-                use con_stats
-                use tank_pars
-                implicit none
-                include 'mpif.h'
-                real :: rhop,taup_i,partmass
-                real :: xv,yv,zv
-                integer :: i,j,k,ncount,ipt,jpt,kpt,kwpt,kUpt
-                integer :: ix,iy,iz
-                real :: lref,Cvv,Cva,Cpv
-                real :: zu_1,zu_nnz,ztocheck
-                integer :: iz_beg,iz_end
+        use particles
+        use pars
+        use con_data
+        use con_stats
+        use tank_pars
+        implicit none
+        include 'mpif.h'
+        real :: rhop,taup_i,partmass
+        real :: xv,yv,zv
+        integer :: i,j,k,ncount,ipt,jpt,kpt,kwpt,kUpt
+        integer :: ix,iy,iz
+        real :: lref,Cvv,Cva,Cpv
+        real :: zu_1,zu_nnz,ztocheck
+        integer :: iz_beg,iz_end
 
 
-                part => first_particle
-                do while (associated(part))
+        part => first_particle
+        do while (associated(part))
 
-                  ipt = floor(part%xp(1)/dx) + 1
-                  jpt = floor(part%xp(2)/dy) + 1
-                  kUpt = floor((part%xip(3)-0.0)/dz_U) + 1
+          ipt = floor(part%xp(1)/dx) + 1
+          jpt = floor(part%xp(2)/dy) + 1
+          kUpt = floor((part%xip(3)-0.0)/dz_U) + 1
 
-                  if (i_zeta == 1) then  !particle stats according to zeta levels
-                    ztocheck = part%xip(3)
-                  else if (i_zeta == 0) then
-                    ztocheck = part%xp(3)  !particle stats according to z-levels
-                  end if
+          if (i_zeta == 1) then  !particle stats according to zeta levels
+            ztocheck = part%xip(3)
+          else if (i_zeta == 0) then
+            ztocheck = part%xp(3)  !particle stats according to z-levels
+          end if
 
-                  kUpt = floor((ztocheck-minwavez)/dz_U) + 1
+          kUpt = floor((ztocheck-minwavez)/dz_U) + 1
+          if (kUpt > nnz+1) then
+            write(*,*) "STATISTICS ERROR - kUpt too large:", kUpt
+            kUpt = nnz+1
+          endif
 
-                  call particle_stats_U(ipt,jpt,kUpt)
+          call particle_stats_U(ipt,jpt,kUpt)
 
 
 
@@ -2203,37 +2211,42 @@
       !of volume where particle belongs:
       !(must repeat since now particle locations have been updated)
 
-                  do iz=0,nnz+1
-                    if (zz(iz) > part%xip(3)) go to 1299
-                  end do
-1299              continue
-                  kpt = iz-1
+          do iz=0,nnz+1
+            if (zz(iz) > part%xip(3)) go to 1299
+          enddo
+1299      continue
+          kpt = iz-1
 
       !Do again for w:
-                  do iz = 0,nnz+1
-                    if (z(iz) > part%xip(3)) go to 1120
-                  end do
-1120              continue
+          do iz = 0,nnz+1
+            if (z(iz) > part%xip(3)) go to 1120
+          enddo
+1120      continue
 
-                  kwpt = iz
-
-
-!---------
-      !As an aside, use ipt,jpt,kwpt to update the particle numbers at
-      !each cell:
-
-      !call inputs are the nodes associated with the volume that each
-      !part. lies in
-                  call particle_stats(ipt,jpt,kwpt)
+          kwpt = iz
+          if (kwpt > nnz+1) then
+            write(*,*) "STATISTICS ERROR - kwpt too large:", kwpt
+            kwpt = nnz+1
+          endif
+          kwpt = iz
 
 
 !---------
+!As an aside, use ipt,jpt,kwpt to update the particle numbers at
+!each cell:
 
-                  part => part%next
-                end do
+!call inputs are the nodes associated with the volume that each
+!part. lies in
+          call particle_stats(ipt,jpt,kwpt)
 
 
-              end subroutine update_particle_stats
+!---------
+
+          part => part%next
+        end do
+
+
+      end subroutine update_particle_stats
 
       subroutine particle_write_traj(it)
       use con_data
