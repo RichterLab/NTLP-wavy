@@ -7595,7 +7595,7 @@ c --------- generate new coefficients
         kk    = 1
         do i=2,nnx-1,2
           kk = kk + 1
-          if(i_tank == 13) then
+          if(i3d_surf == 4) then
             c_wav  = sqrt(grav/xk(i))
             if(i>ncx) c_wav = sqrt(-grav/xk(i))
           else
@@ -7636,7 +7636,7 @@ c --------- generate modified fourier coefficients
         kk    = 1
         do i=2,nnx-1,2
           kk = kk + 1
-          if(i_tank == 13) then
+          if(i3d_surf == 4) then
             c_wav  = sqrt(grav/xk(i))
             if(i>ncx) c_wav = sqrt(-grav/xk(i))
           else
@@ -9034,23 +9034,19 @@ c --------- allocate surface arrays
 
         lut    = 89
         close(lut)
-        if(i_tank == 1) then     ! no breaking case
-          open(lut,file='./les_tank_nobreak.dat')
-          npts_t  = 1485
-          wave_l  = 0.232780E+02*0.01
-          c_speed = 0.602861E+00
-          wave_k  = pi2/wave_l
-          ustar_tank = 0.381 ! from table 2 of banner 1990
-        else if(i_tank == 10) then !7/12/18: Particle-laden monochromatic turbulence
-          open(lut,file='./monochromatic.dat')
-          npts_t  = 128
-          wave_k  = pi2/wave_l
-        else if(i_tank == 13) then !7/12/18: Particle-laden real wave
-          open(lut,file='./polychromatic.dat')
-          npts_t  = 1000
-          wave_k  = pi2/wave_l
-        end if
+        wave_k  = pi2/wave_l
 
+c---------- count number of points in wave file
+        open(lut,file=wave_file)
+        npts_t = -4 ! don't count top 4 comment lines
+        do
+          read (lut,*, end=10) ! break at end of file
+          npts_t = npts_t + 1
+        end do
+10      close (lut)
+        open (lut, file = wave_file) !re-open to read
+
+c--------- read in wave file
         do i=1,4
           read(lut,'(a1)') idum
         end do
@@ -9157,23 +9153,18 @@ c --------- allocate surface arrays
 
         lut    = 89
         close(lut)
-        if(i_tank == 1) then     ! no breaking case
-          open(lut,file='./les_tank_nobreak.dat')
-          npts_t  = 1485
-          wave_l  = 0.232780E+02*0.01
-          c_speed = 0.602861E+00
-          wave_k  = pi2/wave_l
-          ustar_tank = 0.381 ! from table 2 of banner 1990
-        else if(i_tank == 10) then !7/12/18: Particle-laden monochromatic turbulence
-          open(lut,file='./monochromatic.dat')
-          npts_t  = 128
-          wave_k  = pi2/wave_l
-        else if(i_tank == 13) then !7/12/18: Particle-laden real wave
-          open(lut,file='./polychromatic.dat')
-          npts_t  = 1000
-          wave_k  = pi2/wave_l
-        end if
 
+c---------- count number of points in wave file
+        open(lut,file=wave_file)
+        npts_t = -4 ! don't count top 4 comment lines
+        do
+          read (lut,*, end=10) ! break at end of file
+          npts_t = npts_t + 1
+        end do
+10      close (lut)
+        open (lut, file = wave_file) !re-open to read
+       
+c--------- read in wave file 
         do i=1,4
           read(lut,'(a1)') idum
         end do
@@ -9193,8 +9184,6 @@ c ---------- fit a spline to the data
         yp1 = 2.0e+30
         ypn = yp1
         call spline(xx,zz_tank,npts_t,yp1,ypn,y2)
-        ! call spline(xx,us,npts_t,yp1,ypn,u2)
-        ! call spline(xx,ws,npts_t,yp1,ypn,w2)
 
 c ---------- interpolate into the spline function at les points
 
@@ -9202,8 +9191,6 @@ c ---------- interpolate into the spline function at les points
         do i=1,nnx
           xles(i) = float(i-1)*ddx
           call splint(xx,zz_tank,y2,npts_t,xles(i),z_tank(i))
-          ! call splint(xx,us,u2,npts_t,xles(i),u_tank(i))
-          ! call splint(xx,ws,w2,npts_t,xles(i),w_tank(i))
         end do
 
         sum = 0.0
@@ -9231,12 +9218,8 @@ c           to use in building shape at t > 0
         fnx = 1.0/float(nnx)
         do i=1,nnx
           z_tank_f(i) = z_tank(i)*fnx
-          ! u_tank_f(i) = u_tank(i)*fnx
-          ! w_tank_f(i) = w_tank(i)*fnx
         end do
         call rfftf(nnx,z_tank_f(1),trigx(1,1))
-        ! call rfftf(nnx,u_tank_f(1),trigx(1,1))
-        ! call rfftf(nnx,w_tank_f(1),trigx(1,1))
 
 c ------ dealias the inputs to match the grid resolution
 c        careful with the indices, match fftpack order
@@ -9246,8 +9229,6 @@ c     ix_cut   = 44
 
         do i=ix_cut,nnx
           z_tank_f(i) = 0.0
-          ! u_tank_f(i) = 0.0
-          ! w_tank_f(i) = 0.0
         end do
 
         return

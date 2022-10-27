@@ -14,12 +14,12 @@
 
         namelist /io_params/ inetcdf,ifields,itrajout,
      +      path_seed,path_part,
-     +      path_res,path_ran
+     +      path_res,path_ran,wave_file
 
         namelist /computational_params/ iradup,ifilt,itcut,isubs,ibrcl,
      +      iocean,idebug,ivis0,new_vis,ismlt,ifree,iupwnd,iskew,ibuoy,
      +      ifix_dt,move_step,method,iz_space,iflat,i3d_surf,i_pm,
-     +      lpbc,k_stab,no_pgrad,ispray,iDNS,ievap,isfc,i_tank,
+     +      lpbc,k_stab,no_pgrad,ispray,iDNS,ievap,isfc,
      +      i_zeta,pinertia,verb,ncpu_s,minwavez,zi,zw1,dt_new,cfl
 
         namelist /physical_params/ nuf,Pra,Sc,Cpa,ustar_tank,ugcont,

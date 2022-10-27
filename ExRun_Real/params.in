@@ -65,7 +65,6 @@ ispray    = 1     ! use particles
 iDNS      = 0
 isfc      = 0, 1  ! 0 sets surface flux (qstar), 1 sets surface condition (tsfcc)
 ievap     = 0
-i_tank    = 13
 i_zeta    = 1     ! Do particle statistics correspond to zeta (i_zeta=1) or z (i_zeta=0) levels?
 pinertia  = 1     ! Set to 1 to enable inertial mass for particles
 verb      = 0     ! Set greater than 0 for additional output
@@ -130,7 +129,6 @@ Tp_init     = 300.0
 vp_init     = 0.0, 0.0, 0.0
 
 !-- monochromatic wave properties --!
-waveslope  = 0.2    ! dimensionless
 c_speed    = 0.883  ! m/s
 wave_l     = 0.5    ! m
 /

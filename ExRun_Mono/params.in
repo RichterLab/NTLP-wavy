@@ -28,6 +28,7 @@ path_seed="/scratch365/user/NTLP-wavy/case1/"
 path_part="/scratch365/user/NTLP-wavy/case1/part.le.wav040"
 path_res="/scratch365/user/NTLP-wavy/case1/u.le.wav040"
 path_ran="/scratch365/user/NTLP-wavy/case1/u.le.wav000"
+wave_file="monochromatic.dat"
 /
 
 !!==============================================!!
