@@ -8266,16 +8266,41 @@ c --------- check if neutral surface layer
           go to 9999
         endif
 
-      !Second scalar:
-        if(isfc(2) == 0) then
-          thstar(2) = -qstar(2)/utau
-          tsfcc(2)  = t1xy(2)-thstar(2)*dnom
-          t10xy(2)  = thstar(2)*dnom
-        else
-          thstar(2) = (t1xy(2) - tsfcc(2))/dnom
-          t10xy(2)  = thstar(2)*dnom
-          qstar(2)  = -utau*thstar(2)
-        endif
+
+      ! Second scalar:
+      !  if(isfc(2) == 0) then
+      !    thstar(2) = -qstar(2)/utau
+      !    tsfcc(2)  = t1xy(2)-thstar(2)*dnom
+      !    t10xy(2)  = thstar(2)*dnom
+      !  else
+      !    thstar(2) = (t1xy(2) - tsfcc(2))/dnom
+      !    t10xy(2)  = thstar(2)*dnom
+      !    qstar(2)  = -utau*thstar(2)
+      !  endif
+
+
+        ! To increase scalar roughness in wall model from NTLP (copied from les.F) - Rolf Seh
+
+        do iscl = 2, nscl
+          if (ibuoy == 0 .or. qstar(1) == 0.) then
+            thstar(iscl) = 0.0
+            t10xy(iscl)  = 0.0
+            tsfcc(iscl)  = t1xy(iscl)
+          else
+            dnom = (zosdy-psis)*vk74in
+            if (isfc(iscl) == 0) then
+              thstar(iscl) = -qstar(iscl)/utau
+              tsfcc(iscl)  = t1xy(iscl)-thstar(iscl)*dnom
+              t10xy(iscl)  = thstar(iscl)*dnom
+            else
+              thstar(iscl) = (t1xy(iscl) - tsfcc(iscl))/dnom
+              t10xy(iscl)  = thstar(iscl)*dnom
+              qstar(iscl)  = -utau*thstar(iscl)
+            endif
+            amonin = -utau**3/(batagk*qstar(iscl))
+            zeta   = z1/amonin
+          endif
+        enddo
 
 c ---------- examples of two other scalars
 
@@ -9567,7 +9592,7 @@ c         with fix sr. hx_deriv
         use wavy_pars
         use tank_pars
 
-        real gam, k_main, f_main
+        real gam, f_main
 
 c ------------ for doing restart with gradually growing bumps
 c              specify initial and end times to blend over
@@ -9664,13 +9689,13 @@ c ----------- make sure mean of w_orbit = 0
 
 c ----------- add drift velocity to u_orbit
 
-        gam = 0.5           ! set gamma here
-        k_main = 2*pi/2.35  ! set dominant wavelength
-        f_main = sqrt(grav*k_main)
+        gam = 0.7*0.9   ! set gamma here 0.5
+        wave_k = 2*pi/wave_l  ! set dominant wavelength wave_l in params.in
+        f_main = sqrt(grav*wave_k)
         do j=iys,iye
           do i = 1, nnx
             u_orbit(i,j) = u_orbit(i,j)
-     +          + gam * (1 + cos(k_main*bndy(i,j) - f_main*t_bndy))
+     +          + gam * (1 + cos(wave_k*bndy(i,j) - f_main*t_bndy))
           enddo
         enddo
 
@@ -11289,7 +11314,7 @@ c           u(ix,iy,iz) = ug(iz) - ugal
           do iy=iys,iye
             do ix=1,nnx
               t(ix,iy,1,iz) = 300.0
-              t(ix,iy,2,iz) = 0.01
+              t(ix,iy,2,iz) = 0.02   ! modified to match RH profile in Bruch's tank (long waves)  0.01
             enddo
           enddo
           do iy=iys,iye
