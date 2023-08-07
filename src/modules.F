@@ -33,7 +33,7 @@ c
       !Boundary conditions and other parameters
         real :: Uo,Ttop(nscl),Tbot(nscl),qstar(nscl),tsfcc(nscl),RHbot
         real :: ugcont,vgcont,fcor,t00,grav,ustar_tank,waveslope
-        real :: zi, zl, xl, yl, zw1, zo, dt_new
+        real :: zi, zl, xl, yl, zw1, zo, zos, dt_new
         real :: RHT, RHB
         integer :: isfc(nscl)
 
@@ -255,10 +255,9 @@ c ----------------------------------------------------------------------
      +        gcp, fcor_h, pi2,
      +        batagk, batag,
      +        cdbtm, dtdzf(nscl), dtjump, ugal, divgls,
-     +        z1, utausv, dx, dy, dz,
-     +        dt, dt1,
+     +        utausv, dx, dy, dz, z1, dt, dt1,
      +        fnxy, dzdz, dsl, c23, dtgama, dtzeta, xkmax,
-     +        time, t_zero, zody, zody74,
+     +        time, t_zero, zody, zosdy, zody74,
      +        utau, wtsfc(nscl),
      +        uusfc, uvsfc, uwsfc, vvsfc, vwsfc, wwsfc, amonin,
      +        zol, hol, smal_e, sml_eg,drg_x,drg_y
@@ -269,11 +268,10 @@ c ----------------------------------------------------------------------
      +      gcp, fcor_h, pi2,
      +      batagk, batag,
      +      cdbtm, dtdzf(:), dtjump, ugal, divgls,
-     +      z1, utausv, dx, dy, dz,
+     +      utausv, dx, dy, dz, z1,
      +      dt, dt1,
      +      fnxy, dzdz, dsl, c23, dtgama, dtzeta, xkmax,
-     +      time, t_zero, zody, zody74,
-     +      utau, wtsfc(:),
+     +      time, t_zero, zody, zosdy, zody74, utau, wtsfc(:),
      +      uusfc, uvsfc, uwsfc, vvsfc, vwsfc, wwsfc, amonin,
      +      zol, hol, smal_e, sml_eg,drg_x,drg_y
         contains
