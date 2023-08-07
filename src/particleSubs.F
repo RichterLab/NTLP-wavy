@@ -380,7 +380,6 @@
         real :: Nup,Tptmp,taup_i,rhop,Volp,radiustmp,Shp
         real :: TfC,einf,TpC,Lv,Eff_C,Eff_S,estar
         real :: yp1,ypn,hpart,xpart(nnx),yspln(nnx),ddx,mod_magnus
-
         real :: t_s,t_f,t_s1,t_f1
 
 
@@ -525,7 +524,6 @@
           part%Tp = part%Tp + dt*gama(istage)*part%Tprhs_L
           part%radius = radiustmp + dt*gama(istage)*part%radrhs
 
-
           !Update part%xip as well:
           call splint(xpart,z_tank_i,yspln,nnx,part%xp(1),hpart)
           part%xip(1:3) = part%xp(1:3)
@@ -535,7 +533,7 @@
 
           !Keep track of max height particle reaches during lifetime
           if (part%xip(3) > part%zpmax) part%zpmax = part%xip(3)
-
+          endif
 
           part => part%next
         enddo
@@ -815,7 +813,7 @@
       end subroutine particle_bcs_nonperiodic
 
 
-      ! Recently Implemented SSGFs (refer to Bruch et al. 2019)
+      ! Implemented SSGFs (refer to Bruch et al. 2021) - Rolf and Sarah
       subroutine part_reintro_ssgf(it,istage)
         use particles
         use pars
@@ -842,15 +840,16 @@
         S2_U10_12 = (/ 0.039, 0.053, 0.047, 0.030 /)
         S2_U10_16 = (/ 0.056, 0.063, 0.087, 0.046 /)
         S2_U10_18 = (/ 0.062, 0.066, 0.080, 0.055 /)
-        S2_U10_20 = (/ 0.073, 0.072, 0.078, 0.065 /)
+        !S2_U10_20 = (/ 0.073, 0.072, 0.078, 0.065 /)   ! Tabulated Data
+        S2_U10_20 = (/ 0.073, 0.072, 0.078, 8.683e-6 /)   ! Calculated Wave Slope Variance
 
         uStar_U10_12 = (/ 0.54,  0.52,  0.46,  0.48 /)
         uStar_U10_16 = (/ 0.75,  0.76,  0.80,  0.66 /)
         uStar_U10_18 = (/ 0.89,  0.85,  0.89,  0.79 /)
         uStar_U10_20 = (/ 1.05,  1.01,  1.00,  0.90 /)
 
-        S2 = S2_U10_20(2)   ! refer to Table 1 in Bruch's paper
-        u_star = uStar_U10_20(2)   ! refer to Table 1 in Bruch's paper
+        S2 = S2_U10_20(4)   ! refer to Table 1 in Bruch's paper  1-wind, 2-short, 3-intermediate, 4-long
+        u_star = uStar_U10_20(4)   ! refer to Table 1 in Bruch's paper
         r80 = (/ 5, 10, 15, 20, 25, 30 /)
         dist = r80(2) - r80(1)
         FPss = 1   ! 1 or 2 to choose which functions - refer to Table 2 in Bruch's paper
@@ -864,7 +863,7 @@
         tau = 3.53
         t_bndy = t_stage - t_zero
 
-        nth = 250   ! turn on SSGF every nth time steps (from trial and error)
+        nth = 500   ! turn on SSGF every nth time steps (from trial and error)
 
         ! Set up xpart for interpolation of h:
         yp1 = 2.0e+30
@@ -879,7 +878,6 @@
         call spline(xpart,hx_i,nnx,yp1,ypn,dyspln)
         call spline(xpart,hx2_i,nnx,yp1,ypn,dy2spln)
 
-        ! INTRODUCING FUNCTIONS HERE
         rlength = size(r80)
         allocate(sum_dfdr(rlength))
         tot_reintro = 0
@@ -2188,10 +2186,10 @@
           endif
 
           kUpt = floor((ztocheck-minwavez)/dz_U) + 1
-          if (kUpt > nnz+1) then
-            write(*,*) "STATISTICS ERROR - kUpt too large:", kUpt
-            kUpt = nnz+1
-          endif
+          !if (kUpt > nnz+1) then
+          !  write(*,*) "STATISTICS ERROR - kUpt too large:", kUpt
+          !  kUpt = nnz+1
+          !endif
 
           call particle_stats_U(ipt,jpt,kUpt)
 
@@ -2214,11 +2212,11 @@
 1120      continue
 
           kwpt = iz
-          if (kwpt > nnz+1) then
-            write(*,*) "STATISTICS ERROR - kwpt too large:", kwpt
-            kwpt = nnz+1
-          endif
-          kwpt = iz
+          !if (kwpt > nnz+1) then
+          !  write(*,*) "STATISTICS ERROR - kwpt too large:", kwpt
+          !  kwpt = nnz+1
+          !endif
+          !kwpt = iz
 
 
 !---------
