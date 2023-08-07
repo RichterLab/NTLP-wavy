@@ -35,8 +35,8 @@ c           the flux velocity field
               w_xy = amax1(w_xy,abs(wf(ix,iy,iz)),abs(gm(ix,iy,iz,5)))
               e_xy = amax1(e_xy,e(ix,iy,iz))
               g_xy = amax1(g_xy,gm(ix,iy,iz,1))
-            end do
-          end do
+            enddo
+          enddo
           u_xy   = u_xy*dx_i
           v_xy   = v_xy*dy_i
           wsav   = w_xy
@@ -53,7 +53,7 @@ c ------- get max allowable diffusivity for scalars
           e_temp   = amax1(e_xy,e_temp)
           vis_temp = amax1(vis_xy,vis_temp)
 
-        end do
+        enddo
         u_send(1) = u_temp
         u_send(2) = v_temp
         u_send(3) = w_temp
@@ -93,7 +93,7 @@ c            from max's found previously
      +        ' vel_max = ',e15.5,/,
      +        ' infinite time step !!!')
           stop
-        end if
+        endif
 
 c ---------------- choose fixed or variable time step
 
@@ -109,7 +109,7 @@ c                     from cfl constraint
 
           dt_new  = cfl/vel_max
           dt_new = amin1(dt_new, 5.0)
-        end if
+        endif
 
 c ---------------- compare against viscous stability limit
 
@@ -121,8 +121,8 @@ c ---------------- compare against viscous stability limit
  6200       format(' 6200 get_dt: cfl time step too large',/,
      +          '   viscous time step = ',e15.6,
      +          ' cfl time step = ',e15.6,' vismax = ',e15.6)
-          end if
-        end if
+          endif
+        endif
 
 c -------- for safety if restart set timestep = saved timestep in
 c          restart file
@@ -136,7 +136,7 @@ CHECK ... for moving grids?
  4001     format(' 4001: it = ',i5,' iti = ',i5,
      +        ' dt_new = ',e15.6,' dt1 = ',e15.6,
      +        ' dt = ',e15.6)
-        end if
+        endif
 
         return
       end
@@ -152,7 +152,7 @@ c      monotonic increasing or decreasing function
           ip1 = 1
           ratio = 0.0
           go to 999
-        end if
+        endif
         if(zary(1) < zary(2)) go to 1
         go to 101
     1   continue
@@ -164,12 +164,12 @@ c **** monotonic increasing array
           ip1 = 1
           ratio = 0.0
           go to 999
-        else if(zpt > zary(n)) then
+        elseif(zpt > zary(n)) then
           i = n
           ip1 = n
           ratio = 1.0
           go to 999
-        end if
+        endif
         do j=1,nm1
           if(zpt >= zary(j) .and.
      $        zpt <= zary(j+1)) then
@@ -177,8 +177,8 @@ c **** monotonic increasing array
             ip1 = j+1
             ratio = (zpt - zary(i))/(zary(ip1) - zary(i))
             go to 999
-          end if
-        end do
+          endif
+        enddo
 
 c **** decreasing array
 
@@ -188,12 +188,12 @@ c **** decreasing array
           ip1 = 1
           ratio = 0.0
           go to 999
-        else if(zpt < zary(n)) then
+        elseif(zpt < zary(n)) then
           i = n
           ip1 = n
           ratio = 1.0
           go to 999
-        end if
+        endif
         do j=1,nm1
           if(zpt <= zary(j) .and.
      $        zpt >= zary(j+1)) then
@@ -201,8 +201,8 @@ c **** decreasing array
             ip1 = j+1
             ratio = (zpt - zary(i))/(zary(ip1) - zary(I))
             go to 999
-          end if
-        end do
+          endif
+        enddo
   999   continue
         return
       end
@@ -245,7 +245,7 @@ c        smal_e = 6.0e-03
         else
           smal_e = 1.0e-09
 c        smal_e = 0.0
-        end if
+        endif
 
 c ---------------------- set constants in eddy viscosity model
 
@@ -274,7 +274,7 @@ c                      of max eddy viscosity
         myid_newvis = 0
         do iz=1,nnz
           dfac(iz) = 1.0
-        end do
+        enddo
 
 c -------------- initialize grid restart flag
 
@@ -291,7 +291,7 @@ c ---------- set constants for pressure iteration
           accel_min = 1.0
           do i=1,ip_accel
             accel(i) = 1.0
-          end do
+          enddo
         else
 
 c ------- with effectively flat just use 2 iterations
@@ -316,18 +316,18 @@ c ---------- for initialization with flat
             accel_max = 1.0
             accel_min = 1.0
             ip_ramp   = 10
-          end if
+          endif
           d_accel   = (accel_max - accel_min)/float(ip_ramp - 1)
           do i=1,ip_accel
             accel(i) = accel_max
-          end do
+          enddo
           do i=1,ip_ramp
             accel(i) = float(i-1)*d_accel + accel_min
-          end do
+          enddo
           write(nprt,1017) (i,accel(i),i=1,ip_accel)
  1017     format(' acceleration parameters',/,
      +        ' i ',5x,' accel',/,(i5,e15.6))
-        end if
+        endif
 
 c -------------- set grid generation factor for type of simulation
 c                in routines exp_grid, exp_grid2
@@ -336,24 +336,24 @@ c                in routines exp_grid, exp_grid2
           a_exp_grd   = 0.020
           a_exp_grd2  = 0.00010
           a_decay     = 3.0
-        else if(i3d_surf == 1) then
+        elseif(i3d_surf == 1) then
           a_exp_grd   = 0.020
           a_exp_grd2  = 0.00010
           a_decay     = 3.0
-        else if(i3d_surf == 2) then
+        elseif(i3d_surf == 2) then
           a_exp_grd   = 0.020
           a_exp_grd2  = 0.00010
           a_decay     = 3.0
-        else if(i3d_surf == 3) then
+        elseif(i3d_surf == 3) then
 c           a_exp_grd   = 50.00
           a_exp_grd   = 11.65
           a_exp_grd2  = -1000.0 ! fix for tank simulations
           a_decay     = 3.0
-        else if(i3d_surf == 4) then
+        elseif(i3d_surf == 4) then
           a_exp_grd   = 11.65
           a_exp_grd2  = -1000.0 ! fix for tank simulations
           a_decay     = 3.0
-        end if
+        endif
 
 c -------------- create mpi operation to find max and location
 c                using local gradient method
@@ -410,7 +410,7 @@ c ------------ turn on new sgs model at a particular step
           ivis = 1
         else
           ivis = 0
-        end if
+        endif
 
         if(igrdr . eq. 3) then
           if(l_root) then
@@ -419,28 +419,28 @@ c ------------ turn on new sgs model at a particular step
             write(6,520) wtsfc(1),utau,amonin,dtdzf(1),zody,zo
      +          ,cdbtm,ugcont
             call print(6,it,1,nnz)
-          end if
+          endif
           if(l_debug) then
             write(nprt,6)iti,utau,tsfcc(1) ,qstar(1)
             write(nprt,510)
             write(nprt,520) wtsfc(1),utau,amonin,dtdzf(1),zody,zo
      +          ,cdbtm,ugcont
             call print(nprt,it,izs,ize)
-          end if
-        end if
+          endif
+        endif
 c     if(ifilt==1)call filter
         if(l_root) then
           write(6,1) nnx,nny,nnz,ismlt,ifilt,iti,itmax,
      +        iupwnd,ibuoy,itcut,
      +        dt,zo,tsfcc(1),isubs,ibrcl,
      +        method, iocean, ivis
-        end if
+        endif
         if(l_debug) then
           write(nprt,1) nnx,nny,nnz,ismlt,ifilt,iti,itmax,
      +        iupwnd,ibuoy,itcut,
      +        dt,zo,tsfcc(1),isubs,ibrcl,
      +        method, iocean, ivis
-        end if
+        endif
 
 c -------------- boundary condition flags
 
@@ -455,21 +455,21 @@ c                      in derivatives , xderiv, yderiv
         do i=1,nnx
           xkn(i) = float(i-1)*pi2/xl
           if(i>ncx)xkn(i) = -float(nnx-i+1)*pi2/xl
-        end do
+        enddo
         fn = 1.0/float(nnx)
         do i=1,nnx
           xk(i)  = xkn(i)*fn
           xkk(i) = xkn(i)*xkn(i)*fn
-        end do
+        enddo
         do i=1,nny
           ykn(i) = float(i-1)*pi2/yl
           if(i>ncy)ykn(i) = -float(nny-i+1)*pi2/yl
-        end do
+        enddo
         fn = 1.0/float(nny)
         do i=1,nny
           yk(i)  = ykn(i)*fn
           ykk(i) = ykn(i)*ykn(i)*fn
-        end do
+        enddo
         ii = -1
         do i=1,ncx
           ii = ii + 2
@@ -478,8 +478,8 @@ c                      in derivatives , xderiv, yderiv
             temp1       = temp + ykn(j)**2
             xks(ii,j)   = temp1
             xks(ii+1,j) = temp1
-          end do
-        end do
+          enddo
+        enddo
         xnn = abs(batag*dtdzf(1))
 
 c ----------- choose correct sign so gravity waves
@@ -494,10 +494,10 @@ c             propagate out of the domain
                 wavexy(ix,iy) = 0.0
               else
                 wavexy(ix,iy) = sgn*sqrt(xnn/xks(ix,iy))
-              end if
-            end do
-          end do
-        end if
+              endif
+            enddo
+          enddo
+        endif
 
 c -------------------- set length scale for SGS model
 
@@ -514,7 +514,7 @@ c -------
 
           do iz=0,nnzp1
             dsl_z(iz) = dslg
-          end do
+          enddo
           if(l_root)  write(6,2000) dsl
           if(l_debug) write(nprt,2000) dsl
           if(l_root) write(6, 4033) (iz,dsl_z(iz),iz=0,nnz+1)
@@ -532,11 +532,11 @@ c ----------- just estimate dsl for average spacing
           do iz=0,nnzp1
             dsl_z(iz) = (abs(dx32*dy32*dzw(iz)))**pow3
             if(dsl_z(iz) > dsl_max) dsl_max = dsl_z(iz)
-          end do
+          enddo
           dsl  = dsl_max
           dslg = dsl
           if(l_root) write(6, 4033) (iz,dsl_z(iz),iz=0,nnz+1)
-        end if
+        endif
 
 c --------------------- create dsl array for easy indexing in comp1
 
@@ -553,13 +553,13 @@ c --------- special for moving 3d surface
 
         if(i3d_surf == 1) then
           call surf_setup
-        else if(i3d_surf == 2) then
+        elseif(i3d_surf == 2) then
           call surf_setup_gabls
-        else if(i3d_surf == 3) then
+        elseif(i3d_surf == 3) then
           call surf_setup_tank
-        else if(i3d_surf == 4) then
+        elseif(i3d_surf == 4) then
           call surf_setup_real
-        end if
+        endif
 
 c --------- can add a time factor so as to skip into any part of
 c           the specified geostrophic arrays. time factor in seconds
@@ -588,10 +588,10 @@ c -------------------- do not look for zi below zi_min
         do iz=1,nnz-1
           if(zz(iz) < zi_min .and.
      +        zz(iz+1) >= zi_min) iz_min = iz
-        end do
+        enddo
         if(l_root) then
           write(6,9000) zi_min, iz_min
-        end if
+        endif
 
 c -------- for curvy bottom set the distribution
 c          of specified heat flux. customize for
@@ -646,8 +646,8 @@ c          scalar sources and sinks
               do i=1,nnx
                 t3tbc(i,j,iscl)  = qstar(iscl)
                 t_grnd(i,j,iscl) = tsfcc(iscl)
-              end do
-            end do
+              enddo
+            enddo
 
           else ! given surface temp compute qstar
 
@@ -655,12 +655,12 @@ c          scalar sources and sinks
               do i=1,nnx
                 t3tbc(i,j,iscl)  = -99999.0
                 t_grnd(i,j,iscl) = tsfcc(iscl)
-              end do
-            end do
+              enddo
+            enddo
 
-          end if
+          endif
 
-        end do
+        enddo
 
         return
       end
@@ -673,18 +673,18 @@ c          scalar sources and sinks
  6000     format(' TROUBLE, IN SR. NBLNK : NCHAR = ',i6,
      +        ' EXCEEDS NMAX = ',i6)
           stop
-        end if
+        endif
         jj = 0
         do j=1,nchar
           if(word(j:j) /= ' ') then
             jj = jj + 1
             wordt(jj:jj) = word(j:j)
-          end if
+          endif
           word(j:j) = ' '
-        end do
+        enddo
         do j=1,jj
           word(j:j) = wordt(j:j)
-        end do
+        enddo
 
         return
       end
@@ -693,7 +693,7 @@ c          scalar sources and sinks
         nchar = len(word)
         do j=1,nchar
           word(j:j) = ' '
-        end do
+        enddo
 
         return
       end
@@ -717,10 +717,10 @@ c      height. uses boundary conditions from lower and upper.
 c        dfac(iz) = 1.0
           dfac(iz) = 0.0
           sfk(iz)  = 0.0
-        end do
+        enddo
         do iz=izs,ize
           dfac(iz) = 1.0
-        end do
+        enddo
 
 c ------ set nmatch equal to fraction of initial zi in sr. random
 
@@ -728,7 +728,7 @@ c ------ set nmatch equal to fraction of initial zi in sr. random
         do i=0,numprocs-1,ncpu_s
           if(nmatch >= iz_s(i) .and.
      +        nmatch <= iz_e(i)) myid_newvis = i
-        end do
+        enddo
 
         do iz=izs,min(ize,nmatch)
           izp1 = iz + 1
@@ -753,10 +753,10 @@ c ---- get fluctuating strains
      +            wy(i,j,iz)))**2
               sfk(iz) = sfk(iz) + 2.0*(s11 + s22 + s33) +
      +            s12 + s13 + s23
-            end do
-          end do
+            enddo
+          enddo
           sfk(iz) = sfk(iz)*fnxy
-        end do
+        enddo
         call mpi_sum_z(sfk,i_root,myid,nnz,1)
 
         do iz=izs,min(ize,nmatch)
@@ -770,11 +770,11 @@ c ---- get fluctuating strains
             dfac(iz) = 1.0
           else
             dfac(iz) = sfk(iz)/(sfk(iz) + smk)
-          end if
+          endif
 c     if(l_root) write(6,6001) iz,sfk(iz),smk,dfac(iz)
  6001     format(' iz = ',i3,' sfk = ',e15.6,
      +        ' smk = ',e15.6,' dfac = ',e15.6)
-        end do
+        enddo
 
 c ---- rescale ratio to give unity at match height
 c      and if nested grid match value at upper boundary
@@ -782,7 +782,7 @@ c      of coarser grid
 
         if(myid == myid_newvis) then
           dfacm = dfac(nmatch)
-        end if
+        endif
 
         call mpi_bcast(dfacm,1,mpi_real8,
      +      myid_newvis,mpi_comm_world,ierr)
@@ -791,7 +791,7 @@ c      of coarser grid
           dfac(iz) = dfac(iz)/dfacm
           dfac(iz) = amax1(dfac(iz), 0.1)
           dfac(iz) = amin1(dfac(iz), 1.0)
-        end do
+        enddo
 
 c --------- gather dfac on all processes for printing and use in tke_vis
 c           use reduce and divide by number of slab cpus
@@ -800,7 +800,7 @@ c           use reduce and divide by number of slab cpus
         fncpu_s = 1.0/float(ncpu_s)
         do iz=1,nnz
           dfac(iz) = dfac(iz)*fncpu_s
-        end do
+        enddo
 
  6000   format(' in sr. iso, nmatch = ',i3,/,
      +      ' ivis = ',i3,'iz',5x,'dfac',/,(i3,1x,e15.6))
@@ -842,17 +842,17 @@ c     xkmax  = dzu(izp1)*dzu(izp1)/(5.0*dt)
             call sufto(it)
           else
             call suft(it)
-          end if
+          endif
           if(qstar(1) == 0.) then
             zeta = 0.0
           else
             zeta = abs(z(1))/amonin
-          end if
+          endif
           if(ismlt == 1) then
             call busngr(zeta,phim,phis,psim,psis)
           else
             call fzol(zeta,phim,phis,psim,psis)
-          end if
+          endif
           viscon = vk*abs(z(1))/(utau*phim)
           vise   = utau*vk*abs(z(1))/phim
 
@@ -866,8 +866,8 @@ c ---- get special value at z1 to match with surface layer
      +            u(ix,iy,izp1) - u_mn(izp1))*(w(ix,iy,iz)-w_mn(iz))
               vws = vws + 0.5*(v(ix,iy,iz)-v_mn(iz) +
      +            v(ix,iy,izp1) - v_mn(izp1))*(w(ix,iy,iz)-w_mn(iz))
-            end do
-          end do
+            enddo
+          enddo
           uws = uws*fnxy
           vws = vws*fnxy
 
@@ -876,8 +876,8 @@ c ---- get average fluctuating eddy viscsoity
           do iy=iys,iye
             do ix=1,nnx
               e(ix,iy,iz)=amax1(e(ix,iy,iz),sml_eg)
-            end do
-          end do
+            enddo
+          enddo
           dslk = amin1(dsl,vk*abs(z(iz))/csmag)
 c     stabmin = 1.e-12
 c     almin = 0.0001*dsl
@@ -886,8 +886,8 @@ c     almin = 0.0001*dsl
             do ix=1,nnx
               alwk(ix,iy)=dslk
               xkvis(ix,iy)=ck*alwk(ix,iy)*sqrt(e(ix,iy,iz))*dfac(1)
-            end do
-          end do
+            enddo
+          enddo
 
 c ---- get average viscosity
 
@@ -895,8 +895,8 @@ c ---- get average viscosity
           do iy=iys,iye
             do ix=1,nnx
               xkavg = xkavg + xkvis(ix,iy)
-            end do
-          end do
+            enddo
+          enddo
           xkavg = xkavg*fnxy
 
           buf(1) = uws
@@ -915,7 +915,7 @@ c ---- get average viscosity
  6000     format(' dfac = ',e12.4,' xkavg = ',e12.4,' xkz1 = ',e12.4,/,
      +        ' vise = ',e12.4,' xksurf = ',e12.4)
 
-        end if
+        endif
 
 c ---------- broadcast values to other processes
 
@@ -969,19 +969,19 @@ c              free of (1/J)
               vrhs(i,j,k) = v(i,j,k)*gm(i,j,k,1) + dtzeta*r2(i,j,k)
               wrhs(i,j,k) = w(i,j,k)*gm(i,j,k,1) + dtzeta*r3(i,j,k)
               erhs(i,j,k) = e(i,j,k)*gm(i,j,k,1) + dtzeta*r5(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do k=izs,ize
           do l=1,nscl
             do j=iys,iye
               do i=1,nnx
                 trhs(i,j,l,k)=t(i,j,l,k)*gm(i,j,k,1)+dtzeta*r4(i,j,l,k)
-              end do
-            end do
-          end do
-        end do
+              enddo
+            enddo
+          enddo
+        enddo
 
 c --------- get viscosity and rhs of (e,u,v,w)-equations
 c           at next step
@@ -992,7 +992,7 @@ c           at next step
         else
           call tke_vis(istep)
           call rhs_uvw(istep)
-        end if
+        endif
 
 c -------- evaluate rhs of scalar equations
 
@@ -1001,8 +1001,8 @@ c -------- evaluate rhs of scalar equations
             call rhs_scl_dns(istep,l)
           else
             call rhs_scl(istep,l)
-          end if
-        end do
+          endif
+        enddo
 
 c ---------- gather stat sums on root processor
 c            using mpi_reduction over all processors
@@ -1012,8 +1012,8 @@ c            using mpi_reduction over all processors
           do j=1,nstat
             do k=1,nnz
               stat(k,j) = 0.0
-            end do
-          end do
+            enddo
+          enddo
           do k=izs,ize
             stat(k,1) = uwsb(k)
             stat(k,2) = vwsb(k)
@@ -1022,7 +1022,7 @@ c            using mpi_reduction over all processors
             stat(k,5) = triz(k)
             stat(k,6) = shrz(k)
             stat(k,7) = t_diss(k)
-          end do
+          enddo
           m1 = js
           m2 = js + nscl
           m3 = js + 2*nscl
@@ -1031,8 +1031,8 @@ c            using mpi_reduction over all processors
               stat(k,m1+l) = utsb(k,l)
               stat(k,m2+l) = vtsb(k,l)
               stat(k,m3+l) = wtsb(k,l)
-            end do
-          end do
+            enddo
+          enddo
           call mpi_sum_z(stat(1,1),i_root,myid,nstat*nnz,1)
           do k=1,nnz
             uwsb(k)   = stat(k,1)
@@ -1042,21 +1042,21 @@ c            using mpi_reduction over all processors
             triz(k)   = stat(k,5)
             shrz(k)   = stat(k,6)
             t_diss(k) = stat(k,7)
-          end do
+          enddo
           do l=1,nscl
             do k=1,nnz
               utsb(k,l) = stat(k,m1+l)
               vtsb(k,l) = stat(k,m2+l)
               wtsb(k,l) = stat(k,m3+l)
-            end do
-          end do
+            enddo
+          enddo
           do k=1,nnz
             buyz(k) = batag*wtsb(k,1)
-          end do
+          enddo
 
 c -------- end if block
 
-        end if
+        endif
 
 c ------- save old rhs in field variables for RK-advancement
 c         add new rhs for computation of flux velocities
@@ -1069,18 +1069,18 @@ c         at this stage field variables are (u,v,w,e,theta)/J
               v(i,j,k) = vrhs(i,j,k) + dtgama*r2(i,j,k)
               w(i,j,k) = wrhs(i,j,k) + dtgama*r3(i,j,k)
               e(i,j,k) = erhs(i,j,k) + dtgama*r5(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         do k=izs,ize
           do l=1,nscl
             do j=iys,iye
               do i=1,nnx
                 t(i,j,l,k) = trhs(i,j,l,k) + dtgama*r4(i,j,l,k)
-              end do
-            end do
-          end do
-        end do
+              enddo
+            enddo
+          enddo
+        enddo
 
 c --------- generate rhs of contravariant flux velocities equations
 c           at cell faces
@@ -1117,10 +1117,10 @@ c           get the contravariant flux velocities.
         nt = myid + ncpu_s
         if(iss == 0) then
           nb = mpi_proc_null
-        end if
+        endif
         if(ise == numprocs-1) then
           nt = mpi_proc_null
-        end if
+        endif
         nsend = 3*nnx*(iye + 1 - iys)
         nrecv = nsend
         do j=iys,iye
@@ -1128,8 +1128,8 @@ c           get the contravariant flux velocities.
             fs(i,j,1) = u(i,j,izs)
             fs(i,j,2) = v(i,j,izs)
             fs(i,j,3) = w(i,j,izs)
-          end do
-        end do
+          enddo
+        enddo
         call mpi_sendrecv(
      +      fs(1,iys,1),nsend,mpi_real8,nb,2,
      +      fr(1,iys,1),nrecv,mpi_real8,nt,2,
@@ -1140,15 +1140,15 @@ c           get the contravariant flux velocities.
               u(i,j,ize+1)  = fr(i,j,1)
               v(i,j,ize+1)  = fr(i,j,2)
               w(i,j,ize+1)  = fr(i,j,3)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
 c ---------- get mean of wfi
 
         do k=0,nnz
           wfi_sum(k) = 0.0
-        end do
+        enddo
 
         do k=izs,ize
           km1 = k - 1
@@ -1163,8 +1163,8 @@ c              correct value is used in psolver
                 wfi(i,j,k) = wfbc(i,j,1)
                 ufi(i,j,k) = u(i,j,k)
                 vfi(i,j,k) = v(i,j,k)
-              end do
-            end do
+              enddo
+            enddo
           else
             do j=iys,iye
               do i=1,nnx
@@ -1177,15 +1177,15 @@ c              correct value is used in psolver
      +              u(i,j,kp1)*gm(i,j,kp1,2)  +
      +              v(i,j,kp1)*gm(i,j,kp1,3)
                 wfi(i,j,k) = wf_k*weitm(k) + wf_kp1*weit(k)
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
           do j=iys,iye
             do i=1,nnx
               wfi_sum(k) = wfi_sum(k) + wfi(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           wfi_sum(k) = wfi_sum(k)*fnxy
 
 c --------- linear extrapolation to get wfi surface value
@@ -1205,12 +1205,12 @@ c --------- linear extrapolation to get wfi surface value
      +              v(i,j,kp1)*gm(i,j,kp1,3)
                 wfi(i,j,km1) = wf_k*w2 + wf_kp1*w1
                 wfi_sum(km1) = wfi_sum(km1) + wfi(i,j,km1)
-              end do
-            end do
+              enddo
+            enddo
             wfi_sum(km1) = wfi_sum(km1)*fnxy
-          end if
+          endif
 
-        end do
+        enddo
 
         call mpi_sum_z(wfi_sum(0),i_root,myid,nnz+1,1)
 
@@ -1220,18 +1220,18 @@ c -------  take out mean here
           do j=iys,iye
             do i=1,nnx
               wfi(i,j,k) = wfi(i,j,k) - wfi_sum(k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         if(izs == 1) then
           k = 0
           do j=iys,iye
             do i=1,nnx
               wfi(i,j,k) = wfi(i,j,k) - wfi_sum(k)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
         return
       end
       subroutine rhs_uvw(istep)
@@ -1257,7 +1257,7 @@ c            variables used to build rhs are (u,v,w,e,theta).
           upfac = 0.5
         else
           upfac = 1.0
-        end if
+        endif
 
 c --------- special first grid point arrays, to avoid repeating
 
@@ -1271,9 +1271,9 @@ c --------- special first grid point arrays, to avoid repeating
               fnt4(i,j) = 2.0*(weit(k)*vis_m(i,j,kp1) +
      +            weitm(k)*vis_m(i,j,k))*fnt4(i,j)
               fnt5(i,j)=weit(km1)*gm(i,j,k,1)+weitm(km1)*gm(i,j,km1,1)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
         do k=izs,ize
 
@@ -1308,10 +1308,10 @@ c ------------ build rhs times 1/J
               r1(i,j,k) = (u_cor + u_geo)*gm(i,j,k,1)
               r2(i,j,k) = (v_cor + v_geo)*gm(i,j,k,1)
               r3(i,j,k) = (w_cor + w_buy)*gm(i,j,k,1)
-            end do
-          end do
+            enddo
+          enddo
 
-        end do ! end z-loop
+        enddo ! end z-loop
 
 c ---------- advection for skew symmetric form
 
@@ -1351,9 +1351,9 @@ c ------------ totals
                 r1(i,j,k) = r1(i,j,k) - u_adv
                 r2(i,j,k) = r2(i,j,k) - v_adv
                 r3(i,j,k) = r3(i,j,k) - w_adv
-              end do
-            end do
-          end do ! end z-loop
+              enddo
+            enddo
+          enddo ! end z-loop
 
         else   ! flux form with grid speed
 
@@ -1381,11 +1381,11 @@ c ------------ totals
                 r1(i,j,k) = r1(i,j,k) - u_adv
                 r2(i,j,k) = r2(i,j,k) - v_adv
                 r3(i,j,k) = r3(i,j,k) - w_adv
-              end do
-            end do
-          end do ! end z-loop
+              enddo
+            enddo
+          enddo ! end z-loop
 
-        end if ! end of skew check
+        endif ! end of skew check
 
 c ----------- SGS cell center x-contributions + resolved fluxes
 c             advective terms can be written in skew symmetric
@@ -1403,8 +1403,8 @@ c             average boundary and upper cell tau flux
      +              t12bc(i,j)*fnt5(i,j))
                 tauij(i,j,3,2) = 0.5*(fnt4(i,j)*sij(i,j,3) -
      +              t13bc(i,j)*fnt5(i,j))
-              end do
-            end do
+              enddo
+            enddo
           else
             call strain_c(sij,k)
             do j=iys,iye
@@ -1412,16 +1412,16 @@ c             average boundary and upper cell tau flux
                 tauij(i,j,1,2) = 2.0*vis_m(i,j,k)*sij(i,j,1)*gm(i,j,k,1)
                 tauij(i,j,2,2) = 2.0*vis_m(i,j,k)*sij(i,j,2)*gm(i,j,k,1)
                 tauij(i,j,3,2) = 2.0*vis_m(i,j,k)*sij(i,j,3)*gm(i,j,k,1)
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j) = tauij(i,j,1,2) - upfac*uf(i,j,k)*u(i,j,k)
               fnt2(i,j) = tauij(i,j,2,2) - upfac*uf(i,j,k)*v(i,j,k)
               fnt3(i,j) = tauij(i,j,3,2) - upfac*uf(i,j,k)*w(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call xderivp(fnt2(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call xderivp(fnt3(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
@@ -1430,9 +1430,9 @@ c             average boundary and upper cell tau flux
               r1(i,j,k) = r1(i,j,k) + fnt1(i,j)
               r2(i,j,k) = r2(i,j,k) + fnt2(i,j)
               r3(i,j,k) = r3(i,j,k) + fnt3(i,j)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ----------- SGS z-contributions
 
@@ -1445,8 +1445,8 @@ c ----------- SGS z-contributions
               tauij(i,j,4,2) = -t22bc(i,j)
               tauij(i,j,5,2) = -t23bc(i,j)
               tauij(i,j,6,2) = -t33bc(i,j)
-            end do
-          end do
+            enddo
+          enddo
         else
           call strain_u(sij,izs-1)
           do n=1,6
@@ -1455,10 +1455,10 @@ c ----------- SGS z-contributions
                 fac   = 2.0*(weit(izs-1)*vis_m(i,j,izs) +
      +              weitm(izs-1)*vis_m(i,j,izs-1))
                 tauij(i,j,n,2) = fac*sij(i,j,n)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
         do k=izs,ize
           kp1 = k + 1
           km1 = k - 1
@@ -1466,9 +1466,9 @@ c ----------- SGS z-contributions
             do j=iys,iye
               do i=1,nnx
                 tauij(i,j,n,1) = tauij(i,j,n,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call strain_u(sij,k)
           do n=1,6
             do j=iys,iye
@@ -1476,9 +1476,9 @@ c ----------- SGS z-contributions
                 fac   = 2.0*(weit(k)*vis_m(i,j,kp1) +
      +              weitm(k)*vis_m(i,j,k))
                 tauij(i,j,n,2) = fac*sij(i,j,n)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           uw_sum = 0.0
           vw_sum = 0.0
           ww_sum = 0.0
@@ -1510,8 +1510,8 @@ c ----------- SGS z-contributions
      +            tauij(i,j,6,1)
               ww_sum    = ww_sum + tau_up
               r3(i,j,k) = r3(i,j,k) + (tau_up - tau_lo)*dzw_i(k)
-            end do
-          end do
+            enddo
+          enddo
 
 c -------- save SGS fluxes for printout
 
@@ -1525,17 +1525,17 @@ c -------- save SGS fluxes for printout
      +              (v(i,j,k) - vxym(k))*weitm(k)
                 tr_tau(k) = tr_tau(k) -
      +              tauij(i,j,3,2)*ufluc - tauij(i,j,5,2)*vfluc
-              end do
-            end do
+              enddo
+            enddo
             uwsb(k)   = -uw_sum*fnxy
             vwsb(k)   = -vw_sum*fnxy
             wwsb(k)   = -ww_sum*fnxy
             tr_tau(k) = tr_tau(k)*fnxy
-          end if
+          endif
 
 c ---------- end z loop
 
-        end do
+        enddo
 
 c ---------- SGS fluxes tau_12, tau_22, tau_23 that depend on
 c            y-derivatives at cell centers. special treatment
@@ -1550,17 +1550,17 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
                 tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) -
      +              t12bc(i,j)*fnt5(i,j))
                 fntd(i,j,k) = tau_c  - upfac*vf(i,j,k)*u(i,j,k)
-              end do
-            end do
+              enddo
+            enddo
           else
             do j=iys,iye
               do i=1,nnx
                 tau_c       = 2.0*gm(i,j,k,1)*vis_m(i,j,k)*sij(i,j,1)
                 fntd(i,j,k) = tau_c - upfac*vf(i,j,k)*u(i,j,k)
-              end do
-            end do
-          end if
-        end do
+              enddo
+            enddo
+          endif
+        enddo
         call yd_mpi(fntd(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -1568,9 +1568,9 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
           do j=iys,iye
             do i=1,nnx
               r1(i,j,k)   = r1(i,j,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do k=izs,ize
           call strain_22(sij(1,iys,1),k)
@@ -1580,17 +1580,17 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
                 tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) -
      +              t22bc(i,j)*fnt5(i,j))
                 fntd(i,j,k) = tau_c  - upfac*vf(i,j,k)*v(i,j,k)
-              end do
-            end do
+              enddo
+            enddo
           else
             do j=iys,iye
               do i=1,nnx
                 tau_c       = 2.0*gm(i,j,k,1)*vis_m(i,j,k)*sij(i,j,1)
                 fntd(i,j,k) = tau_c - upfac*vf(i,j,k)*v(i,j,k)
-              end do
-            end do
-          end if
-        end do
+              enddo
+            enddo
+          endif
+        enddo
         call yd_mpi(fntd(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -1598,9 +1598,9 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
           do j=iys,iye
             do i=1,nnx
               r2(i,j,k)   = r2(i,j,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do k=izs,ize
           call strain_23(sij(1,iys,1),k)
@@ -1610,17 +1610,17 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
                 tau_c       = 0.5*(fnt4(i,j)*sij(i,j,1) -
      +              t23bc(i,j)*fnt5(i,j))
                 fntd(i,j,k) = tau_c - upfac*vf(i,j,k)*w(i,j,k)
-              end do
-            end do
+              enddo
+            enddo
           else
             do j=iys,iye
               do i=1,nnx
                 tau_c       = 2.0*gm(i,j,k,1)*vis_m(i,j,k)*sij(i,j,1)
                 fntd(i,j,k) = tau_c - upfac*vf(i,j,k)*w(i,j,k)
-              end do
-            end do
-          end if
-        end do
+              enddo
+            enddo
+          endif
+        enddo
         call yd_mpi(fntd(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -1628,40 +1628,40 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
           do j=iys,iye
             do i=1,nnx
               r3(i,j,k) = r3(i,j,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c --------- get average of r3 as estimate of mean pressure gradient
 c           from turbulence and add it to right hand sides of all equations
 
         do k=1,nnz
           pm_z(k) = 0.0
-        end do
+        enddo
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               pm_z(k) = pm_z(k) + r3(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           pm_z(k) = pm_z(k)*fnxy
-        end do
+        enddo
         call mpi_sum_z(pm_z,i_root,myid,nnz,1)
 
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               r3(i,j,k) = r3(i,j,k) - pm_z(k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------- integrate p-gradient to get values at wf points
 
         pm(0) = p_surf
         do k=1,nnz
           pm(k) = pm(k-1) + pm_z(k)*dzw(k)
-        end do
+        enddo
 
         if(no_pgrad == 1) then
 
@@ -1674,11 +1674,11 @@ c           to avoid specifying the surface pressure
               do i=1,nnx
                 r1(i,j,k) = r1(i,j,k) - pm_z(k)*gm(i,j,k,1)*gm(i,j,k,2)
                 r2(i,j,k) = r2(i,j,k) - pm_z(k)*gm(i,j,k,1)*gm(i,j,k,3)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
-        end if ! check for no mean dpdx in (u,v)
+        endif ! check for no mean dpdx in (u,v)
 
 c --------- leave with (r1,r2,r3)/J
 
@@ -1708,7 +1708,7 @@ c            variables used to build rhs are (u,v,w,e,theta).
           upfac = 0.5
         else
           upfac = 1.0
-        end if
+        endif
         sfc_flx = 0.0
 
 c --------- special first grid point arrays, to avoid repeating
@@ -1723,9 +1723,9 @@ c --------- special first grid point arrays, to avoid repeating
               fnt4(i,j) = 2.0*(weit(k)*vis_m(i,j,kp1) +
      +            weitm(k)*vis_m(i,j,k))*fnt4(i,j)
               fnt5(i,j)=weit(km1)*gm(i,j,k,1)+weitm(km1)*gm(i,j,km1,1)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
         do k=izs,ize
 
@@ -1760,10 +1760,10 @@ c ------------ build rhs times 1/J
               r1(i,j,k) = (u_cor + u_geo)*gm(i,j,k,1)
               r2(i,j,k) = (v_cor + v_geo)*gm(i,j,k,1)
               r3(i,j,k) = (w_cor + w_buy)*gm(i,j,k,1)
-            end do
-          end do
+            enddo
+          enddo
 
-        end do ! end z-loop
+        enddo ! end z-loop
 
 c ---------- advection for skew symmetric form
 
@@ -1803,9 +1803,9 @@ c ------------ totals
                 r1(i,j,k) = r1(i,j,k) - u_adv
                 r2(i,j,k) = r2(i,j,k) - v_adv
                 r3(i,j,k) = r3(i,j,k) - w_adv
-              end do
-            end do
-          end do ! end z-loop
+              enddo
+            enddo
+          enddo ! end z-loop
 
         else   ! flux form with grid speed
 
@@ -1833,11 +1833,11 @@ c ------------ totals
                 r1(i,j,k) = r1(i,j,k) - u_adv
                 r2(i,j,k) = r2(i,j,k) - v_adv
                 r3(i,j,k) = r3(i,j,k) - w_adv
-              end do
-            end do
-          end do ! end z-loop
+              enddo
+            enddo
+          enddo ! end z-loop
 
-        end if ! end of skew check
+        endif ! end of skew check
 
 c ----------- SGS cell center x-contributions + resolved fluxes
 c             advective terms can be written in skew symmetric
@@ -1851,15 +1851,15 @@ c             average boundary and upper cell tau flux
               tauij(i,j,1,2) = 2.0*vis_m(i,j,k)*sij(i,j,1)*gm(i,j,k,1)
               tauij(i,j,2,2) = 2.0*vis_m(i,j,k)*sij(i,j,2)*gm(i,j,k,1)
               tauij(i,j,3,2) = 2.0*vis_m(i,j,k)*sij(i,j,3)*gm(i,j,k,1)
-            end do
-          end do
+            enddo
+          enddo
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j) = tauij(i,j,1,2) - upfac*uf(i,j,k)*u(i,j,k)
               fnt2(i,j) = tauij(i,j,2,2) - upfac*uf(i,j,k)*v(i,j,k)
               fnt3(i,j) = tauij(i,j,3,2) - upfac*uf(i,j,k)*w(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call xderivp(fnt2(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call xderivp(fnt3(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
@@ -1868,9 +1868,9 @@ c             average boundary and upper cell tau flux
               r1(i,j,k) = r1(i,j,k) + fnt1(i,j)
               r2(i,j,k) = r2(i,j,k) + fnt2(i,j)
               r3(i,j,k) = r3(i,j,k) + fnt3(i,j)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ----------- SGS z-contributions
 
@@ -1881,9 +1881,9 @@ c ----------- SGS z-contributions
               fac   = 2.0*(weit(izs-1)*vis_m(i,j,izs) +
      +            weitm(izs-1)*vis_m(i,j,izs-1))
               tauij(i,j,n,2) = fac*sij(i,j,n)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 !      endif
         do k=izs,ize
           kp1 = k + 1
@@ -1892,9 +1892,9 @@ c ----------- SGS z-contributions
             do j=iys,iye
               do i=1,nnx
                 tauij(i,j,n,1) = tauij(i,j,n,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call strain_u(sij,k)
           do n=1,6
             do j=iys,iye
@@ -1902,9 +1902,9 @@ c ----------- SGS z-contributions
                 fac   = 2.0*(weit(k)*vis_m(i,j,kp1) +
      +              weitm(k)*vis_m(i,j,k))
                 tauij(i,j,n,2) = fac*sij(i,j,n)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           uw_sum = 0.0
           vw_sum = 0.0
           ww_sum = 0.0
@@ -1927,7 +1927,7 @@ c ----------- SGS z-contributions
 
               if (k==1) then
                 sfc_flx(1) = sfc_flx(1) + tau_lo
-              end if
+              endif
 
               tau_up    = tauij(i,j,2,2)*gm_xu + tauij(i,j,4,2)*gm_yu +
      +            tauij(i,j,5,2)
@@ -1937,7 +1937,7 @@ c ----------- SGS z-contributions
 
               if (k==1) then
                 sfc_flx(2) = sfc_flx(2) + tau_lo
-              end if
+              endif
 
               r2(i,j,k) = r2(i,j,k) + (tau_up - tau_lo)*dzw_i(k)
               tau_up    = tauij(i,j,3,2)*gm_xu + tauij(i,j,5,2)*gm_yu +
@@ -1947,8 +1947,8 @@ c ----------- SGS z-contributions
               ww_sum    = ww_sum + tau_up
               r3(i,j,k) = r3(i,j,k) + (tau_up - tau_lo)*dzw_i(k)
 
-            end do
-          end do
+            enddo
+          enddo
 
 c -------- save SGS fluxes for printout
 
@@ -1962,24 +1962,24 @@ c -------- save SGS fluxes for printout
      +              (v(i,j,k) - vxym(k))*weitm(k)
                 tr_tau(k) = tr_tau(k) -
      +              tauij(i,j,3,2)*ufluc - tauij(i,j,5,2)*vfluc
-              end do
-            end do
+              enddo
+            enddo
             uwsb(k)   = -uw_sum*fnxy
             vwsb(k)   = -vw_sum*fnxy
             wwsb(k)   = -ww_sum*fnxy
             tr_tau(k) = tr_tau(k)*fnxy
-          end if
+          endif
 
       !As an aside, compute the values uwsfc and vwsfc for output:
           if (k==1) then
             call mpi_sum_xy(sfc_flx,myid,iss,ise,2)
             uwsfc = sfc_flx(1)*fnxy
             vwsfc = sfc_flx(2)*fnxy
-          end if
+          endif
 
 c ---------- end z loop
 
-        end do
+        enddo
 
 c ---------- SGS fluxes tau_12, tau_22, tau_23 that depend on
 c            y-derivatives at cell centers. special treatment
@@ -1992,9 +1992,9 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
             do i=1,nnx
               tau_c       = 2.0*gm(i,j,k,1)*vis_m(i,j,k)*sij(i,j,1)
               fntd(i,j,k) = tau_c - upfac*vf(i,j,k)*u(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fntd(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -2002,9 +2002,9 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
           do j=iys,iye
             do i=1,nnx
               r1(i,j,k)   = r1(i,j,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do k=izs,ize
           call strain_22_dns(sij(1,iys,1),k)
@@ -2013,9 +2013,9 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
             do i=1,nnx
               tau_c       = 2.0*gm(i,j,k,1)*vis_m(i,j,k)*sij(i,j,1)
               fntd(i,j,k) = tau_c - upfac*vf(i,j,k)*v(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fntd(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -2023,9 +2023,9 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
           do j=iys,iye
             do i=1,nnx
               r2(i,j,k)   = r2(i,j,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do k=izs,ize
           call strain_23_dns(sij(1,iys,1),k)
@@ -2033,9 +2033,9 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
             do i=1,nnx
               tau_c       = 2.0*gm(i,j,k,1)*vis_m(i,j,k)*sij(i,j,1)
               fntd(i,j,k) = tau_c - upfac*vf(i,j,k)*w(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fntd(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -2043,40 +2043,40 @@ c            at k = 1 is at upper face, see strain_12,_22,_23
           do j=iys,iye
             do i=1,nnx
               r3(i,j,k) = r3(i,j,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c --------- get average of r3 as estimate of mean pressure gradient
 c           from turbulence and add it to right hand sides of all equations
 
         do k=1,nnz
           pm_z(k) = 0.0
-        end do
+        enddo
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               pm_z(k) = pm_z(k) + r3(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           pm_z(k) = pm_z(k)*fnxy
-        end do
+        enddo
         call mpi_sum_z(pm_z,i_root,myid,nnz,1)
 
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               r3(i,j,k) = r3(i,j,k) - pm_z(k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------- integrate p-gradient to get values at wf points
 
         pm(0) = p_surf
         do k=1,nnz
           pm(k) = pm(k-1) + pm_z(k)*dzw(k)
-        end do
+        enddo
 
         if(no_pgrad == 1) then
 
@@ -2089,11 +2089,11 @@ c           to avoid specifying the surface pressure
               do i=1,nnx
                 r1(i,j,k) = r1(i,j,k) - pm_z(k)*gm(i,j,k,1)*gm(i,j,k,2)
                 r2(i,j,k) = r2(i,j,k) - pm_z(k)*gm(i,j,k,1)*gm(i,j,k,3)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
-        end if ! check for no mean dpdx in (u,v)
+        endif ! check for no mean dpdx in (u,v)
 
 c --------- leave with (r1,r2,r3)/J
 
@@ -2121,7 +2121,7 @@ c            variables used to build rhs are (u,v,w,e,theta).
           upfac = 0.5
         else
           upfac = 1.0
-        end if
+        endif
 
         do k=izs,ize
 
@@ -2159,10 +2159,10 @@ c ------------ build rhs times 1/J
               r1(i,j,k) = (u_cor + u_geo)*gm(i,j,k,1)
               r2(i,j,k) = (v_cor + v_geo)*gm(i,j,k,1)
               r3(i,j,k) = (w_cor + w_buy)*gm(i,j,k,1)
-            end do
-          end do
+            enddo
+          enddo
 
-        end do ! end z-loop
+        enddo ! end z-loop
 
 c ---------- advection for skew symmetric form, fix for moving grids
 
@@ -2202,9 +2202,9 @@ c ------------ totals
                 r1(i,j,k) = r1(i,j,k) - u_adv
                 r2(i,j,k) = r2(i,j,k) - v_adv
                 r3(i,j,k) = r3(i,j,k) - w_adv
-              end do
-            end do
-          end do ! end z-loop
+              enddo
+            enddo
+          enddo ! end z-loop
 
         else   ! flux form with grid speed
 
@@ -2232,11 +2232,11 @@ c ------------ totals
                 r1(i,j,k) = r1(i,j,k) - u_adv
                 r2(i,j,k) = r2(i,j,k) - v_adv
                 r3(i,j,k) = r3(i,j,k) - w_adv
-              end do
-            end do
-          end do ! end z-loop
+              enddo
+            enddo
+          enddo ! end z-loop
 
-        end if ! end of skew check
+        endif ! end of skew check
 
 c ----------- SGS cell center x-contributions + resolved fluxes
 c             advective terms written in skew symmetric form
@@ -2249,8 +2249,8 @@ c             advective terms written in skew symmetric form
               fnt1(i,j) = fac*sij(i,j,1) - upfac*uf(i,j,k)*u(i,j,k)
               fnt2(i,j) = fac*sij(i,j,2) - upfac*uf(i,j,k)*v(i,j,k)
               fnt3(i,j) = fac*sij(i,j,3) - upfac*uf(i,j,k)*w(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call xderivp(fnt2(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call xderivp(fnt3(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
@@ -2259,9 +2259,9 @@ c             advective terms written in skew symmetric form
               r1(i,j,k) = r1(i,j,k) + fnt1(i,j)
               r2(i,j,k) = r2(i,j,k) + fnt2(i,j)
               r3(i,j,k) = r3(i,j,k) + fnt3(i,j)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ----------- SGS z-contributions
 
@@ -2274,8 +2274,8 @@ c ----------- SGS z-contributions
               tauij(i,j,4,2) = -t22bc(i,j)
               tauij(i,j,5,2) = -t23bc(i,j)
               tauij(i,j,6,2) = -t33bc(i,j)
-            end do
-          end do
+            enddo
+          enddo
         else
           call strain_u(sij,izs-1)
           do n=1,6
@@ -2284,10 +2284,10 @@ c ----------- SGS z-contributions
                 fac   = 2.0*(weit(izs-1)*vis_m(i,j,izs) +
      +              weitm(izs-1)*vis_m(i,j,izs-1))
                 tauij(i,j,n,2) = fac*sij(i,j,n)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
         do k=izs,ize
           kp1 = k + 1
           km1 = k - 1
@@ -2295,9 +2295,9 @@ c ----------- SGS z-contributions
             do j=iys,iye
               do i=1,nnx
                 tauij(i,j,n,1) = tauij(i,j,n,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call strain_u(sij,k)
           do n=1,6
             do j=iys,iye
@@ -2305,9 +2305,9 @@ c ----------- SGS z-contributions
                 fac   = 2.0*(weit(k)*vis_m(i,j,kp1) +
      +              weitm(k)*vis_m(i,j,k))
                 tauij(i,j,n,2) = fac*sij(i,j,n)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           uw_sum = 0.0
           vw_sum = 0.0
           ww_sum = 0.0
@@ -2339,8 +2339,8 @@ c ----------- SGS z-contributions
      +            tauij(i,j,6,1)
               ww_sum    = ww_sum + tau_up
               r3(i,j,k) = r3(i,j,k) + (tau_up - tau_lo)*dzw_i(k)
-            end do
-          end do
+            enddo
+          enddo
 
 c -------- save SGS fluxes for printout
 
@@ -2354,17 +2354,17 @@ c -------- save SGS fluxes for printout
      +              (v(i,j,k) - vxym(k))*weitm(k)
                 tr_tau(k) = tr_tau(k) -
      +              tauij(i,j,3,2)*ufluc - tauij(i,j,5,2)*vfluc
-              end do
-            end do
+              enddo
+            enddo
             uwsb(k)   = -uw_sum*fnxy
             vwsb(k)   = -vw_sum*fnxy
             wwsb(k)   = -ww_sum*fnxy
             tr_tau(k) = tr_tau(k)*fnxy
-          end if
+          endif
 
 c ---------- end z loop
 
-        end do
+        enddo
 
 c ---------- SGS fluxes tau_12, tau_22, tau_23 that depend on
 c            y-derivatives at cell centers
@@ -2376,9 +2376,9 @@ c            y-derivatives at cell centers
               fac         = 2.0*gm(i,j,k,1)*vis_m(i,j,k)
 c           fntd(i,j,k) = fac*sij(i,j,1) - upfac*vf(i,j,k)*u(i,j,k)
               fntd(i,j,k) = tauij(i,j,2,2) - upfac*vf(i,j,k)*u(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fntd(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -2386,9 +2386,9 @@ c           fntd(i,j,k) = fac*sij(i,j,1) - upfac*vf(i,j,k)*u(i,j,k)
           do j=iys,iye
             do i=1,nnx
               r1(i,j,k)   = r1(i,j,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         do k=izs,ize
           call strain_22(sij(1,iys,1),k)
           do j=iys,iye
@@ -2396,9 +2396,9 @@ c           fntd(i,j,k) = fac*sij(i,j,1) - upfac*vf(i,j,k)*u(i,j,k)
               fac         = 2.0*gm(i,j,k,1)*vis_m(i,j,k)
 c           fntd(i,j,k) = fac*sij(i,j,1) - upfac*vf(i,j,k)*v(i,j,k)
               fntd(i,j,k) = tauij(i,j,4,2) - upfac*vf(i,j,k)*u(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fntd(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -2406,9 +2406,9 @@ c           fntd(i,j,k) = fac*sij(i,j,1) - upfac*vf(i,j,k)*v(i,j,k)
           do j=iys,iye
             do i=1,nnx
               r2(i,j,k)   = r2(i,j,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         do k=izs,ize
           call strain_23(sij(1,iys,1),k)
           do j=iys,iye
@@ -2416,9 +2416,9 @@ c           fntd(i,j,k) = fac*sij(i,j,1) - upfac*vf(i,j,k)*v(i,j,k)
               fac       = 2.0*gm(i,j,k,1)*vis_m(i,j,k)
 c           fntd(i,j,k) = fac*sij(i,j,1) - upfac*vf(i,j,k)*w(i,j,k)
               fntd(i,j,k) = tauij(i,j,5,2) - upfac*vf(i,j,k)*u(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fntd(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -2429,16 +2429,16 @@ c           constant to be added  = - <J*r3/J>/J
 
         do k=1,nnz
           r3_sum(k) = 0.0
-        end do
+        enddo
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               r3(i,j,k) = r3(i,j,k) + fntd(i,j,k)
               r3_sum(k) = r3_sum(k) + r3(i,j,k)*gm(i,j,k,4)
-            end do
-          end do
+            enddo
+          enddo
           r3_sum(k) = r3_sum(k)*fnxy
-        end do
+        enddo
 
         call mpi_sum_z(r3_sum,i_root,myid,nnz,1)
 
@@ -2449,16 +2449,16 @@ c ------- make sure <r3/J> = 0 and set r3 = 0 at top
             do j=iys,iye
               do i=1,nnx
                 r3(i,j,k) = 0.0
-              end do
-            end do
+              enddo
+            enddo
           else
             do j=iys,iye
               do i=1,nnx
                 r3(i,j,k) = r3(i,j,k) - r3_sum(k)*gm(i,j,k,1)
-              end do
-            end do
-          end if
-        end do
+              enddo
+            enddo
+          endif
+        enddo
 
 c --------- leave with (r1,r2,r3)/J
 
@@ -2504,8 +2504,8 @@ c -------- at upper face
             sij_u(i,j,4) = veta + vzet*gm_y
             sij_u(i,j,5) = 0.5*(vzet*gm_z + weta + wzet*gm_y)
             sij_u(i,j,6) = wzet*gm_z
-          end do
-        end do
+          enddo
+        enddo
 
         return
       end
@@ -2551,8 +2551,8 @@ c -------- at cell center
             sij_c(i,j,4) = vy(i,j,k) + vzet*gm_y
             sij_c(i,j,5) = 0.5*(vzet*gm_z + wy(i,j,k) + wzet*gm_y)
             sij_c(i,j,6) = wzet*gm_z
-          end do
-        end do
+          enddo
+        enddo
 
 !      endif
 
@@ -2597,8 +2597,8 @@ Cnew      now computed at cell centers using surface bcs
               sij_c(i,j,4) = vy(i,j,k) + vzet*gm_y
               sij_c(i,j,5) = 0.5*(vzet*gm_z + wy(i,j,k) + wzet*gm_y)
               sij_c(i,j,6) = wzet*gm_z
-            end do
-          end do
+            enddo
+          enddo
 
         else
 
@@ -2625,10 +2625,10 @@ c -------- at cell center
               sij_c(i,j,4) = vy(i,j,k) + vzet*gm_y
               sij_c(i,j,5) = 0.5*(vzet*gm_z + wy(i,j,k) + wzet*gm_y)
               sij_c(i,j,6) = wzet*gm_z
-            end do
-          end do
+            enddo
+          enddo
 
-        end if
+        endif
 
         return
       end
@@ -2664,8 +2664,8 @@ c -------- at cell center
             vzet  = (vup - vlo)*dzw_i(k)
             sij_y(i,j) = 0.5*(uy(i,j,k) + uzet*gm(i,j,k,3) +
      +          vx(i,j,k) + vzet*gm(i,j,k,2))
-          end do
-        end do
+          enddo
+        enddo
 
 !      endif
 
@@ -2704,8 +2704,8 @@ c ------ at upper face
               gm_x       = w1*gm(i,j,kp1,2) + w1m*gm(i,j,k,2)
               gm_y       = w1*gm(i,j,kp1,3) + w1m*gm(i,j,k,3)
               sij_y(i,j) = 0.5*(ueta + uzet*gm_y + vxi  + vzet*gm_x)
-            end do
-          end do
+            enddo
+          enddo
 
         else
 
@@ -2721,10 +2721,10 @@ c -------- at cell center
               vzet  = (vup - vlo)*dzw_i(k)
               sij_y(i,j) = 0.5*(uy(i,j,k) + uzet*gm(i,j,k,3) +
      +            vx(i,j,k) + vzet*gm(i,j,k,2))
-            end do
-          end do
+            enddo
+          enddo
 
-        end if
+        endif
 
         return
       end
@@ -2756,8 +2756,8 @@ c -------- at cell center
             vlo   = w2*v(i,j,k) + w2m*v(i,j,km1)
             vzet  = (vup - vlo)*dzw_i(k)
             sij_y(i,j) = vy(i,j,k) + vzet*gm(i,j,k,3)
-          end do
-        end do
+          enddo
+        enddo
 
 !      endif
 
@@ -2792,8 +2792,8 @@ c -------at upper face
               veta       = w1*vy(i,j,kp1) + w1m*vy(i,j,k)
               gm_y       = w1*gm(i,j,kp1,3) + w1m*gm(i,j,k,3)
               sij_y(i,j) = veta + vzet*gm_y
-            end do
-          end do
+            enddo
+          enddo
         else
 
 c -------- at cell center
@@ -2804,10 +2804,10 @@ c -------- at cell center
               vlo   = w2*v(i,j,k) + w2m*v(i,j,km1)
               vzet  = (vup - vlo)*dzw_i(k)
               sij_y(i,j) = vy(i,j,k) + vzet*gm(i,j,k,3)
-            end do
-          end do
+            enddo
+          enddo
 
-        end if
+        endif
 
         return
       end
@@ -2842,8 +2842,8 @@ c -------- at cell center
             wzet  = (wup - wlo)*dzw_i(k)
             sij_y(i,j) = 0.5*(vzet*gm(i,j,k,4) +
      +          wy(i,j,k) + wzet*gm(i,j,k,3))
-          end do
-        end do
+          enddo
+        enddo
 
 !      endif
 
@@ -2881,8 +2881,8 @@ c -------- at upper face
               gm_y       = w1*gm(i,j,kp1,3) + w1m*gm(i,j,k,3)
               gm_z       = w1*gm(i,j,kp1,4) +  w1m*gm(i,j,k,4)
               sij_y(i,j) = 0.5*(vzet*gm_z + weta + wzet*gm_y)
-            end do
-          end do
+            enddo
+          enddo
         else
 
 c -------- at cell center
@@ -2897,10 +2897,10 @@ c -------- at cell center
               wzet  = (wup - wlo)*dzw_i(k)
               sij_y(i,j) = 0.5*(vzet*gm(i,j,k,4) +
      +            wy(i,j,k) + wzet*gm(i,j,k,3))
-            end do
-          end do
+            enddo
+          enddo
 
-        end if
+        endif
 
         return
       end
@@ -2933,7 +2933,7 @@ c --------- set sign for ocean simulations that use monotone
           upfac = 1.0
         else
           upfac = 0.5
-        end if
+        endif
         sfc_flx = 0.0
 
 c --------- get x & y derivatives for [izs-1:ize+1]
@@ -2943,10 +2943,10 @@ c --------- get x & y derivatives for [izs-1:ize+1]
             do i=1,nnx
               tx(i,j,k) = t(i,j,iscl,k)
               ty(i,j,k) = t(i,j,iscl,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(tx(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
-        end do
+        enddo
         call yd_mpi(ty(1,iys,izs-1),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs-1,ize+1,myid,ncpu_s,numprocs)
@@ -2965,15 +2965,15 @@ c -------- SGS term tflx(.,.,1) + resolved flux at cell center
      +            upfac*uf(i,j,k)*t(i,j,iscl,k)
               fntd(i,j,k)   = tflx(i,j,2,1) -
      +            upfac*vf(i,j,k)*t(i,j,iscl,k)
-            end do
-          end do
+            enddo
+          enddo
 !         endif
           call xderivp(fnt1(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           do j=iys,iye
             do i=1,nnx
               r4(i,j,iscl,k) = fnt1(i,j)
-            end do
-          end do
+            enddo
+          enddo
 
 c -------- save SGS fluxes for printout
 
@@ -2984,12 +2984,12 @@ c -------- save SGS fluxes for printout
               do i=1,nnx
                 utsb(k,iscl) = utsb(k,iscl) - tflx(i,j,1,1)
                 vtsb(k,iscl) = vtsb(k,iscl) - tflx(i,j,2,1)
-              end do
-            end do
+              enddo
+            enddo
             utsb(k,iscl) = utsb(k,iscl)*fnxy
             vtsb(k,iscl) = vtsb(k,iscl)*fnxy
-          end if
-        end do
+          endif
+        enddo
 
 c ---------- SGS fluxes tflx(.,.,2) that depend on
 c            y-derivative at cell centers
@@ -3001,9 +3001,9 @@ c            y-derivative at cell centers
           do j=iys,iye
             do i=1,nnx
               r4(i,j,iscl,k) = r4(i,j,iscl,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------- resolved advection for skew symmetric form
 c         for no monotone
@@ -3015,10 +3015,10 @@ c         for no monotone
               do i=1,nnx
                 r4(i,j,iscl,k) = r4(i,j,iscl,k) -
      +              upfac*(uf(i,j,k)*tx(i,j,k) + vf(i,j,k)*ty(i,j,k))
-              end do
-            end do
-          end do
-        end if ! end of iupwnd check for horizontal advection
+              enddo
+            enddo
+          enddo
+        endif ! end of iupwnd check for horizontal advection
 
 c ----------- SGS z-contributions
 
@@ -3029,9 +3029,9 @@ c ----------- SGS z-contributions
               fac   = weit(izs-1)*vis_s(i,j,izs) +
      +            weitm(izs-1)*vis_s(i,j,izs-1)
               tflx(i,j,n,2) = fac*scl_g(i,j,n)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         do k=izs,ize
           kp1 = k + 1
           km1 = k - 1
@@ -3039,18 +3039,18 @@ c ----------- SGS z-contributions
             do j=iys,iye
               do i=1,nnx
                 tflx(i,j,n,1) = tflx(i,j,n,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call grads_u(scl_g,k,tx,ty,iscl)
           do n=1,3
             do j=iys,iye
               do i=1,nnx
                 fac   = weit(k)*vis_s(i,j,kp1) + weitm(k)*vis_s(i,j,k)
                 tflx(i,j,n,2) = fac*scl_g(i,j,n)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           do j=iys,iye
             do i=1,nnx
               gm_xu      = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) +
@@ -3069,9 +3069,9 @@ c ----------- SGS z-contributions
      +            (tflx_up - tflx_lo)*dzw_i(k)
               if (k==1) then
                 sfc_flx = sfc_flx + tflx_lo
-              end if
-            end do
-          end do
+              endif
+            enddo
+          enddo
 
 c -------- save SGS fluxes for printout, gather sums on exit
 
@@ -3080,20 +3080,20 @@ c -------- save SGS fluxes for printout, gather sums on exit
             do j=iys,iye
               do i=1,nnx
                 wtsb(k,iscl) = wtsb(k,iscl) - tflx(i,j,3,2)
-              end do
-            end do
+              enddo
+            enddo
             wtsb(k,iscl) = wtsb(k,iscl)*fnxy
-          end if
+          endif
 
       !As an aside, compute the values uwsfc and vwsfc for output:
           if (k==1 .and. isfc(1)==1) then
             call mpi_sum_xy(sfc_flx,myid,iss,ise,1)
             wtsfc(iscl) = sfc_flx
-          end if
+          endif
 
 c ---------- end z loop
 
-        end do
+        enddo
 
 c ---------- resolved vertical advection
 
@@ -3118,9 +3118,9 @@ c           no grid speed
      +              wf(i,j,km1)*theta_l)*dzw_i(k) +
      +              0.25*(wf(i,j,k)*tz + wf(i,j,km1)*tzm)
                 r4(i,j,iscl,k) = r4(i,j,iscl,k) - t_adv
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
         else
 
@@ -3145,9 +3145,9 @@ c ----------- z-direction special with monotone
      +                amin1(sgn*wflx_u,0.)*(t(i,j,iscl,kp1) +
      +                rlim(t(i,j,iscl,k),t(i,j,iscl,kp1),
      +                t(i,j,iscl,kp2)))
-                end do
-              end do
-            else if(k == nnz) then
+                enddo
+              enddo
+            elseif(k == nnz) then
               do j=iys,iye
                 do i=1,nnx
                   wflx_l      = wf(i,j,km1) - gm(i,j,km1,5)
@@ -3161,8 +3161,8 @@ c ----------- z-direction special with monotone
      +                amin1(sgn*wflx_l,0.)*(t(i,j,iscl,k) +
      +                rlim(t(i,j,iscl,km1),t(i,j,iscl,k),
      +                t(i,j,iscl,kp1)))
-                end do
-              end do
+                enddo
+              enddo
             else
               do j=iys,iye
                 do i=1,nnx
@@ -3182,9 +3182,9 @@ c ----------- z-direction special with monotone
      +                amin1(sgn*wflx_l,0.)*(t(i,j,iscl,k) +
      +                rlim(t(i,j,iscl,km1),t(i,j,iscl,k),
      +                t(i,j,iscl,kp1)))
-                end do
-              end do
-            end if
+                enddo
+              enddo
+            endif
 
 c ---------- sum vertical monotone flux
 
@@ -3192,16 +3192,16 @@ c ---------- sum vertical monotone flux
               do i=1,nnx
                 r4(i,j,iscl,k) = r4(i,j,iscl,k)
      +              - sgn*(flux_u(i,j) - flux_l(i,j))*dzw_i(k)
-              end do
-            end do
+              enddo
+            enddo
 
 c ---------- end z loop
 
-          end do
+          enddo
 
 c -------- end monotone if block
 
-        end if
+        endif
 
         return
       end
@@ -3233,7 +3233,7 @@ c --------- set sign for ocean simulations that use monotone
           upfac = 1.0
         else
           upfac = 0.5
-        end if
+        endif
 
 c --------- get x & y derivatives for [izs-1:ize+1]
 
@@ -3242,10 +3242,10 @@ c --------- get x & y derivatives for [izs-1:ize+1]
             do i=1,nnx
               tx(i,j,k) = t(i,j,iscl,k)
               ty(i,j,k) = t(i,j,iscl,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(tx(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
-        end do
+        enddo
         call yd_mpi(ty(1,iys,izs-1),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs-1,ize+1,myid,ncpu_s,numprocs)
@@ -3273,8 +3273,8 @@ c          center value.
      +              upfac*uf(i,j,k)*t(i,j,iscl,k)
                 fntd(i,j,k)   = tflx(i,j,2,1) -
      +              upfac*vf(i,j,k)*t(i,j,iscl,k)
-              end do
-            end do
+              enddo
+            enddo
           else
             call grads_c(scl_g,k,tx,ty,iscl)
             do j=iys,iye
@@ -3285,15 +3285,15 @@ c          center value.
      +              upfac*uf(i,j,k)*t(i,j,iscl,k)
                 fntd(i,j,k)   = tflx(i,j,2,1) -
      +              upfac*vf(i,j,k)*t(i,j,iscl,k)
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
           call xderivp(fnt1(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           do j=iys,iye
             do i=1,nnx
               r4(i,j,iscl,k) = fnt1(i,j)
-            end do
-          end do
+            enddo
+          enddo
 
 c -------- save SGS fluxes for printout
 
@@ -3304,12 +3304,12 @@ c -------- save SGS fluxes for printout
               do i=1,nnx
                 utsb(k,iscl) = utsb(k,iscl) - tflx(i,j,1,1)
                 vtsb(k,iscl) = vtsb(k,iscl) - tflx(i,j,2,1)
-              end do
-            end do
+              enddo
+            enddo
             utsb(k,iscl) = utsb(k,iscl)*fnxy
             vtsb(k,iscl) = vtsb(k,iscl)*fnxy
-          end if
-        end do
+          endif
+        enddo
 
 c ---------- SGS fluxes tflx(.,.,2) that depend on
 c            y-derivative at cell centers
@@ -3321,9 +3321,9 @@ c            y-derivative at cell centers
           do j=iys,iye
             do i=1,nnx
               r4(i,j,iscl,k) = r4(i,j,iscl,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------- resolved advection for skew symmetric form
 c         for no monotone
@@ -3335,10 +3335,10 @@ c         for no monotone
               do i=1,nnx
                 r4(i,j,iscl,k) = r4(i,j,iscl,k) -
      +              upfac*(uf(i,j,k)*tx(i,j,k) + vf(i,j,k)*ty(i,j,k))
-              end do
-            end do
-          end do
-        end if ! end of iupwnd check for horizontal advection
+              enddo
+            enddo
+          enddo
+        endif ! end of iupwnd check for horizontal advection
 
 c ----------- SGS z-contributions
 
@@ -3348,8 +3348,8 @@ c ----------- SGS z-contributions
               tflx(i,j,1,2) = -t1tbc(i,j,iscl)
               tflx(i,j,2,2) = -t2tbc(i,j,iscl)
               tflx(i,j,3,2) = -t3tbc(i,j,iscl)
-            end do
-          end do
+            enddo
+          enddo
         else
           call grads_u(scl_g,izs-1,tx,ty,iscl)
           do n=1,3
@@ -3358,10 +3358,10 @@ c ----------- SGS z-contributions
                 fac   = weit(izs-1)*vis_s(i,j,izs) +
      +              weitm(izs-1)*vis_s(i,j,izs-1)
                 tflx(i,j,n,2) = fac*scl_g(i,j,n)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
         do k=izs,ize
           kp1 = k + 1
           km1 = k - 1
@@ -3369,18 +3369,18 @@ c ----------- SGS z-contributions
             do j=iys,iye
               do i=1,nnx
                 tflx(i,j,n,1) = tflx(i,j,n,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call grads_u(scl_g,k,tx,ty,iscl)
           do n=1,3
             do j=iys,iye
               do i=1,nnx
                 fac   = weit(k)*vis_s(i,j,kp1) + weitm(k)*vis_s(i,j,k)
                 tflx(i,j,n,2) = fac*scl_g(i,j,n)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           do j=iys,iye
             do i=1,nnx
               gm_xu      = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) +
@@ -3396,14 +3396,14 @@ c ----------- SGS z-contributions
               !A hack to enforce a constant flux of heat/moisture
               !through the domain
               if (iz==nnz) then
-                 tflx_up = wtsfc(iscl)
-              end if
+                tflx_up = wtsfc(iscl)
+              endif
               tflx_lo    = tflx(i,j,1,1)*gm_xl + tflx(i,j,2,1)*gm_yl +
      +            tflx(i,j,3,1)
               r4(i,j,iscl,k) = r4(i,j,iscl,k) +
      +            (tflx_up - tflx_lo)*dzw_i(k)
-            end do
-          end do
+            enddo
+          enddo
 
 c -------- save SGS fluxes for printout, gather sums on exit
 
@@ -3412,14 +3412,14 @@ c -------- save SGS fluxes for printout, gather sums on exit
             do j=iys,iye
               do i=1,nnx
                 wtsb(k,iscl) = wtsb(k,iscl) - tflx(i,j,3,2)
-              end do
-            end do
+              enddo
+            enddo
             wtsb(k,iscl) = wtsb(k,iscl)*fnxy
-          end if
+          endif
 
 c ---------- end z loop
 
-        end do
+        enddo
 
 c ---------- resolved vertical advection
 
@@ -3444,9 +3444,9 @@ c           no grid speed
      +              wf(i,j,km1)*theta_l)*dzw_i(k) +
      +              0.25*(wf(i,j,k)*tz + wf(i,j,km1)*tzm)
                 r4(i,j,iscl,k) = r4(i,j,iscl,k) - t_adv
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
         else
 
@@ -3471,9 +3471,9 @@ c ----------- z-direction special with monotone
      +                amin1(sgn*wflx_u,0.)*(t(i,j,iscl,kp1) +
      +                rlim(t(i,j,iscl,k),t(i,j,iscl,kp1),
      +                t(i,j,iscl,kp2)))
-                end do
-              end do
-            else if(k == nnz) then
+                enddo
+              enddo
+            elseif(k == nnz) then
               do j=iys,iye
                 do i=1,nnx
                   wflx_l      = wf(i,j,km1) - gm(i,j,km1,5)
@@ -3488,8 +3488,8 @@ c ----------- z-direction special with monotone
      +                amin1(sgn*wflx_l,0.)*(t(i,j,iscl,k) +
      +                rlim(t(i,j,iscl,km1),t(i,j,iscl,k),
      +                t(i,j,iscl,kp1)))
-                end do
-              end do
+                enddo
+              enddo
             else
               do j=iys,iye
                 do i=1,nnx
@@ -3509,9 +3509,9 @@ c ----------- z-direction special with monotone
      +                amin1(sgn*wflx_l,0.)*(t(i,j,iscl,k) +
      +                rlim(t(i,j,iscl,km1),t(i,j,iscl,k),
      +                t(i,j,iscl,kp1)))
-                end do
-              end do
-            end if
+                enddo
+              enddo
+            endif
 
 c ---------- sum vertical monotone flux
 
@@ -3519,16 +3519,16 @@ c ---------- sum vertical monotone flux
               do i=1,nnx
                 r4(i,j,iscl,k) = r4(i,j,iscl,k)
      +              - sgn*(flux_u(i,j) - flux_l(i,j))*dzw_i(k)
-              end do
-            end do
+              enddo
+            enddo
 
 c ---------- end z loop
 
-          end do
+          enddo
 
 c -------- end monotone if block
 
-        end if
+        endif
 
         return
       end
@@ -3560,7 +3560,7 @@ c --------- set sign for ocean simulations that use monotone
           upfac = 1.0
         else
           upfac = 0.5
-        end if
+        endif
 
 c --------- get x & y derivatives for [izs-1:ize+1]
 
@@ -3569,10 +3569,10 @@ c --------- get x & y derivatives for [izs-1:ize+1]
             do i=1,nnx
               tx(i,j,k) = t(i,j,iscl,k)
               ty(i,j,k) = t(i,j,iscl,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(tx(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
-        end do
+        enddo
         call yd_mpi(ty(1,iys,izs-1),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs-1,ize+1,myid,ncpu_s,numprocs)
@@ -3589,14 +3589,14 @@ c -------- SGS term tflx(.,.,1) + resolved flux at cell center
      +            upfac*uf(i,j,k)*t(i,j,iscl,k)
               fntd(i,j,k)   = gm(i,j,k,1)*tflx(i,j,2,1) -
      +            upfac*vf(i,j,k)*t(i,j,iscl,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           do j=iys,iye
             do i=1,nnx
               r4(i,j,iscl,k) = fnt1(i,j)
-            end do
-          end do
+            enddo
+          enddo
 
 c -------- save SGS fluxes for printout
 
@@ -3607,12 +3607,12 @@ c -------- save SGS fluxes for printout
               do i=1,nnx
                 utsb(k,iscl) = utsb(k,iscl) - tflx(i,j,1,1)
                 vtsb(k,iscl) = vtsb(k,iscl) - tflx(i,j,2,1)
-              end do
-            end do
+              enddo
+            enddo
             utsb(k,iscl) = utsb(k,iscl)*fnxy
             vtsb(k,iscl) = vtsb(k,iscl)*fnxy
-          end if
-        end do
+          endif
+        enddo
 
 c ---------- SGS fluxes tflx(.,.,2) that depend on
 c            y-derivative at cell centers
@@ -3624,9 +3624,9 @@ c            y-derivative at cell centers
           do j=iys,iye
             do i=1,nnx
               r4(i,j,iscl,k) = r4(i,j,iscl,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------- resolved advection for skew symmetric form
 c         for no monotone
@@ -3638,10 +3638,10 @@ c         for no monotone
               do i=1,nnx
                 r4(i,j,iscl,k) = r4(i,j,iscl,k) -
      +              upfac*(uf(i,j,k)*tx(i,j,k) + vf(i,j,k)*ty(i,j,k))
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
 
 c ----------- SGS z-contributions
 
@@ -3651,8 +3651,8 @@ c ----------- SGS z-contributions
               tflx(i,j,1,2) = -t1tbc(i,j,iscl)
               tflx(i,j,2,2) = -t2tbc(i,j,iscl)
               tflx(i,j,3,2) = -t3tbc(i,j,iscl)
-            end do
-          end do
+            enddo
+          enddo
         else
           call grads_u(scl_g,izs-1,tx,ty,iscl)
           do n=1,3
@@ -3661,10 +3661,10 @@ c ----------- SGS z-contributions
                 fac   = weit(izs-1)*vis_s(i,j,izs) +
      +              weitm(izs-1)*vis_s(i,j,izs-1)
                 tflx(i,j,n,2) = fac*scl_g(i,j,n)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
         do k=izs,ize
           kp1 = k + 1
           km1 = k - 1
@@ -3672,18 +3672,18 @@ c ----------- SGS z-contributions
             do j=iys,iye
               do i=1,nnx
                 tflx(i,j,n,1) = tflx(i,j,n,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call grads_u(scl_g,k,tx,ty,iscl)
           do n=1,3
             do j=iys,iye
               do i=1,nnx
                 fac   = weit(k)*vis_s(i,j,kp1) + weitm(k)*vis_s(i,j,k)
                 tflx(i,j,n,2) = fac*scl_g(i,j,n)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           do j=iys,iye
             do i=1,nnx
               gm_xu      = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) +
@@ -3700,8 +3700,8 @@ c ----------- SGS z-contributions
      +            tflx(i,j,3,1)
               r4(i,j,iscl,k) = r4(i,j,iscl,k) +
      +            (tflx_up - tflx_lo)*dzw_i(k)
-            end do
-          end do
+            enddo
+          enddo
 
 c -------- save SGS fluxes for printout, gather sums on exit
 
@@ -3710,14 +3710,14 @@ c -------- save SGS fluxes for printout, gather sums on exit
             do j=iys,iye
               do i=1,nnx
                 wtsb(k,iscl) = wtsb(k,iscl) - tflx(i,j,3,2)
-              end do
-            end do
+              enddo
+            enddo
             wtsb(k,iscl) = wtsb(k,iscl)*fnxy
-          end if
+          endif
 
 c ---------- end z loop
 
-        end do
+        enddo
 
 c ---------- resolved vertical advection
 
@@ -3742,9 +3742,9 @@ c           no grid speed
      +              wf(i,j,km1)*theta_l)*dzw_i(k) +
      +              0.25*(wf(i,j,k)*tz + wf(i,j,km1)*tzm)
                 r4(i,j,iscl,k) = r4(i,j,iscl,k) - t_adv
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
         else
 
@@ -3769,9 +3769,9 @@ c ----------- z-direction special with monotone
      +                amin1(sgn*wflx_u,0.)*(t(i,j,iscl,kp1) +
      +                rlim(t(i,j,iscl,k),t(i,j,iscl,kp1),
      +                t(i,j,iscl,kp2)))
-                end do
-              end do
-            else if(k == nnz) then
+                enddo
+              enddo
+            elseif(k == nnz) then
               do j=iys,iye
                 do i=1,nnx
                   wflx_l      = wf(i,j,km1) - gm(i,j,km1,5)
@@ -3785,8 +3785,8 @@ c ----------- z-direction special with monotone
      +                amin1(sgn*wflx_l,0.)*(t(i,j,iscl,k) +
      +                rlim(t(i,j,iscl,km1),t(i,j,iscl,k),
      +                t(i,j,iscl,kp1)))
-                end do
-              end do
+                enddo
+              enddo
             else
               do j=iys,iye
                 do i=1,nnx
@@ -3806,9 +3806,9 @@ c ----------- z-direction special with monotone
      +                amin1(sgn*wflx_l,0.)*(t(i,j,iscl,k) +
      +                rlim(t(i,j,iscl,km1),t(i,j,iscl,k),
      +                t(i,j,iscl,kp1)))
-                end do
-              end do
-            end if
+                enddo
+              enddo
+            endif
 
 c ---------- sum vertical monotone flux
 
@@ -3816,16 +3816,16 @@ c ---------- sum vertical monotone flux
               do i=1,nnx
                 r4(i,j,iscl,k) = r4(i,j,iscl,k)
      +              - sgn*(flux_u(i,j) - flux_l(i,j))*dzw_i(k)
-              end do
-            end do
+              enddo
+            enddo
 
 c ---------- end z loop
 
-          end do
+          enddo
 
 c -------- end monotone if block
 
-        end if
+        endif
 
         return
       end
@@ -3861,8 +3861,8 @@ c -------- at upper face
             scl_u(i,j,1) = txi  + tzet*gm_x
             scl_u(i,j,2) = teta + tzet*gm_y
             scl_u(i,j,3) = tzet*gm_z
-          end do
-        end do
+          enddo
+        enddo
 
         return
       end
@@ -3893,8 +3893,8 @@ c ---------- get scalar gradient at the cell center
               scl_c(i,j,1) = tx(i,j,k) + tzet*gm(i,j,k,2)
               scl_c(i,j,2) = ty(i,j,k) + tzet*gm(i,j,k,3)
               scl_c(i,j,3) = tzet*gm(i,j,k,4)
-            end do
-          end do
+            enddo
+          enddo
         else
 
 c -------- at cell center
@@ -3907,10 +3907,10 @@ c -------- at cell center
               scl_c(i,j,1) = tx(i,j,k) + tzet*gm(i,j,k,2)
               scl_c(i,j,2) = ty(i,j,k) + tzet*gm(i,j,k,3)
               scl_c(i,j,3) = tzet*gm(i,j,k,4)
-            end do
-          end do
+            enddo
+          enddo
 
-        end if
+        endif
 
         return
       end
@@ -3941,8 +3941,8 @@ c ---------- get scalar gradient at the cell center
               scl_c(i,j,1) = tx(i,j,k) + tzet*gm(i,j,k,2)
               scl_c(i,j,2) = ty(i,j,k) + tzet*gm(i,j,k,3)
               scl_c(i,j,3) = tzet*gm(i,j,k,4)
-            end do
-          end do
+            enddo
+          enddo
         else
 
 c -------- at cell center
@@ -3955,10 +3955,10 @@ c -------- at cell center
               scl_c(i,j,1) = tx(i,j,k) + tzet*gm(i,j,k,2)
               scl_c(i,j,2) = ty(i,j,k) + tzet*gm(i,j,k,3)
               scl_c(i,j,3) = tzet*gm(i,j,k,4)
-            end do
-          end do
+            enddo
+          enddo
 
-        end if
+        endif
 
         return
       end
@@ -4020,8 +4020,8 @@ c -------- see par statments for setting k_stab
           do j=iys,iye
             do i=1,nnx
               rj3(i,j) = gm(i,j,k,1)**pow3
-            end do
-          end do
+            enddo
+          enddo
 
           if(k > 0) dslk  = amin1(dsl_z(k),vk*abs(z(k))/csmag)
           almin = almin_c*dsl_z(k)
@@ -4029,7 +4029,7 @@ c -------- see par statments for setting k_stab
             dfack = 1.0
           else
             dfack = dfac(k)
-          end if
+          endif
 c     if(ivis == 1 .and. k .le. nmatch) then
 
           if(k <= k_stab) then
@@ -4039,8 +4039,8 @@ c --------------- no stability corrected length scales
             do j=iys,iye
               do i=1,nnx
                 alk(i,j) = dslk*rj3(i,j)
-              end do
-            end do
+              enddo
+            enddo
           else
             do j=iys,iye
               do i=1,nnx
@@ -4051,18 +4051,18 @@ c --------------- no stability corrected length scales
                 if(stab > stabmin) then
                   als = stab_c*sqrt(e(i,j,k)/stab)
                   alk(i,j) = amin1(dslk,als)*rj3(i,j)
-                end if
+                endif
                 alk(i,j)  = amax1(almin*rj3(i,j),alk(i,j))
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
           do j=iys,iye
             do i=1,nnx
               vis_m(i,j,k) = ck*alk(i,j)*sqrt(e(i,j,k))*dfack
               vis_s(i,j,k) = (1.0 + 2.0*alk(i,j)/(dslk*rj3(i,j)))*
      +            vis_m(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
 
 c -------------- special case at bottom and top
 
@@ -4071,16 +4071,16 @@ c -------------- special case at bottom and top
               do i=1,nnx
                 vis_m(i,j,km1) = vis_m(i,j,k)
                 vis_s(i,j,km1) = vis_s(i,j,k)
-              end do
-            end do
-          else if(k == nnz) then
+              enddo
+            enddo
+          elseif(k == nnz) then
             do j=iys,iye
               do i=1,nnx
                 vis_m(i,j,kp1) = vis_m(i,j,k)
                 vis_s(i,j,kp1) = vis_s(i,j,k)
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
           if(k >= izs .and. k <= ize) then
 
@@ -4102,25 +4102,25 @@ c          special at lower boundary
                   tau33_s33=0.5*(fac*sij(i,j,6)-t33bc(i,j))*sij(i,j,6)
                   fnt1(i,j) = tau11_s11 + tau22_s22 + tau33_s33 +
      +                2.0*(tau12_s12 + tau13_s13 + tau23_s23)
-                end do
-              end do
+                enddo
+              enddo
             else
               do j=iys,iye
                 do i=1,nnx
                   fnt1(i,j)  = 2.0*vis_m(i,j,k)*(
      +                sij(i,j,1)**2 + sij(i,j,4)**2 + sij(i,j,6)**2 +
      +                2.0*(sij(i,j,2)**2+sij(i,j,3)**2+sij(i,j,5)**2))
-                end do
-              end do
-            end if
+                enddo
+              enddo
+            endif
 
             do j=iys,iye
               do i=1,nnx
                 dissp(i,j) = (0.19 + 0.74*alk(i,j)/(dslk*rj3(i,j)))*
      +              e(i,j,k)*sqrt(e(i,j,k))/alk(i,j)
                 r5(i,j,k) = (fnt1(i,j) - dissp(i,j))*gm(i,j,k,1)
-              end do
-            end do
+              enddo
+            enddo
 
             if(istep == 1) then
               t_diss(k) = 0.0
@@ -4130,17 +4130,17 @@ c          special at lower boundary
                 do i=1,nnx
                   t_diss(k) = t_diss(k) + dissp(i,j)
                   shrz(k)   = shrz(k) + fnt1(i,j)
-                end do
-              end do
+                enddo
+              enddo
               t_diss(k) = t_diss(k)*fnxy
               shrz(k)   = shrz(k)*fnxy
-            end if
+            endif
 
-          end if   ! end if for k = [izs,ize]
+          endif   ! endif for k = [izs,ize]
 
 c -------------- end z loop
 
-        end do
+        enddo
 
 c --------- get x & y derivatives for [izs-1:ize+1]
 
@@ -4149,10 +4149,10 @@ c --------- get x & y derivatives for [izs-1:ize+1]
             do i=1,nnx
               ex(i,j,k) = e(i,j,k)
               ey(i,j,k) = e(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(ex(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
-        end do
+        enddo
         call yd_mpi(ey(1,iys,izs-1),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs-1,ize+1,myid,ncpu_s,numprocs)
@@ -4169,15 +4169,15 @@ c -------- diffusion term eflx(.,.,1) + resolved flux at cell center
      +            uf(i,j,k)*e(i,j,k)
               fntd(i,j,k)   = gm(i,j,k,1)*eflx(i,j,2,1) -
      +            vf(i,j,k)*e(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           do j=iys,iye
             do i=1,nnx
               r5(i,j,k) = r5(i,j,k) + fnt1(i,j)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c -------- diffusion term eflx(.,.,2) + resolved flux at cell center
 
@@ -4188,9 +4188,9 @@ c -------- diffusion term eflx(.,.,2) + resolved flux at cell center
           do j=iys,iye
             do i=1,nnx
               r5(i,j,k) = r5(i,j,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c --------- z-diffusion term + resolved vertical flux
 c           no divergence of flux at first gridpoint
@@ -4204,9 +4204,9 @@ c           no divergence of flux at first gridpoint
               e(i,j,km1)  = e(i,j,k)
               ex(i,j,km1) = ex(i,j,k)
               ey(i,j,km1) = ey(i,j,k)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
         call grd_e_u(e_g,k,ex,ey)
         do n=1,3
           do j=iys,iye
@@ -4214,9 +4214,9 @@ c           no divergence of flux at first gridpoint
               fac   = weit(k)*vis_m(i,j,kp1) +
      +            weitm(k)*vis_m(i,j,k)
               eflx(i,j,n,2) = 2.0*fac*e_g(i,j,n)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do k=izs,ize
           kp1 = k + 1
@@ -4225,18 +4225,18 @@ c           no divergence of flux at first gridpoint
             do j=iys,iye
               do i=1,nnx
                 eflx(i,j,n,1) = eflx(i,j,n,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call grd_e_u(e_g,k,ex,ey)
           do n=1,3
             do j=iys,iye
               do i=1,nnx
                 fac   = weit(k)*vis_m(i,j,kp1) + weitm(k)*vis_m(i,j,k)
                 eflx(i,j,n,2) = 2.0*fac*e_g(i,j,n)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           do j=iys,iye
             do i=1,nnx
               gm_xu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) +
@@ -4252,8 +4252,8 @@ c           no divergence of flux at first gridpoint
               eflx_lo   = eflx(i,j,1,1)*gm_xl + eflx(i,j,2,1)*gm_yl +
      +            eflx(i,j,3,1)
               r5(i,j,k) = r5(i,j,k) + (eflx_up - eflx_lo)*dzw_i(k)
-            end do
-          end do
+            enddo
+          enddo
 
 c ---------- resolved vertical advection, flux form
 c            plus grid speed
@@ -4266,8 +4266,8 @@ c            plus grid speed
               wflx_l    = wf(i,j,km1) - gm(i,j,km1,5)
               e_adv     = (wflx_u*e_u - wflx_l*e_l)*dzw_i(k)
               r5(i,j,k) = r5(i,j,k) - e_adv
-            end do
-          end do
+            enddo
+          enddo
 
 c --------- get buoyancy term/J in sgs e equation
 
@@ -4277,8 +4277,8 @@ c --------- get buoyancy term/J in sgs e equation
                 fac   = weit(k)*vis_s(i,j,kp1) + weitm(k)*vis_s(i,j,k)
                 tzet  = (t(i,j,1,kp1) - t(i,j,1,k))*dzu_i(kp1)
                 r5(i,j,k) = r5(i,j,k) - fac*tzet*batag*gm(i,j,k,1)
-              end do
-            end do
+              enddo
+            enddo
           else
             do j=iys,iye
               do i=1,nnx
@@ -4286,13 +4286,13 @@ c --------- get buoyancy term/J in sgs e equation
                 tlo   = weit(km1)*t(i,j,1,k) + weitm(km1)*t(i,j,1,km1)
                 tzet  = (tup - tlo)*dzw_i(k)
                 r5(i,j,k)=r5(i,j,k)-vis_s(i,j,k)*tzet*batag*gm(i,j,k,1)
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
 c -------- end z loop
 
-        end do
+        enddo
 
         return
       end
@@ -4334,7 +4334,7 @@ c        (fletcher, vol2 1988, p. 51)
             dfack = 1.0
           else
             dfack = dfac(k)
-          end if
+          endif
 
           if(k <= ((3*nnz)/6)) then
 
@@ -4343,8 +4343,8 @@ c --------------- no stability corrected length scales
             do j=iys,iye
               do i=1,nnx
                 alk(i,j) = dslk*gm(i,j,k,1)
-              end do
-            end do
+              enddo
+            enddo
           else
             do j=iys,iye
               do i=1,nnx
@@ -4355,18 +4355,18 @@ c --------------- no stability corrected length scales
                 if(stab > stabmin) then
                   als = stab_c*sqrt(e(i,j,k)/stab)
                   alk(i,j) = amin1(dslk,als)*gm(i,j,k,1)
-                end if
+                endif
                 alk(i,j)  = amax1(almin,alk(i,j))
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
           do j=iys,iye
             do i=1,nnx
               vis_m(i,j,k) = ck*alk(i,j)*sqrt(e(i,j,k))*dfack
               vis_s(i,j,k) = (1.0 + 2.0*alk(i,j)/(dslk*gm(i,j,k,1)))*
      +            vis_m(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
 
 c -------------- special case at bottom and top
 
@@ -4375,16 +4375,16 @@ c -------------- special case at bottom and top
               do i=1,nnx
                 vis_m(i,j,km1) = vis_m(i,j,k)
                 vis_s(i,j,km1) = vis_s(i,j,k)
-              end do
-            end do
-          else if(k == nnz) then
+              enddo
+            enddo
+          elseif(k == nnz) then
             do j=iys,iye
               do i=1,nnx
                 vis_m(i,j,kp1) = vis_m(i,j,k)
                 vis_s(i,j,kp1) = vis_s(i,j,k)
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
           if(k >= izs .and. k <= ize) then
 
@@ -4400,8 +4400,8 @@ c          and shear production with cell centered strains
      +              sij(i,j,1)**2 + sij(i,j,4)**2 + sij(i,j,6)**2 +
      +              2.0*(sij(i,j,2)**2 + sij(i,j,3)**2 + sij(i,j,5)**2))
                 r5(i,j,k) = (fnt1(i,j) - dissp(i,j))*gm(i,j,k,1)
-              end do
-            end do
+              enddo
+            enddo
 
             if(istep == 1) then
               t_diss(k) = 0.0
@@ -4411,17 +4411,17 @@ c          and shear production with cell centered strains
                 do i=1,nnx
                   t_diss(k) = t_diss(k) + dissp(i,j)
                   shrz(k)   = shrz(k) + fnt1(i,j)
-                end do
-              end do
+                enddo
+              enddo
               t_diss(k) = t_diss(k)*fnxy
               shrz(k)   = shrz(k)*fnxy
-            end if
+            endif
 
-          end if   ! end if for k = [izs,ize]
+          endif   ! endif for k = [izs,ize]
 
 c -------------- end z loop
 
-        end do
+        enddo
 
 c --------- get x & y derivatives for [izs-1:ize+1]
 
@@ -4430,10 +4430,10 @@ c --------- get x & y derivatives for [izs-1:ize+1]
             do i=1,nnx
               ex(i,j,k) = e(i,j,k)
               ey(i,j,k) = e(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(ex(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
-        end do
+        enddo
         call yd_mpi(ey(1,iys,izs-1),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs-1,ize+1,myid,ncpu_s,numprocs)
@@ -4450,15 +4450,15 @@ c -------- diffusion term eflx(.,.,1) + resolved flux at cell center
      +            uf(i,j,k)*e(i,j,k)
               fntd(i,j,k)   = gm(i,j,k,1)*eflx(i,j,2,1) -
      +            vf(i,j,k)*e(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           do j=iys,iye
             do i=1,nnx
               r5(i,j,k) = r5(i,j,k) + fnt1(i,j)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c -------- diffusion term eflx(.,.,2) + resolved flux at cell center
 
@@ -4469,9 +4469,9 @@ c -------- diffusion term eflx(.,.,2) + resolved flux at cell center
           do j=iys,iye
             do i=1,nnx
               r5(i,j,k) = r5(i,j,k) + fntd(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c --------- z-diffusion term + resolved vertical flux
 c           no divergence of flux at first gridpoint
@@ -4485,9 +4485,9 @@ c           no divergence of flux at first gridpoint
               e(i,j,km1)  = e(i,j,k)
               ex(i,j,km1) = ex(i,j,k)
               ey(i,j,km1) = ey(i,j,k)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
         call grd_e_u(e_g,k,ex,ey)
         do n=1,3
           do j=iys,iye
@@ -4495,9 +4495,9 @@ c           no divergence of flux at first gridpoint
               fac   = weit(k)*vis_m(i,j,kp1) +
      +            weitm(k)*vis_m(i,j,k)
               eflx(i,j,n,2) = 2.0*fac*e_g(i,j,n)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do k=izs,ize
           kp1 = k + 1
@@ -4506,18 +4506,18 @@ c           no divergence of flux at first gridpoint
             do j=iys,iye
               do i=1,nnx
                 eflx(i,j,n,1) = eflx(i,j,n,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call grd_e_u(e_g,k,ex,ey)
           do n=1,3
             do j=iys,iye
               do i=1,nnx
                 fac   = weit(k)*vis_m(i,j,kp1) + weitm(k)*vis_m(i,j,k)
                 eflx(i,j,n,2) = 2.0*fac*e_g(i,j,n)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           do j=iys,iye
             do i=1,nnx
               gm_xu     = weit(k)*gm(i,j,kp1,1)*gm(i,j,kp1,2) +
@@ -4533,8 +4533,8 @@ c           no divergence of flux at first gridpoint
               eflx_lo   = eflx(i,j,1,1)*gm_xl + eflx(i,j,2,1)*gm_yl +
      +            eflx(i,j,3,1)
               r5(i,j,k) = r5(i,j,k) + (eflx_up - eflx_lo)*dzw_i(k)
-            end do
-          end do
+            enddo
+          enddo
 
 c ---------- resolved vertical advection, flux form
 c            plus grid speed
@@ -4547,8 +4547,8 @@ c            plus grid speed
               wflx_l    = wf(i,j,km1) - gm(i,j,km1,5)
               e_adv     = (wflx_u*e_u - wflx_l*e_l)*dzw_i(k)
               r5(i,j,k) = r5(i,j,k) - e_adv
-            end do
-          end do
+            enddo
+          enddo
 
 c --------- get buoyancy term/J in sgs e equation
 
@@ -4558,8 +4558,8 @@ c --------- get buoyancy term/J in sgs e equation
                 fac   = weit(k)*vis_s(i,j,kp1) + weitm(k)*vis_s(i,j,k)
                 tzet  = (t(i,j,1,kp1) - t(i,j,1,k))*dzu_i(kp1)
                 r5(i,j,k) = r5(i,j,k) - fac*tzet*batag*gm(i,j,k,1)
-              end do
-            end do
+              enddo
+            enddo
           else
             do j=iys,iye
               do i=1,nnx
@@ -4567,13 +4567,13 @@ c --------- get buoyancy term/J in sgs e equation
                 tlo   = weit(km1)*t(i,j,1,k) + weitm(km1)*t(i,j,1,km1)
                 tzet  = (tup - tlo)*dzw_i(k)
                 r5(i,j,k)=r5(i,j,k)-vis_s(i,j,k)*tzet*batag*gm(i,j,k,1)
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
 c -------- end z loop
 
-        end do
+        enddo
 
         return
       end
@@ -4609,8 +4609,8 @@ c -------- at upper face
             scl_u(i,j,1) = exi  + ezet*gm_x
             scl_u(i,j,2) = eeta + ezet*gm_y
             scl_u(i,j,3) = ezet*gm_z
-          end do
-        end do
+          enddo
+        enddo
 
         return
       end
@@ -4641,8 +4641,8 @@ c ---------- get scalar gradient at the cell center
               scl_c(i,j,1) = ex(i,j,k) + ezet*gm(i,j,k,2)
               scl_c(i,j,2) = ey(i,j,k) + ezet*gm(i,j,k,3)
               scl_c(i,j,3) = ezet*gm(i,j,k,4)
-            end do
-          end do
+            enddo
+          enddo
         else
 
 c -------- at cell center
@@ -4655,10 +4655,10 @@ c -------- at cell center
               scl_c(i,j,1) = ex(i,j,k) + ezet*gm(i,j,k,2)
               scl_c(i,j,2) = ey(i,j,k) + ezet*gm(i,j,k,3)
               scl_c(i,j,3) = ezet*gm(i,j,k,4)
-            end do
-          end do
+            enddo
+          enddo
 
-        end if
+        endif
 
         return
       end
@@ -4688,8 +4688,8 @@ c        index f(.,.,2)  indicates lower.
             wfbc(i,j,2) = 0.0
             ufbc(i,j,2) = 0.0
             vfbc(i,j,2) = 0.0
-          end do
-        end do
+          enddo
+        enddo
 
         if(iocean == 1) then ! water surface layer
           call sufto(it)
@@ -4697,15 +4697,15 @@ c        index f(.,.,2)  indicates lower.
             do i=1,nnx
               tau13m(i,j) = -au13m
               tau23m(i,j) = -au23m
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
             do j=iys,iye
               do i=1,nnx
                 taut3m(i,j,iscl) = aut3m(iscl)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
         else  !   land surface layer
 
@@ -4717,8 +4717,8 @@ c        index f(.,.,2)  indicates lower.
      +            wind(i,j)*u1xy)
               tau23m(i,j) = fac*(windm*(v(i,j,k)-v1xy)+
      +            wind(i,j)*v1xy)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
             dnom3=t10xy(iscl)*windm
             if(dnom3 /= 0.) then
@@ -4728,18 +4728,18 @@ c        index f(.,.,2)  indicates lower.
                   taut3m(i,j,iscl) = aut3m(iscl)*
      +                (windm*(t(i,j,iscl,k) - t1xy(iscl))+
      +                wind(i,j)*(t1xy(iscl) - tsfcc(iscl)))*dnom_i
-                end do
-              end do
+                enddo
+              enddo
             else
               do j=iys,iye
                 do i=1,nnx
                   taut3m(i,j,iscl) = aut3m(iscl)
-                end do
-              end do
-            end if
-          end do
+                enddo
+              enddo
+            endif
+          enddo
 
-        end if ! end of surface layer type
+        endif ! end of surface layer type
 
         do j=iys,iye
           do i=1,nnx
@@ -4749,8 +4749,8 @@ c        index f(.,.,2)  indicates lower.
             t22bc(i,j) = 0.0
             t23bc(i,j) = tau23m(i,j)
             t33bc(i,j) = 0.0
-          end do
-        end do
+          enddo
+        enddo
 
 c -------- partial sums of surface fluxes and mean scalar
 
@@ -4760,16 +4760,16 @@ c -------- partial sums of surface fluxes and mean scalar
           do i=1,nnx
             sfc_flx(1) = sfc_flx(1) + tau13m(i,j)
             sfc_flx(2) = sfc_flx(2) + tau23m(i,j)
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           sfc_flx(2+iscl) = 0.0
           do j=iys,iye
             do i=1,nnx
               sfc_flx(2+iscl) = sfc_flx(2+iscl) + taut3m(i,j,iscl)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         call mpi_sum_xy(sfc_flx,myid,iss,ise,(2+nscl))
         uwsfc = sfc_flx(1)*fnxy
@@ -4780,7 +4780,7 @@ c -------- partial sums of surface fluxes and mean scalar
         wwsfc = 0.0
         do iscl=1,nscl
           wtsfc(iscl) = sfc_flx(2+iscl)*fnxy
-        end do
+        enddo
 c     write(nprt,2345) uwsfc, vwsfc, wtsfc(nscl), tsfcc(nscl)
  2345   format(' in lower 2345 uwsfc = ',e15.6,' vwsfc = ',e15.6,
      +      ' wtsfc = ',e15.6,' tsfcc = ',e15.6)
@@ -4791,16 +4791,16 @@ c     write(nprt,2345) uwsfc, vwsfc, wtsfc(nscl), tsfcc(nscl)
             dvdz       = 2.*v(i,j,k)*dz_i
             ubc(i,j,2) = u(i,j,k) - dudz*dzu(k)
             vbc(i,j,2) = v(i,j,k) - dvdz*dzu(k)
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           do j=iys,iye
             do i=1,nnx
               dtdz     = 2.*(t(i,j,iscl,k)-tsfcc(iscl))*dz_i
               tbc(i,j,iscl,2) = t(i,j,iscl,k) - dtdz*dzu(k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------------ initialize u, v, w, t derivatives are
 c              computed in get_derv at km1
@@ -4817,8 +4817,8 @@ c              wbc = 0, change for more general lower bc
             wf(i,j,km1) = wfbc(i,j,2)
             uf(i,j,km1) = ufbc(i,j,2)
             vf(i,j,km1) = vfbc(i,j,2)
-          end do
-        end do
+          enddo
+        enddo
 
         do iscl=1,nscl
           do j=iys,iye
@@ -4827,9 +4827,9 @@ c              wbc = 0, change for more general lower bc
               t2tbc(i,j,iscl) = 0.0
               t3tbc(i,j,iscl) = taut3m(i,j,iscl)
               t(i,j,iscl,km1) = tbc(i,j,iscl,2)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -4859,16 +4859,16 @@ c -------------- broadcast level 1 data everywhere
             do ix=1,nnx
               u_level1(ix,iy,1) = u(ix,iy,1)
               u_level1(ix,iy,2) = v(ix,iy,1)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
             do iy=iys,iye
               do ix=1,nnx
                 u_level1(ix,iy,2+iscl) = t(ix,iy,iscl,1)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
         num = nnx*(iye + 1 - iys)*(2+nscl)
 
 c ------ send all of root data to other processors
@@ -4889,16 +4889,16 @@ c           back to root(s)
           do ix=mxs,mxe
             sbuf(1,ix,iy)  = tau13m(ix,iy)
             sbuf(2,ix,iy)  = tau23m(ix,iy)
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           do iy=iys,iye
             do ix=mxs,mxe
               sbuf(2+iscl,ix,iy)      = taut3m(ix,iy,iscl)
               sbuf(2+nscl+iscl,ix,iy) = t_grnd(ix,iy,iscl)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         irow_r = mod(myid,ncpu_s)
         if(myid >= ncpu_s) then
@@ -4913,8 +4913,8 @@ c           back to root(s)
 c          call f_suft2(rbuf,maxnx,maxny,mx_s(l),mx_e(l),iys,iye,nscl,
             call f_suft2(rbuf,nnx,mx_s(l),mx_e(l),iys,iye,nscl,
      +          tau13m,tau23m,taut3m,t_grnd)
-          end do
-        end if
+          enddo
+        endif
 
   999   continue
 
@@ -4930,8 +4930,8 @@ c              and set surface boundary conditions
             do ix=1,nnx
               buf(1) = buf(1) + tau13m(ix,iy)
               buf(2) = buf(2) + tau23m(ix,iy)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
             buf(2+iscl)      = 0.
             buf(2+nscl+iscl) = 0.
@@ -4939,9 +4939,9 @@ c              and set surface boundary conditions
               do ix=1,nnx
                 buf(2+iscl)      = buf(2+iscl) + taut3m(ix,iy,iscl)
                 buf(2+nscl+iscl) = buf(2+nscl+iscl) + t_grnd(ix,iy,iscl)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
           call mpi_sum_xy(buf,myid,iss,ise,2+2*nscl)
           uwsfc = buf(1)*fnxy
@@ -4949,7 +4949,7 @@ c              and set surface boundary conditions
           do iscl=1,nscl
             wtsfc(iscl) = buf(2+iscl)*fnxy
             tsfcc(iscl) = buf(2+nscl+iscl)*fnxy
-          end do
+          enddo
 
           do j=iys,iye
             do i=1,nnx
@@ -4962,8 +4962,8 @@ c              and set surface boundary conditions
               t1tbc(i,j,1) = 0.0
               t2tbc(i,j,1) = 0.0
               t3tbc(i,j,1) = taut3m(i,j,1)
-            end do
-          end do
+            enddo
+          enddo
 
           iz   = 1
           izm1 = iz - 1
@@ -4979,8 +4979,8 @@ c              and set surface boundary conditions
               wfbc(i,j,2)  = 0.0
               ufbc(i,j,2)  = 0.0
               vfbc(i,j,2)  = 0.0
-            end do
-          end do
+            enddo
+          enddo
 
           do iy=iys,iye
             do ix=1,nnx
@@ -4988,16 +4988,16 @@ c              and set surface boundary conditions
               dvdz     = 2.*v(ix,iy,iz)*dz_i
               ubc(ix,iy,2) = u(ix,iy,iz) - dudz*dzu(iz)
               vbc(ix,iy,2) = v(ix,iy,iz) - dvdz*dzu(iz)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
             do iy=iys,iye
               do ix=1,nnx
                 dtdz     = 2.*(t(ix,iy,iscl,iz)-tsfcc(iscl))*dz_i
                 tbc(ix,iy,iscl,2) = t(ix,iy,iscl,iz) - dtdz*dzu(iz)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
 c ------------ initialize u, v, w, t and derivatives at izm1
 
@@ -5014,20 +5014,20 @@ c ------------ initialize u, v, w, t and derivatives at izm1
               vy(ix,iy,izm1) = 0.0
               wx(ix,iy,izm1) = wbc(ix,iy,2)
               wy(ix,iy,izm1) = wbc(ix,iy,2)
-            end do
-          end do
+            enddo
+          enddo
 
           do iscl=1,nscl
             do iy=iys,iye
               do ix=1,nnx
                 t(ix,iy,iscl,izm1) = tbc(ix,iy,iscl,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
 c ----- end of if block for root row
 
-        end if
+        endif
 
  7999   continue
 
@@ -5046,16 +5046,16 @@ c ------ fill surface arrays on root processors
           do ix=mxs,mxe
             tau13m(ix,iy) = rbuf(1,ix,iy)
             tau23m(ix,iy) = rbuf(2,ix,iy)
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           do iy=iys,iye
             do ix=mxs,mxe
               taut3m(ix,iy,iscl) = rbuf(2+iscl,ix,iy)
               t_grnd(ix,iy,iscl) = rbuf(2+nscl+iscl,ix,iy)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -5085,15 +5085,15 @@ c         get back
 
         if(i3d_surf == 0) then
           call l_bndy(t_bndy)
-        else if(i3d_surf == 1) then
+        elseif(i3d_surf == 1) then
           call get_surf(t_bndy)
-        else if(i3d_surf == 2) then
+        elseif(i3d_surf == 2) then
           call get_surf_gabls(t_bndy)
-        else if(i3d_surf == 3) then
+        elseif(i3d_surf == 3) then
           call get_surf_tank(t_bndy)
-        else if(i3d_surf == 4) then
+        elseif(i3d_surf == 4) then
           call get_surf_real(t_bndy)
-        end if
+        endif
 
 c     call dealias_grid_speed
 
@@ -5124,18 +5124,18 @@ c          fuller definition
               u_level1(i,j,7) = u_orbit(i,j)
               u_level1(i,j,8) = v_orbit(i,j)
               u_level1(i,j,9) = gm(i,j,km1,5)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
             do j=iys,iye
               do i=1,nnx
                 u_level1(i,j,9+iscl)        = t3tbc(i,j,iscl)
                 u_level1(i,j,9+nscl+iscl)   = t(i,j,iscl,k)
                 u_level1(i,j,9+2*nscl+iscl) = t_grnd(i,j,iscl)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
 
         num = nnx*(iye + 1 - iys)*mvar
 
@@ -5150,8 +5150,8 @@ c --------- every task gets their own fluxes and surface scalars
           do i=1,nnx
             ustar(i,j)    = -999999.99
 c        t_grnd(i,j,1) = -999999.99
-          end do
-        end do
+          enddo
+        enddo
 
         call drglaw_l(u_level1,mvar,it)
 
@@ -5170,16 +5170,16 @@ c           back to root(s)
             sbuf(6,i,j)  = t33bc(i,j)
             sbuf(7,i,j)  = ustar(i,j)
             sbuf(8,i,j)  = amol(i,j)
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           do j=iys,iye
             do i=mxs,mxe
               sbuf(8+iscl,i,j)      = t3tbc(i,j,iscl)
               sbuf(8+nscl+iscl,i,j) = t_grnd(i,j,iscl)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         irow_r = mod(myid,ncpu_s)
         if(myid >= ncpu_s) then
@@ -5194,8 +5194,8 @@ c           back to root(s)
             call f_suft_curvy(rbuf,nnx,mx_s(l),mx_e(l),
      +          iys,iye,nscl,jvar,t11bc,t12bc,t13bc,t22bc,
      +          t23bc,t33bc,ustar,t3tbc,t_grnd,amol)
-          end do
-        end if
+          enddo
+        endif
 
   999   continue
 
@@ -5207,7 +5207,7 @@ c              and set surface boundary conditions
 
           do i=1,jvar
             buf(i) = 0.0
-          end do
+          enddo
 
 c ------- add SGS pieces that appear on rhs of [u,v,w] equations
 
@@ -5226,17 +5226,17 @@ c ------- add SGS pieces that appear on rhs of [u,v,w] equations
      +            fac1*t13bc(i,j) + fac2*t23bc(i,j)
               buf(7) = buf(7) + ustar(i,j)**2
               buf(8) = buf(8) + amol(i,j)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
             do j=iys,iye
               do i=1,nnx
                 buf(8+iscl)      = buf(8+iscl) + t3tbc(i,j,iscl)
                 buf(8+nscl+iscl) = buf(8+nscl+iscl) +
      +              t_grnd(i,j,iscl)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
           call mpi_sum_xy(buf,myid,iss,ise,jvar)
           uusfc   =  buf(1)*fnxy
@@ -5251,12 +5251,12 @@ c ------- add SGS pieces that appear on rhs of [u,v,w] equations
           do iscl=1,nscl
             wtsfc(iscl) = buf(8+iscl)*fnxy
             tsfcc(iscl) = buf(8+nscl+iscl)*fnxy
-          end do
+          enddo
           if(ibuoy == 0 .or. wtsfc(1) == 0.) then
             zol = 0.0
           else
             zol = zz(1)/amonin
-          end if
+          endif
 
           dz_i = dzu_i(k)
 
@@ -5280,16 +5280,16 @@ Cnew ------ bc for vertical velocity
 c ------- no flow through the surface at t = t_stage
 
               wfbc(i,j,2)  = gm(i,j,km1,5)
-            end do
-          end do
+            enddo
+          enddo
 
           do iscl=1,nscl
             do j=iys,iye
               do i=1,nnx
                 tbc(i,j,iscl,2) = 2.0*t_grnd(i,j,iscl) - t(i,j,iscl,k)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
 c ------------ initialize u, v, w, t and derivatives at km1
 
@@ -5310,18 +5310,18 @@ c ------------ initialize u, v, w, t and derivatives at km1
               wf(i,j,km1) = wfbc(i,j,2)
               uf(i,j,km1) = ufbc(i,j,2)
               vf(i,j,km1) = vfbc(i,j,2)
-            end do
-          end do
+            enddo
+          enddo
 
           do iscl=1,nscl
             do j=iys,iye
               do i=1,nnx
                 t(i,j,iscl,km1) = tbc(i,j,iscl,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
-        end if ! end of if block for root row
+        endif ! end of if block for root row
 
         call mpi_bcast(wtsfc,2,mpi_real8,0,mpi_comm_world,ierr)
 
@@ -5353,15 +5353,15 @@ c         get back
 
         if(i3d_surf == 0) then
           call l_bndy(t_bndy)
-        else if(i3d_surf == 1) then
+        elseif(i3d_surf == 1) then
           call get_surf(t_bndy)
-        else if(i3d_surf == 2) then
+        elseif(i3d_surf == 2) then
           call get_surf_gabls(t_bndy)
-        else if(i3d_surf == 3) then
+        elseif(i3d_surf == 3) then
           call get_surf_tank(t_bndy)
-        else if(i3d_surf == 4) then
+        elseif(i3d_surf == 4) then
           call get_surf_real(t_bndy)
-        end if
+        endif
 
 c ----- broadcast level 1 data to processors above root
 
@@ -5376,7 +5376,7 @@ c              and set surface boundary conditions
 
           do i=1,jvar
             buf(i) = 0.0
-          end do
+          enddo
 
           dz_i = dzu_i(k)
 
@@ -5400,23 +5400,23 @@ c           wbc(i,j,2)  = -w(i,j,k)
 c ------- no flow through the surface at t = t_stage
 
               wfbc(i,j,2)  = gm(i,j,km1,5)
-            end do
-          end do
+            enddo
+          enddo
 
           do iscl=1,nscl
             do j=iys,iye
               do i=1,nnx
                 if (isfc(iscl)==1) then
                   tbc(i,j,iscl,2) = 2.0*Tbot(iscl) - t(i,j,iscl,k)
-                end if
+                endif
                 if (isfc(iscl)==0) then
                   tbc(i,j,iscl,2) = t(i,j,iscl,k) +
      +                dzu(0)*wtsfc(1)/vis_s(i,j,k)
-                end if
+                endif
                !tbc(i,j,iscl,2) = 2.0*t_grnd(i,j,iscl) - t(i,j,iscl,k)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
 c ------------ initialize u, v, w, t and derivatives at km1
 
@@ -5437,18 +5437,18 @@ c ------------ initialize u, v, w, t and derivatives at km1
               wf(i,j,km1) = wfbc(i,j,2)
               uf(i,j,km1) = ufbc(i,j,2)
               vf(i,j,km1) = vfbc(i,j,2)
-            end do
-          end do
+            enddo
+          enddo
 
           do iscl=1,nscl
             do j=iys,iye
               do i=1,nnx
                 t(i,j,iscl,km1) = tbc(i,j,iscl,2)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
-        end if ! end of if block for root row
+        endif ! end of if block for root row
 
         return
       end
@@ -5475,16 +5475,16 @@ c ------ fill surface arrays on root processors
             t33bc(i,j)  =  rbuf(6,i,j)
             ustar(i,j)  =  rbuf(7,i,j)
             amol(i,j)   = rbuf(8,i,j)
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           do j=iys,iye
             do i=mxs,mxe
               t3tbc(i,j,iscl)  = rbuf(8+iscl,i,j)
               t_grnd(i,j,iscl) = rbuf(8+nscl+iscl,i,j)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -5590,7 +5590,7 @@ c           fix here if specified surface value
               qflux(l) = u_level1(i,j,9+l)
               tlv1(l)  = u_level1(i,j,9+nscl+l)
               tsurf(l) = u_level1(i,j,9+2*nscl+l)
-            end do
+            enddo
 
             zody = alog(z1b(i,j)/zo + 1.0)
             call mo(ibuoy,isfc,ismlt,vk,batag,zody,z1b(i,j),
@@ -5616,9 +5616,9 @@ c ------------ build the momentum fluxes
               t2tbc(i,j,iscl)  = 0.0
               t3tbc(i,j,iscl)  = qflux(iscl)
               t_grnd(i,j,iscl) = tsurf(iscl)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -5648,7 +5648,7 @@ c    can add more scalars using definition below
           vk74in = 0.74/vk
         else
           vk74in = 1.0/vk
-        end if
+        endif
         batagk = batag*vk
 
         windm = amax1(wind_min,wind)
@@ -5662,7 +5662,7 @@ c ---------- limits for zeta
         else
           d_theta = vk74in*(tsfcc(1) - t1xy(1))
           f_con   = z1*batagk*d_theta/((windm*vk)**2)
-        end if
+        endif
 
 c --------- iteration for zeta
 
@@ -5672,20 +5672,20 @@ c --------- iteration for zeta
             call busngr(zeta_a,phim,phis,psim,psis)
           else
             call fzol(zeta_a,phim,phis,psim,psis)
-          end if
+          endif
           u_fac = (zody - psim)
           if(isfc(1) == 0) then
             f_new =  zeta_a + f_con*u_fac**3
           else
             t_fac = 1.0/amax1((zody - psis),0.01)
             f_new =  zeta_a + f_con*u_fac*u_fac*t_fac
-          end if
+          endif
           if(f_new < 0.0) then
             zeta_mn = zeta_a
           else
             zeta_mx = zeta_a
-          end if
-        end do
+          endif
+        enddo
 
 c --------- check if neutral surface layer
 
@@ -5704,16 +5704,16 @@ c --------- check if neutral surface layer
           else
             thstar = (t1xy(1) - tsfcc(1))/dnom
             qstar(1)  = -utau*thstar
-          end if
+          endif
           amonin = -utau**3/(batagk*qstar(1))
           zeta   = z1/amonin
-        end if
+        endif
         cd = utau**2/windm**2
         ch = 0.0
         dnom_ch = windm*(tsfcc(1) - t1xy(1))
         if(dnom_ch /= 0.) then
           ch = qstar(1)/dnom_ch
-        end if
+        endif
 
       !Do the lower BC for RH:
 
@@ -5721,12 +5721,12 @@ c --------- check if neutral surface layer
 
           thstar = -qstar(2)/utau
           tsfcc(2) = t1xy(2) - thstar*dnom
-        else if (isfc(2) == 1) then !Set tsfcc, solve for qstar
+        elseif (isfc(2) == 1) then !Set tsfcc, solve for qstar
 
           tsfcc(2) = RHB/100.0*Mw/Ru/tsfcc(1)*mod_magnus(tsfcc(1))/rhoa
           thstar = (t1xy(2) - tsfcc(2))/dnom
           qstar(2) = -utau*thstar
-        end if
+        endif
 
 c ------ example of other scalars (specified surface value and source)
 
@@ -5785,14 +5785,14 @@ Cnew ------ bc for vertical velocity
 c --------- upper boundary = grid speed
 
               wfbc(ix,iy,1) = gm(ix,iy,iz,5)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
 
 c ---------- average scalar gradient
 
             dtdzf(iscl) = 0.0
-          end do
+          enddo
 
           call mpi_sum_xy(dtdzf,myid,iss,ise,nscl)
 
@@ -5801,11 +5801,11 @@ c ---------- average scalar gradient
               do ix=1,nnx
                 tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) +
      +              dtdzf(iscl)*dzu(nnzp1)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
-        else if(ibcu == 0) then
+        elseif(ibcu == 0) then
 
 c --------- boundary conditions are gradient conditions
 
@@ -5823,8 +5823,8 @@ c --------- boundary conditions are gradient conditions
 c --------- upper boundary = grid speed
 
               wfbc(ix,iy,1) = gm(ix,iy,iz,5)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
 
 c ---------- first get average scalar gradient
@@ -5834,10 +5834,10 @@ c ---------- first get average scalar gradient
               do ix=1,nnx
                 dtdzf(iscl) = dtdzf(iscl) + (t(ix,iy,iscl,nnz) -
      +              t(ix,iy,iscl,nnz-1))*dzu_i(nnz)
-              end do
-            end do
+              enddo
+            enddo
             dtdzf(iscl) = dtdzf(iscl)*fnxy
-          end do
+          enddo
 
           call mpi_sum_xy(dtdzf,myid,iss,ise,nscl)
 
@@ -5846,10 +5846,10 @@ c ---------- first get average scalar gradient
               do ix=1,nnx
                 tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) +
      +              dtdzf(iscl)*dzu(nnzp1)
-              end do
-            end do
-          end do
-        else if(ibcu == 2) then
+              enddo
+            enddo
+          enddo
+        elseif(ibcu == 2) then
 
 c --------- boundary conditions are Sullivan et al. (2000) Couette flow
 
@@ -5867,8 +5867,8 @@ c --------- boundary conditions are Sullivan et al. (2000) Couette flow
 c --------- upper boundary = grid speed
 
               wfbc(ix,iy,1) = gm(ix,iy,iz,5)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
 
 c ---------- first get average scalar gradient
@@ -5878,10 +5878,10 @@ c ---------- first get average scalar gradient
               do ix=1,nnx
                 dtdzf(iscl) = dtdzf(iscl) + (t(ix,iy,iscl,nnz) -
      +              t(ix,iy,iscl,nnz-1))*dzu_i(nnz)
-              end do
-            end do
+              enddo
+            enddo
             dtdzf(iscl) = dtdzf(iscl)*fnxy
-          end do
+          enddo
 
           call mpi_sum_xy(dtdzf,myid,iss,ise,nscl)
 
@@ -5890,10 +5890,10 @@ c ---------- first get average scalar gradient
               do ix=1,nnx
                 tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) +
      +              dtdzf(iscl)*dzu(nnzp1)
-              end do
-            end do
-          end do
-        else if(ibcu == 1) then
+              enddo
+            enddo
+          enddo
+        elseif(ibcu == 1) then
 
 c ------------- special if iradup boundary condition
 c               get estimate of w from continuity and
@@ -5919,27 +5919,27 @@ c -------- FIX upper radiation boundary conditions
               vfbc(ix,iy,1) = vbc(ix,iy,1)
 c        wfbc(ix,iy,1) = wbc(ix,iy,1)
               wbc(ix,iy,1)  = w(ix,iy,iz)
-            end do
-          end do
+            enddo
+          enddo
           call mpi_sum_xy(xmeanp,myid,iss,ise,1)
           do iscl=1,nscl
             do iy=iys,iye
               do ix=1,nnx
                 tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) +
      +              dtdzf(iscl)*dzu(nnzp1)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           xmeanp = xmeanp*fnxy
           do iy=iys,iye
             do ix=1,nnx
               pbc2(ix,iy,1) = pbc2(ix,iy,1) - xmeanp
-            end do
-          end do
+            enddo
+          enddo
 
 c ---------- end if block
 
-        end if
+        endif
 
         do iy=iys,iye
           do ix=1,nnx
@@ -5965,16 +5965,16 @@ c            at top of box becuase of bc
             uy(ix,iy,izp1) = 0.0
             vx(ix,iy,izp1) = 0.0
             vy(ix,iy,izp1) = 0.0
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           do iy=iys,iye
             do ix=1,nnx
               t(ix,iy,iscl,izp1) = tbc(ix,iy,iscl,1)
               t(ix,iy,iscl,izp2) = tbc(ix,iy,iscl,1)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -6014,8 +6014,8 @@ c --------- boundary conditions are Sullivan et al. (2000) Couette flow
 c --------- upper boundary = grid speed
 
             wfbc(ix,iy,1) = gm(ix,iy,iz,5)
-          end do
-        end do
+          enddo
+        enddo
 
 !Set the scalar boundary condition based on isfc:
 ! isfc = 0, specified surface heat flux (through qstar)
@@ -6026,14 +6026,14 @@ c --------- upper boundary = grid speed
             do ix=1,nnx
               if (isfc(iscl)==1) then
                 tbc(ix,iy,iscl,1) = 2.0*Ttop(iscl)-t(ix,iy,iscl,iz)
-              end if
+              endif
               if (isfc(iscl)==0) then
                 tbc(ix,iy,iscl,1) = t(ix,iy,iscl,iz) +
      +              dzu(izp1)*wtsfc(iscl)/vis_s(ix,iy,izp1)
-              end if
-            end do
-          end do
-        end do
+              endif
+            enddo
+          enddo
+        enddo
 
         do iy=iys,iye
           do ix=1,nnx
@@ -6062,16 +6062,16 @@ c            at top of box becuase of bc
             uy(ix,iy,izp1) = 0.0
             vx(ix,iy,izp1) = 0.0
             vy(ix,iy,izp1) = 0.0
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           do iy=iys,iye
             do ix=1,nnx
               t(ix,iy,iscl,izp1) = tbc(ix,iy,iscl,1)
               t(ix,iy,iscl,izp2) = tbc(ix,iy,iscl,1)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -6098,9 +6098,9 @@ c          array p(.,.,.) is p' array pm(.) is the mean value
           do j=iys,iye
             do i=1,nnx
               p(i,j,k) = 0.0
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c -------- special sequence for flat bottom
 
@@ -6127,7 +6127,7 @@ c ------- iteration sequence
 c -------- use last pressure iteration in flux velocity
 
           call build_rhs(ip_iter)
-        end if
+        endif
 
         return
       end
@@ -6156,17 +6156,17 @@ c              to get p(.,.,izs-1)
         nt = myid + ncpu_s
         if(iss == 0) then
           nb = mpi_proc_null
-        end if
+        endif
         if(ise == numprocs-1) then
           nt = mpi_proc_null
-        end if
+        endif
         nsend = nnx*(iye + 1 - iys)
         nrecv = nsend
         do j=iys,iye
           do i=1,nnx
             fs(i,j) = p(i,j,ize)
-          end do
-        end do
+          enddo
+        enddo
 
         call mpi_sendrecv(
      +      fs(1,iys),nsend,mpi_real8,nt,2,
@@ -6176,9 +6176,9 @@ c              to get p(.,.,izs-1)
           do j=iys,iye
             do i=1,nnx
               p(i,j,izs-1) = fr(i,j)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
         if(iss == 0) then
 
@@ -6189,9 +6189,9 @@ c          picked to match future grid speed
           do j=iys,iye
             do i=1,nnx
               wf(i,j,izs-1) = wfbc(i,j,3)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
 c --------- get bottom ghost point for fluctuating pressure
 
@@ -6207,16 +6207,16 @@ c --------- get bottom ghost point for fluctuating pressure
                 do i=1,nnx
                   fnt1(i,j,k) = p(i,j,k)
                   fnt2(i,j)   = fnt1(i,j,k)
-                end do
-              end do
+                enddo
+              enddo
             else
               do j=iys,iye
                 do i=1,nnx
                   fnt1(i,j,k) = 0.5*(p(i,j,k) + p_old(i,j,km1))
                   fnt2(i,j)   = fnt1(i,j,k)
-                end do
-              end do
-            end if
+                enddo
+              enddo
+            endif
             call xderivp(fnt2(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
             call yd_mpi(fnt1(1,iys,izs),trigx(1,2),yk(1),
      +          nnx,nny,ixs,ixe,ix_s,ix_e,
@@ -6229,37 +6229,37 @@ c --------- get bottom ghost point for fluctuating pressure
                 facx  = gm2(i,j,k,1)*gm2(i,j,k,2)*fnt2(i,j)
                 facy  = gm2(i,j,k,1)*gm2(i,j,k,3)*fnt1(i,j,k)
                 p(i,j,km1) = p(i,j,k) - (wbndy - facx - facy)*dzu(k)/fac
-              end do
-            end do
+              enddo
+            enddo
 
-          else if(lpbc == 1) then
+          elseif(lpbc == 1) then
 
             w1 = -2.0*dzw(izs)/(dzw(izs) + dzw(izs+1))
             w2 = 1.0 - w1
             do j=iys,iye
               do i=1,nnx
                 p(i,j,izs-1) = p(i,j,izs)*w2 + w1*p(i,j,izs+1)
-              end do
-            end do
+              enddo
+            enddo
 
           else
 
             do j=iys,iye
               do i=1,nnx
                 p(i,j,izs-1) = p(i,j,izs)
-              end do
-            end do
-          end if ! end of check for lpbc
+              enddo
+            enddo
+          endif ! end of check for lpbc
 
-        end if ! end of check for izs
+        endif ! end of check for izs
 
         if(ize == nnz) then
           do j=iys,iye
             do i=1,nnx
               p(i,j,ize+1) = p(i,j,ize)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
 c --------- save the last pressure iteration
 
@@ -6267,18 +6267,18 @@ c --------- save the last pressure iteration
           do j=iys,iye
             do i=1,nnx
               p_old(i,j,k) = p(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do k=izs,ize+1
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = p_old(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
-        end do
+        enddo
 
         do k=izs,ize
           kp1   = k + 1
@@ -6301,8 +6301,8 @@ c --------- save the last pressure iteration
      +            gm2(i,j,k,3)**2 + gm2(i,j,k,4)**2)
               wf(i,j,k) = wfi(i,j,k) - dtgama*(weit(k)*facu +
      +            weitm(k)*facl)*dpdz
-            end do
-          end do
+            enddo
+          enddo
           do j=iys,iye
             do i=1,nnx
               uf(i,j,k) = uf(i,j,k) - dtgama*fnt1(i,j,k)*gm2(i,j,k,1)
@@ -6310,9 +6310,9 @@ c --------- save the last pressure iteration
               facl      = gm2(i,j,k,1)*gm2(i,j,k,2)*fnt1(i,j,k)
               wf(i,j,k) = wf(i,j,k) - dtgama*
      +            (weit(k)*facu + weitm(k)*facl)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c -------- get the y contributions
 
@@ -6320,9 +6320,9 @@ c -------- get the y contributions
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = p_old(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fnt1(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize+1,myid,ncpu_s,numprocs)
@@ -6337,9 +6337,9 @@ c -------- get the y contributions
               facl      = gm2(i,j,k,1)*gm2(i,j,k,3)*fnt1(i,j,k)
               wf(i,j,k) = wf(i,j,k) - dtgama*
      +            (weit(k)*facu + weitm(k)*facl)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         if(ise == numprocs-1) then
 
@@ -6348,23 +6348,23 @@ c -------- upper boundary speed at t = t_stage2
           do j=iys,iye
             do i=1,nnx
               wf(i,j,ize) = wfbc(i,j,4)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
 c ------------ make sure continuity is satisfied
 
         do k=1,nnz
           wf_sum(k) = 0.0
-        end do
+        enddo
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               wf_sum(k) = wf_sum(k) + wf(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           wf_sum(k) = wf_sum(k)*fnxy
-        end do
+        enddo
 
 c ---------- gather partial sums
 
@@ -6374,9 +6374,9 @@ c ---------- gather partial sums
           do j=iys,iye
             do i=1,nnx
               wf(i,j,k) = wf(i,j,k) - wf_sum(k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -6404,22 +6404,22 @@ c             new time metrics and weight for pressure
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = uf(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
           do j=iys,iye
             do i=1,nnx
               p(i,j,k) = fnt1(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = vf(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fnt1(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -6431,17 +6431,17 @@ c              to processor above the current myid.
         nt = myid + ncpu_s
         if(iss == 0) then
           nb = mpi_proc_null
-        end if
+        endif
         if(ise == numprocs-1) then
           nt = mpi_proc_null
-        end if
+        endif
         nsend = nnx*(iye + 1 - iys)
         nrecv = nsend
         do j=iys,iye
           do i=1,nnx
             fs(i,j) = wf(i,j,ize)
-          end do
-        end do
+          enddo
+        enddo
 
         call mpi_sendrecv(
      +      fs(1,iys),nsend,mpi_real8,nt,2,
@@ -6451,32 +6451,32 @@ c              to processor above the current myid.
           do j=iys,iye
             do i=1,nnx
               wf(i,j,izs-1) = fr(i,j)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               div_wf   = (wf(i,j,k) - wf(i,j,k-1))*dzw_i(k)
               p(i,j,k) = (p(i,j,k) + fnt1(i,j,k) + div_wf)*gami
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c debug -------
 
         do k=1,nnz
           sum_div(k) = 0.0
-        end do
+        enddo
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               sum_div(k) = sum_div(k) + (p(i,j,k)/gami)**2
-            end do
-          end do
+            enddo
+          enddo
           sum_div(k) = sum_div(k)*fnxy
-        end do
+        enddo
 
 c ---------- gather partial sums for rj_dif
 
@@ -6499,15 +6499,15 @@ c --------- 1/J values stored at cell centers
 
         do k=0,nnz+1
           avg_j(k) = 0.0
-        end do
+        enddo
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               avg_j(k) = avg_j(k) + gm2(i,j,k,1)
-            end do
-          end do
+            enddo
+          enddo
           avg_j(k) = avg_j(k)*fnxy
-        end do
+        enddo
 
 c ---------- gather partial sums for avg_j
 
@@ -6520,7 +6520,7 @@ c ---------- J values stored at cell faces
         do k=1,nnz
           fac        = avg_j(k+1)*weit(k) + avg_j(k)*weitm(k)
           avg_j_i(k) = 1.0/fac
-        end do
+        enddo
         avg_j_i(0)     = 1.0/avg_j(1)
         avg_j_i(nnz+1) = 1.0/avg_j(nnz)
 
@@ -6551,15 +6551,15 @@ c ------- get x contribution
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = p_old(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xdd(fnt1(1,iys,k),trigx(1,1),xkk(1),nnx,iys,iye)
           do j=iys,iye
             do i=1,nnx
               p(i,j,k) = fnt1(i,j,k)*avg_j(k)*relax1 + p(i,j,k)*relax
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------- get y contribution
 
@@ -6567,9 +6567,9 @@ c ------- get y contribution
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = p_old(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call ydd_mpi(fnt1(1,iys,izs),trigx(1,2),ykk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -6577,9 +6577,9 @@ c ------- get y contribution
           do j=iys,iye
             do i=1,nnx
               p(i,j,k) = p(i,j,k) + fnt1(i,j,k)*avg_j(k)*relax1
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------- get z contribution
 c         always use dp/dz = 0 for pre-conditioner
@@ -6595,9 +6595,9 @@ c         at izs=1
               dpdz_u = facu_i*(p_old(i,j,kp1) - p_old(i,j,k))*dzu_i(kp1)
               dpdz_l = facl_i*(p_old(i,j,k) - p_old(i,j,km1))*dzu_i(k)
               p(i,j,k) = p(i,j,k) + (dpdz_u - dpdz_l)*dzw_i(k)*relax1
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         if(izs == 1) then
           k      = izs
           kp1    = izs + 1
@@ -6606,9 +6606,9 @@ c         at izs=1
             do i=1,nnx
               dpdz_u=facu_i*(p_old(i,j,kp1)-p_old(i,j,k))*dzu_i(kp1)
               p(i,j,k) = p(i,j,k) + dpdz_u*dzw_i(k)*relax1
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
         return
       end
@@ -6632,9 +6632,9 @@ c     fn = 1.0/float(nnx)
             ii          = ii + 1
             ax(ix,iy)   = -xkk(ii)*ax(ix,iy)
             ax(ix+1,iy) = -xkk(ii)*ax(ix+1,iy)
-          end do
+          enddo
           call rfftb(nnx,ax(1,iy),trigx)
-        end do
+        enddo
 
         return
       end
@@ -6667,10 +6667,10 @@ c     fn = 1.0/float(nny)
               ii              = ii + 1
               ayt(iy,ix,iz)   = -ykk(ii)*ayt(iy,ix,iz)
               ayt(iy+1,ix,iz) = -ykk(ii)*ayt(iy+1,ix,iz)
-            end do
+            enddo
             call rfftb(ny,ayt(1,ix,iz),trigy)
-          end do
-        end do
+          enddo
+        enddo
         call ytox_trans(ayt,ay,nx,ny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,iz1,iz2,myid,ncpu,np)
 
@@ -6699,11 +6699,11 @@ c -------- check convergence and update p guess
             do i=1,nnx
               p_temp  = amax1(abs(p(i,j,k)),p_temp)
               pd_temp = amax1(abs(p(i,j,k) - p_old(i,j,k)),pd_temp)
-            end do
-          end do
+            enddo
+          enddo
           pmax  = amax1(p_temp,pmax)
           pdiff = amax1(pd_temp,pdiff)
-        end do
+        enddo
         pmax      = amax1(pmax,small_p)
         ptest_loc = pdiff/pmax
 
@@ -6715,7 +6715,7 @@ c -------- check convergence and update p guess
         if(istage == 1) then
           p_iter = float(ip_iter)
           p_err  = ptest
-        end if
+        endif
 
         return
       end
@@ -6745,8 +6745,8 @@ c ---------  ghost point pressure comes from build_rhs
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = p(i,j,k)*gm2(i,j,k,1)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
 
           do j=iys,iye
@@ -6786,9 +6786,9 @@ c -------- add pressure gradient to rhs
 c ------- e equation correct for Jacobian, result is e (not e/J)
 
               e(i,j,k) = e(i,j,k)*gm2(i,j,k,4)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------ v equation
 
@@ -6796,9 +6796,9 @@ c ------ v equation
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = p(i,j,k)*gm2(i,j,k,1)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fnt1(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -6825,9 +6825,9 @@ c --------  add pressure gradient to rhs now
               r2(i,j,k) = r2(i,j,k) - (fnt1(i,j,k) + dpdz_c)
               v(i,j,k)  = (v(i,j,k) - dtgama*(fnt1(i,j,k) + dpdz_c))*
      +            gm2(i,j,k,4)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------------ scalar equations correct for J, result is theta (not theta/J)
 
@@ -6836,10 +6836,10 @@ c ------------ scalar equations correct for J, result is theta (not theta/J)
             do j=iys,iye
               do i=1,nnx
                 t(i,j,l,k) = t(i,j,l,k)*gm2(i,j,k,4)
-              end do
-            end do
-          end do
-        end do
+              enddo
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -6879,7 +6879,7 @@ c ------------ Fourier analyze the radiation bc arrays
      +        trigx(1,1),trigc,
      +        nnx,nny,jxs,jxe,jx_s,jx_e,iys,iye,iy_s,iy_e,
      +        1,2,myid,ncpu_s,numprocs,-2)
-        end if
+        endif
 
 c ---------- transpose first and last index of array
 c            the order of pfft is (y,x,z)
@@ -6898,7 +6898,7 @@ c ------------- transpose back
         iz_ee = ize+1
         if(ise == numprocs-1) then
           iz_ee = ize
-        end if
+        endif
 
 c --------- inverse fft at all iz=izs,iz_ee to get p
 c           see z indices
@@ -6911,15 +6911,15 @@ c -------- partial sums for pressure
 
         do iz=1,nnz
           psum(iz) = 0.0
-        end do
+        enddo
         do iz=izs,ize
           do iy=iys,iye
             do ix=1,nnx
               psum(iz) = psum(iz) + p(ix,iy,iz)
-            end do
-          end do
+            enddo
+          enddo
           psum(iz) = psum(iz)*fnxy
-        end do
+        enddo
         call mpi_sum_z(psum,i_root,myid,nnz,1)
 
         do iz=izs,iz_ee
@@ -6927,9 +6927,9 @@ c        psum(iz) = -psum(iz) + engz(iz) + c23*engsbz(iz)
           do iy=iys,iye
             do ix=1,nnx
               p(ix,iy,iz) = p(ix,iy,iz) - psum(iz)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -6952,7 +6952,7 @@ c           because of 2d-fft
           fac_u(iz) = avg_j_i(iz)/(dzw(iz)*dzu(iz+1))
           fac_l(iz) = avg_j_i(iz-1)/(dzw(iz)*dzu(iz))
           fac_a(iz) = fac_l(iz) + fac_u(iz)
-        end do
+        enddo
 
         do kp=jys,jye
           do lp=jxs,jxe
@@ -6961,8 +6961,8 @@ c           because of 2d-fft
               aa(iz,lp)  = fac_u(iz)
               dd(iz,lp)  = -xks(lp,kp)*avg_j(iz) - fac_a(iz)
               rh(iz,lp)  = pt(iz,lp,kp)
-            end do
-          end do
+            enddo
+          enddo
 
 c --------------- lower boundary, fill exterior pressure (not used)
 
@@ -6972,7 +6972,7 @@ c --------------- lower boundary, fill exterior pressure (not used)
             dd(1,lp)  = -xks(lp,kp)*avg_j(1) - fac_u(1)
             rh(1,lp)  = pt(1,lp,kp)
             pt(0,lp,kp) = 0.0
-          end do
+          enddo
 
 c --------------- upper boundary, fill exterior pressure (not used)
 
@@ -6983,7 +6983,7 @@ c --------------- upper boundary, fill exterior pressure (not used)
               dd(nnz,lp) = 1.0
               rh(nnz,lp) = ptop(kp,lp,1)*wavexy(lp,kp) + ptop(kp,lp,2)
               pt(nnz+1,lp,kp) = 0.0
-            end do
+            enddo
           else
             do lp=jxs,jxe
               bb(nnz,lp) = fac_l(nnz)
@@ -6991,8 +6991,8 @@ c --------------- upper boundary, fill exterior pressure (not used)
               dd(nnz,lp) = -xks(lp,kp)*avg_j(nnz) - fac_l(nnz)
               rh(nnz,lp) = pt(nnz,lp,kp)
               pt(nnz+1,lp,kp) = 0.0
-            end do
-          end if
+            enddo
+          endif
 
 c ---------------- special situation for zeroth mode
 c                  makes mean pressure = 0
@@ -7007,8 +7007,8 @@ c                  makes mean pressure = 0
               rh(iz,2) = 0.0
               aa(iz,2) = 0.0
               bb(iz,2) = 0.0
-            end do
-          end if
+            enddo
+          endif
 
 c --------------- solve system
 
@@ -7016,9 +7016,9 @@ c --------------- solve system
           do lp=jxs,jxe
             do iz=1,nnz
               pt(iz,lp,kp) = rh(iz,lp)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -7045,7 +7045,7 @@ c     tiny = 1.0e-20
           aa(k)  = fac_u
           dd(k)  = -(fac_u + fac_l + tiny)
           rh(k)  = gami*(wf_sum(k) - wf_sum(k-1))
-        end do
+        enddo
 
 c --------------- lower boundary, assume average wf at boundary = 0
 
@@ -7070,17 +7070,17 @@ c --------------- solve system
         call trids(bb,dd,aa,rh,nnz)
         do k=1,nnz
           pm(k) = rh(k)
-        end do
+        enddo
 
         if(lpbc == 1) then
           k       = 1
           w1      = -2.0*dzw(k)/(dzw(k) + dzw(k+1))
           w2      = 1.0 - w1
           pm(k-1) = pm(k)*w2 + w1*pm(k+1)
-        else if(lpbc == 0) then
+        elseif(lpbc == 0) then
           k       = 1
           pm(k-1) = pm(k)
-        end if
+        endif
 
         pm(nnz+1) = pm(nnz)
 
@@ -7109,7 +7109,7 @@ c     tiny = 1.0e-20
           aa(k)  = fac_u
           dd(k)  = -(fac_u + fac_l + tiny)
           rh(k)  = gami*(wf_sum(k) - wf_sum(k-1))*dzw_i(k)
-        end do
+        enddo
 
 c --------------- lower boundary, assume average wf at boundary = 0
 
@@ -7134,17 +7134,17 @@ c --------------- solve system
         call trids(bb,dd,aa,rh,nnz)
         do k=1,nnz
           pm(k) = rh(k)
-        end do
+        enddo
 
         if(lpbc == 1) then
           k       = 1
           w1      = -2.0*dzw(k)/(dzw(k) + dzw(k+1))
           w2      = 1.0 - w1
           pm(k-1) = pm(k)*w2 + w1*pm(k+1)
-        else if(lpbc == 0) then
+        elseif(lpbc == 0) then
           k       = 1
           pm(k-1) = pm(k)
-        end if
+        endif
 
         pm(nnz+1) = pm(nnz)
 
@@ -7167,17 +7167,17 @@ c --- output:  r   solution vector
         if(n <= 1 ) then
           r(1) = r(1)/d(1)
           go to 999
-        end if
+        endif
         d(1) = 1.0/d(1)
         do i=2,n
           fac = b(i)*d(i-1)
           d(i) = 1.0/(d(i) - fac*a(i-1))
           r(i) = r(i) - fac*r(i-1)
-        end do
+        enddo
         r(n) = r(n)*d(n)
         do i=n-1,1,-1
           r(i) = d(i)*(r(i) - a(i)*r(i+1))
-        end do
+        enddo
   999   continue
 
         return
@@ -7201,27 +7201,27 @@ c --- output:  r   solution vector
         if(n <= 1 ) then
           do j=j1,j2
             r(1,j) = r(1,j)/d(1,j)
-          end do
+          enddo
           go to 999
-        end if
+        endif
         do j=j1,j2
           d(1,j) = 1.0/d(1,j)
-        end do
+        enddo
         do j=j1,j2
           do i=2,n
             fac = b(i,j)*d(i-1,j)
             d(i,j) = 1.0/(d(i,j) - fac*a(i-1,j))
             r(i,j) = r(i,j) - fac*r(i-1,j)
-          end do
-        end do
+          enddo
+        enddo
         do j=j1,j2
           r(n,j) = r(n,j)*d(n,j)
-        end do
+        enddo
         do j=j1,j2
           do i=n-1,1,-1
             r(i,j) = d(i,j)*(r(i,j) - a(i,j)*r(i+1,j))
-          end do
-        end do
+          enddo
+        enddo
   999   continue
 
         return
@@ -7242,10 +7242,10 @@ c         by using exchange to send derivatives
         iz_ee = ize+1
         if(iss == 0) then
           iz_ss = izs
-        end if
+        endif
         if(ise == numprocs-1) then
           iz_ee = ize
-        end if
+        endif
 
 c ------- make sure <w> = 0
 
@@ -7254,16 +7254,16 @@ c ------- make sure <w> = 0
           do iy=iys,iye
             do ix=1,nnx
               w_sum = w_sum + w(ix,iy,iz)
-            end do
-          end do
+            enddo
+          enddo
           w_sum = w_sum*fnxy
           call mpi_sum_xy(w_sum,myid,iss,ise,1)
           do iy=iys,iye
             do ix=1,nnx
               w(ix,iy,iz) = w(ix,iy,iz) - w_sum
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do iz=izs-1,ize+1
           do iy=iys,iye
@@ -7274,8 +7274,8 @@ c ------- make sure <w> = 0
               uy(ix,iy,iz) = u(ix,iy,iz)
               vy(ix,iy,iz) = v(ix,iy,iz)
               wy(ix,iy,iz) = w(ix,iy,iz)
-            end do
-          end do
+            enddo
+          enddo
 c        endif
           call xderivp(ux(1,iys,iz),trigx(1,1),xk(1),
      +        nnx,iys,iye)
@@ -7283,7 +7283,7 @@ c        endif
      +        nnx,iys,iye)
           call xderivp(wx(1,iys,iz),trigx(1,1),xk(1),
      +        nnx,iys,iye)
-        end do
+        enddo
 
 c ---------- get y derivatives for (u,v,w)
 
@@ -7311,14 +7311,14 @@ c ---------- get y derivatives for (u,v,w)
 
         do iz=1,nnz
           div_c(iz) = 0.0
-        end do
+        enddo
         do k=izs,ize
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = vf(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fnt1(1,iys,izs),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -7326,8 +7326,8 @@ c ---------- get y derivatives for (u,v,w)
           do j=iys,iye
             do i=1,nnx
               fnt2(i,j) = uf(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt2(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           km1 = k - 1
           do j=iys,iye
@@ -7335,10 +7335,10 @@ c ---------- get y derivatives for (u,v,w)
               div_c(k) = div_c(k) +
      +            (fnt2(i,j) + fnt1(i,j,k) +
      +            (wf(i,j,k) - wf(i,j,km1))*dzw_i(k))**2
-            end do
-          end do
+            enddo
+          enddo
           div_c(k) = div_c(k)*fnxy
-        end do
+        enddo
         call mpi_sum_z(div_c(1),i_root,myid,nnz,1)
 
         write(nprt,9010) (k, div_c(k),k=izs,ize)
@@ -7368,12 +7368,12 @@ c              simple average along coordinate lines
           engsbz(iz) = 0.0
           divz(iz)   = 0.0
           pxym(iz)   = 0.0
-        end do
+        enddo
         do iscl=1,nscl
           do iz=0,nnz+1
             t_mn(iz,iscl) = 0.0
-          end do
-        end do
+          enddo
+        enddo
         iz_ee = ize
         if(ize == nnz) iz_ee = nnzp1
         do iz=izs,iz_ee
@@ -7382,8 +7382,8 @@ c              simple average along coordinate lines
               u_mn(iz) = u_mn(iz) + u(ix,iy,iz)
               v_mn(iz) = v_mn(iz) + v(ix,iy,iz)
               w_mn(iz) = w_mn(iz) + w(ix,iy,iz)
-            end do
-          end do
+            enddo
+          enddo
           u_mn(iz) = u_mn(iz)*fnxy
           v_mn(iz) = v_mn(iz)*fnxy
           w_mn(iz) = w_mn(iz)*fnxy
@@ -7392,17 +7392,17 @@ c              simple average along coordinate lines
             do iy=iys,iye
               do ix=1,nnx
                 t_mn(iz,iscl) = t_mn(iz,iscl) + t(ix,iy,iscl,iz)
-              end do
-            end do
+              enddo
+            enddo
             t_mn(iz,iscl) = t_mn(iz,iscl)*fnxy
-          end do
-        end do
+          enddo
+        enddo
         call mpi_sum_z(u_mn(1),i_root,myid,nnzp1,1)
         call mpi_sum_z(v_mn(1),i_root,myid,nnzp1,1)
         call mpi_sum_z(w_mn(1),i_root,myid,nnzp1,1)
         do iscl=1,nscl
           call mpi_sum_z(t_mn(1,iscl),i_root,myid,nnzp1,1)
-        end do
+        enddo
 
 c -------- set e to minimum value
 
@@ -7410,9 +7410,9 @@ c -------- set e to minimum value
           do iy=iys,iye
             do ix=1,nnx
               e(ix,iy,iz) = amax1(e(ix,iy,iz ),sml_eg)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------- get terms which contribute to mean pressure
 c         careful with the sum, get the mean p_star pressure
@@ -7428,12 +7428,12 @@ c         CHECK if rotational form of the equations correct pxym see flat code
               engz(iz)   = engz(iz) + q_temp
               engsbz(iz) = engsbz(iz) + e(ix,iy,iz)
               pxym(iz)   = pxym(iz) + (p(ix,iy,iz) - c23*e(ix,iy,iz))
-            end do
-          end do
+            enddo
+          enddo
           engz(iz)   = engz(iz)*fnxy
           engsbz(iz) = engsbz(iz)*fnxy
           pxym(iz)   = pxym(iz)*fnxy
-        end do
+        enddo
         call mpi_sum_z(engz(1),i_root,myid,nnzp1,1)
         call mpi_sum_z(engsbz(1),i_root,myid,nnzp1,1)
         call mpi_sum_z(pxym(1),i_root,myid,nnz,1)
@@ -7446,9 +7446,9 @@ c              all cpus have means over all z
             do j=iys,iye
               do i=1,nnx
                 fnt1(i,j,k) = vf(i,j,k)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call yd_mpi(fnt1(1,iys,izs),trigx(1,2),yk(1),
      +        nnx,nny,ixs,ixe,ix_s,ix_e,
      +        iys,iye,iy_s,iy_e,izs,ize,myid,ncpu_s,numprocs)
@@ -7456,8 +7456,8 @@ c              all cpus have means over all z
             do j=iys,iye
               do i=1,nnx
                 fnt2(i,j) = uf(i,j,k)
-              end do
-            end do
+              enddo
+            enddo
             call xderivp(fnt2(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
             km1 = k - 1
             do j=iys,iye
@@ -7465,23 +7465,23 @@ c              all cpus have means over all z
                 divz(k) = divz(k) +
      +              (fnt2(i,j) + fnt1(i,j,k) +
      +              (wf(i,j,k) - wf(i,j,km1))*dzw_i(k))**2
-              end do
-            end do
+              enddo
+            enddo
             divz(k) = divz(k)*fnxy
-          end do
+          enddo
           call mpi_sum_z(divz(1),i_root,myid,nnz,1)
 
           do iz=1,nnz+1
             uxym(iz) = u_mn(iz)
             vxym(iz) = v_mn(iz)
             wxym(iz) = w_mn(iz)
-          end do
+          enddo
           do iscl=1,nscl
             do iz=1,nnz
               txym(iz,iscl) = t_mn(iz,iscl)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
         return
       end
@@ -7497,14 +7497,14 @@ c              all cpus have means over all z
         else
           y2(1) = -0.5
           u(1) = (3./(x(2) - x(1)))*((y(2) - y(1))/(x(2) - x(1)) - yp1)
-        end if
+        endif
         do i=2,n-1
           sig = (x(i) - x(i-1))/(x(i+1) - x(i-1))
           p = sig*y2(i-1) + 2.0
           y2(i) = (sig - 1.0)/p
           u(i) = (6.0*((y(i+1) - y(i))/(x(i+1) - x(i)) - (y(i) - y(i-1))
      +        /(x(i) - x(i-1)))/(x(i+1) - x(i-1)) - sig*u(i-1))/p
-        end do
+        enddo
         if(ypn > .99e+30) then
           qn = 0.0
           un = 0.0
@@ -7512,11 +7512,11 @@ c              all cpus have means over all z
           qn = 0.5
           un = (3.0/(x(n) - x(n-1)))*
      +        (ypn - (y(n) - y(n-1))/(x(n) - x(n-1)))
-        end if
+        endif
         y2(n) = (un - qn*u(n-1))/(qn*y2(n-1) + 1.0)
         do k=n-1,1,-1
           y2(k) = y2(k)*y2(k+1) + u(k)
-        end do
+        enddo
 
         return
       end
@@ -7534,9 +7534,9 @@ c              all cpus have means over all z
             khi = k
           else
             klo = k
-          end if
+          endif
           go to 1
-        end if
+        endif
         h = xa(khi) - xa(klo)
         a = (xa(khi) - x)/h
         b = (x - xa(klo))/h
@@ -7558,7 +7558,7 @@ c          assumes that wavenumbers are normalized by number of points
         fn = 1.0/float(nnx)
         do i=1,nnx
           ax(i) = ax_s(i)*fn
-        end do
+        enddo
 
         call rfftf(nnx,ax(1),trigx)
 
@@ -7570,7 +7570,7 @@ c          assumes that wavenumbers are normalized by number of points
           temp     = ax(ix)
           ax(ix)   = -xk(ii)*ax(ix+1)
           ax(ix+1) = xk(ii)*temp
-        end do
+        enddo
         call rfftb(nnx,ax(1),trigx)
 
         return
@@ -7595,19 +7595,19 @@ c --------- generate new coefficients
         kk    = 1
         do i=2,nnx-1,2
           kk = kk + 1
-          if(i_tank == 13) then
+          if(i3d_surf == 4) then
             c_wav  = sqrt(grav/xk(i))
             if(i>ncx) c_wav = sqrt(-grav/xk(i))
           else
             c_wav = c_speed
-          end if
+          endif
           cc = cos(xk(kk)*-c_wav*tb)
           ss = sin(xk(kk)*-c_wav*tb)
           aa = f(i)
           bb = f(i+1)
           fi(i)   = aa*cc - bb*ss
           fi(i+1) = bb*cc + aa*ss
-        end do
+        enddo
 
         cc      = cos(xk(ncx)*-c_wav*tb)
         ss      = 0.0
@@ -7636,12 +7636,12 @@ c --------- generate modified fourier coefficients
         kk    = 1
         do i=2,nnx-1,2
           kk = kk + 1
-          if(i_tank == 13) then
+          if(i3d_surf == 4) then
             c_wav  = sqrt(grav/xk(i))
             if(i>ncx) c_wav = sqrt(-grav/xk(i))
           else
             c_wav = c_speed
-          end if
+          endif
           cc = cos(xk(kk)*-c_wav*tb)
           ss = sin(xk(kk)*-c_wav*tb)
           aa = f(i)
@@ -7649,7 +7649,7 @@ c --------- generate modified fourier coefficients
           uk = xk(kk)*c_wav
           fi(i)     = uk*(aa*ss + bb*cc)
           fi(i+1)   = uk*(bb*ss - aa*cc)
-        end do
+        enddo
         fi(nnx) = 0.0
 
 c --------- transform back to get function at correct x points
@@ -7679,9 +7679,9 @@ c     fn = 1.0/float(nnx)
             temp        = ax(ix,iy)
             ax(ix,iy)   = -xk(ii)*ax(ix+1,iy)
             ax(ix+1,iy) = xk(ii)*temp
-          end do
+          enddo
           call rfftb(nnx,ax(1,iy),trigx)
-        end do
+        enddo
 
         return
       end
@@ -7724,16 +7724,16 @@ c ------ 1d fft in x over [iys,iye] for all z
             do iy=iys,iye
               do ix=1,nx
                 a_wrk(ix) = ax(ix,iy,iz)*fn
-              end do
+              enddo
               call rfftf(nx,a_wrk(1),trigx(1))
               ax(1,iy,iz) = a_wrk(1)
               ax(2,iy,iz) = 0.0
               do ix=2,nx
                 ax(ix+1,iy,iz) = a_wrk(ix)
-              end do
+              enddo
               ax(nx+2,iy,iz) = 0.0
-            end do
-          end do
+            enddo
+          enddo
           call xtoy_trans(ax,at,nxp2,ny,jxs,jxe,jx_s,jx_e,
      +        iys,iye,iy_s,iy_e,iz1,iz2,myid,ncpu,np)
 
@@ -7744,21 +7744,21 @@ c ------ 1d fft in y over [jxs,jxe] for all z
               do iy=1,ny
                 a2d(1,iy) = at(iy,ix,iz)
                 a2d(2,iy) = at(iy,ix+1,iz)
-              end do
+              enddo
               call cfftf(ny,a2d(1,1),trigc(1))
               do iy=1,ny
                 at(iy,ix,iz)   = a2d(1,iy)
                 at(iy,ix+1,iz) = a2d(2,iy)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
 c ---- decide whether to transpose back or leave as is
 
           if(isgn == -1) then
             call ytox_trans(at,ax,nxp2,ny,jxs,jxe,jx_s,jx_e,
      +          iys,iye,iy_s,iy_e,iz1,iz2,myid,ncpu,np)
-          end if
+          endif
 
         else
 
@@ -7767,7 +7767,7 @@ c ---- decide whether to first transpose or leave as is
           if(isgn == 1) then
             call xtoy_trans(ax,at,nxp2,ny,jxs,jxe,jx_s,jx_e,
      +          iys,iye,iy_s,iy_e,iz1,iz2,myid,ncpu,np)
-          end if
+          endif
 
 c ------ 1d fft in y over [jxs,jxe] for all z
 
@@ -7776,14 +7776,14 @@ c ------ 1d fft in y over [jxs,jxe] for all z
               do iy=1,ny
                 a2d(1,iy) = at(iy,ix,iz)
                 a2d(2,iy) = at(iy,ix+1,iz)
-              end do
+              enddo
               call cfftb(ny,a2d(1,1),trigc(1))
               do iy=1,ny
                 at(iy,ix,iz)   = a2d(1,iy)
                 at(iy,ix+1,iz) = a2d(2,iy)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call ytox_trans(at,ax,nxp2,ny,jxs,jxe,jx_s,jx_e,
      +        iys,iye,iy_s,iy_e,iz1,iz2,myid,ncpu,np)
 
@@ -7794,14 +7794,14 @@ c ------  1d fft in x over [iys,iye] for all z
               a_wrk(1) = ax(1,iy,iz)
               do ix=2,nx
                 a_wrk(ix) = ax(ix+1,iy,iz)
-              end do
+              enddo
               call rfftb(nx,a_wrk(1),trigx(1))
               do ix=1,nx
                 ax(ix,iy,iz) = a_wrk(ix)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
 
         return
       end
@@ -7822,8 +7822,8 @@ c --------- transform in x direction
         do k=iz1,iz2
           do j=iys,iye
             call cfftb(nx,ax(1,j,k),trigx(1))
-          end do
-        end do
+          enddo
+        enddo
 
 c --------- transform in y direction
 
@@ -7835,14 +7835,14 @@ c --------- transform in y direction
             do j=1,ny
               a2d(1,j) = at(j,i,k)
               a2d(2,j) = at(j,i+1,k)
-            end do
+            enddo
             call cfftb(ny,a2d(1,1),trigy(1))
             do j=1,ny
               at(j,i,k)   = a2d(1,j)
               at(j,i+1,k) = a2d(2,j)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         call ytox_trans(at,ax,nx2,ny,i2xs,i2xe,i2x_s,i2x_e,
      +      iys,iye,iy_s,iy_e,iz1,iz2,myid,ncpu,np)
@@ -7864,7 +7864,7 @@ c     fn = 1.0/float(nny)
         do ix=1,nnx
           do iy=1,nny
             a_trans(iy) = ay(ix,iy)
-          end do
+          enddo
           call rfftf(nny,a_trans(1),trigy)
           ii = 1
           a_trans(1)   = 0.0
@@ -7874,12 +7874,12 @@ c     fn = 1.0/float(nny)
             temp          = a_trans(iy)
             a_trans(iy)   = -yk(ii)*a_trans(iy+1)
             a_trans(iy+1) = yk(ii)*temp
-          end do
+          enddo
           call rfftb(nny,a_trans(1),trigy)
           do iy=1,nny
             ay(ix,iy) = a_trans(iy)
-          end do
-        end do
+          enddo
+        enddo
 
         return
       end
@@ -7913,10 +7913,10 @@ c     fn = 1.0/float(nny)
               temp            = ayt(iy,ix,iz)
               ayt(iy,ix,iz)   = -yk(ii)*ayt(iy+1,ix,iz)
               ayt(iy+1,ix,iz) = yk(ii)*temp
-            end do
+            enddo
             call rfftb(ny,ayt(1,ix,iz),trigy)
-          end do
-        end do
+          enddo
+        enddo
         call ytox_trans(ayt,ay,nx,ny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,iz1,iz2,myid,ncpu,np)
 
@@ -7956,9 +7956,9 @@ c ----------- stolen from numerical recipes,p. 271
             idum = ia*(idum - k*iq) - ir*k
             if(idum < 0) idum = idum + im
             if(j <= ntab) iv(j) = idum
-          end do
+          enddo
           iy = iv(1)
-        end if
+        endif
         k     = idum/iq
         idum  = ia*(idum - k*iq) - ir*k
         if(idum < 0) idum = idum + im
@@ -7979,7 +7979,7 @@ c ----------- stolen from numerical recipes,p. 271
           fm = float(m)
           ix = 566387
           ia = 2**10 + 3
-        end if
+        endif
         ix = mod(ia*ix,m)
         fx = float(ix)
         ranf = fx/fm
@@ -8010,11 +8010,11 @@ c         stokesa = 1.0
           stokess = sigma*stokesw*stokesa**2
           do iz=1,nnzp1
             stokes(iz) = stokess*exp(2.0*stokesw*zz(iz))
-          end do
+          enddo
           if(l_root) then
             write(6,6000) (iz,zz(iz),stokes(iz),iz=1,nnz)
  6000       format(' iz ',10x,' zz',10x,' stokes',/,(1x,i3,2e12.4))
-          end if
+          endif
 
         else
 
@@ -8022,11 +8022,11 @@ c ----------------- set stokes velocity = 0 for atmos. pbls
 
           do iz=1,nnzp1
             stokes(iz) = 0.0
-          end do
+          enddo
           stokess = 0.0
           udrift = 0.0
           vdrift = 0.0
-        end if
+        endif
 
         return
       end
@@ -8046,7 +8046,7 @@ c ---- Businger's version of similarity theory
           y = sqrt(1.0-9.0*zeta)
           phis = 0.74/y
           psis = alog((1.0+y)/2.0)*2.0
-        else if(zeta > 0) then
+        elseif(zeta > 0) then
           phim = 1.0 + 4.7*zeta
           phis = 0.74 + 4.7*zeta
           psim = -4.7*zeta
@@ -8056,7 +8056,7 @@ c ---- Businger's version of similarity theory
           phis = 0.74
           psim = 0.0
           psis = 0.0
-        end if
+        endif
         return
       end
       subroutine fzol(zeta,phim,phis,psim,psis)
@@ -8093,7 +8093,7 @@ c                                   use limiting form
             psim = (1.0 - c1)*(1.0 + alog(zeta) ) - zeta
             phis = phim
             psis = psim
-          end if
+          endif
 
         else
 c                                         UNSTABLE
@@ -8110,7 +8110,7 @@ c                            use convective limit for momentum
             psim = psimu(Xm(zetam))
      *      + psicu(Xc(zeta,b3/a3),fm)
      *      - psicu(Xc(zetam,b3/a3),fm)
-          end if
+          endif
 
 c                                         UNSTABLE scalars
           if(zeta>=zetas) then
@@ -8123,9 +8123,9 @@ c                              use convective limit for scalars
             psis = psisu(Xs(zetas))
      *      + psicu(Xc(zeta,b4/a4),fs)
      *      - psicu(Xc(zetas,b4/a4),fs)
-          end if
+          endif
 
-        end if
+        endif
         return
       end
       subroutine suft(it)
@@ -8170,16 +8170,16 @@ c ---- save old utau
             wind(ix,iy) = sqrt((u(ix,iy,iz)+ugal)**2
      +          +v(ix,iy,iz)*v(ix,iy,iz))
             buf(3) = buf(3) + wind(ix,iy)
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           buf(3+iscl) = 0.0
           do iy=iys,iye
             do ix=1,nnx
               buf(3+iscl) = buf(3+iscl) + t(ix,iy,iscl,iz)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c -------- get x-y slab sums
 
@@ -8189,7 +8189,7 @@ c -------- get x-y slab sums
         windm = buf(3)*fnxy
         do iscl=1,nscl
           t1xy(iscl) = buf(3+iscl)*fnxy
-        end do
+        enddo
         vsfc  = sqrt(u1xy*u1xy+v1xy*v1xy)
         windm = amax1(windm,ufree)
         vsfc  = amax1(vsfc,ufree)
@@ -8203,7 +8203,7 @@ c ---------- limits for zeta
         else
           d_theta = vk74in*(tsfcc(1) - t1xy(1))
           f_con   = z1*batag*vk*d_theta/((windm*vk)**2)
-        end if
+        endif
 
 c --------- iteration for zeta
 
@@ -8213,21 +8213,21 @@ c --------- iteration for zeta
             call busngr(zeta_a,phim,phis,psim,psis)
           else
             call fzol(zeta_a,phim,phis,psim,psis)
-          end if
+          endif
           u_fac = (zody - psim)
           if(isfc(1) == 0) then
             f_new =  zeta_a + f_con*u_fac**3
           else
             t_fac = 1.0/(zody - psis)
             f_new =  zeta_a + f_con*u_fac*u_fac*t_fac
-          end if
+          endif
           if(f_new < 0.0) then
             zeta_mn = zeta_a
           else
             zeta_mx = zeta_a
-          end if
+          endif
 
-        end do
+        enddo
 
 c --------- check if neutral surface layer
 
@@ -8249,33 +8249,58 @@ c --------- check if neutral surface layer
             thstar(1) = (t1xy(1) - tsfcc(1))/dnom
             t10xy(1)  = thstar(1)*dnom
             qstar(1)  = -utau*thstar(1)
-          end if
+          endif
           amonin = -utau**3/(batagk*qstar(1))
           zeta   = z1/amonin
-        end if
+        endif
 
         if (utau>10.0) then
           write(6,9000)
           write(6,9200) utau,windm
           go to 9999
-        end if
+        endif
         if (t10xy(1)>0. .and. qstar(1) > 0.) then
           write(6,9000)
           write(6,9300) u1xy,v1xy,t1xy(1),
      +        tsfcc(1),amonin,utau,it
           go to 9999
-        end if
+        endif
 
-      !Second scalar:
-        if(isfc(2) == 0) then
-          thstar(2) = -qstar(2)/utau
-          tsfcc(2)  = t1xy(2)-thstar(2)*dnom
-          t10xy(2)  = thstar(2)*dnom
-        else
-          thstar(2) = (t1xy(2) - tsfcc(2))/dnom
-          t10xy(2)  = thstar(2)*dnom
-          qstar(2)  = -utau*thstar(2)
-        end if
+
+      ! Second scalar:
+      !  if(isfc(2) == 0) then
+      !    thstar(2) = -qstar(2)/utau
+      !    tsfcc(2)  = t1xy(2)-thstar(2)*dnom
+      !    t10xy(2)  = thstar(2)*dnom
+      !  else
+      !    thstar(2) = (t1xy(2) - tsfcc(2))/dnom
+      !    t10xy(2)  = thstar(2)*dnom
+      !    qstar(2)  = -utau*thstar(2)
+      !  endif
+
+
+        ! To increase scalar roughness in wall model from NTLP (copied from les.F) - Rolf Seh
+
+        do iscl = 2, nscl
+          if (ibuoy == 0 .or. qstar(1) == 0.) then
+            thstar(iscl) = 0.0
+            t10xy(iscl)  = 0.0
+            tsfcc(iscl)  = t1xy(iscl)
+          else
+            dnom = (zosdy-psis)*vk74in
+            if (isfc(iscl) == 0) then
+              thstar(iscl) = -qstar(iscl)/utau
+              tsfcc(iscl)  = t1xy(iscl)-thstar(iscl)*dnom
+              t10xy(iscl)  = thstar(iscl)*dnom
+            else
+              thstar(iscl) = (t1xy(iscl) - tsfcc(iscl))/dnom
+              t10xy(iscl)  = thstar(iscl)*dnom
+              qstar(iscl)  = -utau*thstar(iscl)
+            endif
+            amonin = -utau**3/(batagk*qstar(iscl))
+            zeta   = z1/amonin
+          endif
+        enddo
 
 c ---------- examples of two other scalars
 
@@ -8347,16 +8372,16 @@ c      option to use businger or large version of similarity theory
             wind(ix,iy) = sqrt((u(ix,iy,iz)+ugal)**2
      +          +v(ix,iy,iz)*v(ix,iy,iz))
             buf(3) = buf(3) + wind(ix,iy)
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           buf(3+iscl) = 0.0
           do iy=iys,iye
             do ix=1,nnx
               buf(3+iscl) = buf(3+iscl) + t(ix,iy,iscl,iz)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c -------- get x-y slab sums
 
@@ -8366,7 +8391,7 @@ c -------- get x-y slab sums
         windm = buf(3)*fnxy
         do iscl=1,nscl
           t1xy(iscl) = buf(3+iscl)*fnxy
-        end do
+        enddo
         vsfc  = sqrt(u1xy*u1xy+v1xy*v1xy)
         windm = amax1(windm,ufree)
         vsfc  = amax1(vsfc,ufree)
@@ -8377,7 +8402,7 @@ c ---- check for temperature boundary condition
 
         if(isfc(1) == 0 ) then
           tsfcc(1)=t1xy(1)-t10xy(1)
-        end if
+        endif
 
 c ----------- input surface wind stress (tau = 0.0184n/m*m)
 c             density rho = 1000kg/m^3
@@ -8395,13 +8420,13 @@ c **** save old utau
         else
           amonin = -utau2*utau/(batagk*qstar(1))
           zeta   = z1_a/amonin
-        end if
+        endif
         if (t10xy(1)<0. .and. qstar(1) < 0.) then
           write(6,1234)u1xy,v1xy,t1xy(1),tsfcc(1),amonin,utau,it
  1234     format(' ** check sfc u=',e12.3,' v=',e12.3,' t,ts=',2f10.3,
      +        ' l=',e12.3,' u*=',e12.3,' at it=',i5)
           go to 9999
-        end if
+        endif
 
 c -------- for stable,neutral and unstable pbl get drift velocity
 
@@ -8409,7 +8434,7 @@ c -------- for stable,neutral and unstable pbl get drift velocity
           call busngr(zeta,phim,phis,psim,psis)
         else
           call fzol(zeta,phim,phis,psim,psis)
-        end if
+        endif
         udrift = windm + stokes(1) - stokess + utau*(zody-psim)*vkin
         vdrift = 0.0
         dnom      = (zody-psis)*vk74in
@@ -8421,7 +8446,7 @@ c -------- for stable,neutral and unstable pbl get drift velocity
           thstar(1)  = -qstar(1)/utau
           tsfcc(1)   = t1xy(1)-thstar(1)*dnom
           t10xy(1)   = thstar(1)*dnom
-        end if
+        endif
         zol = zeta
         hol = zol*zi/z1
 
@@ -8497,7 +8522,7 @@ c ----------------- first guess for utau
      +            ' ix = ',i6,'iy = ',i6,' it = ',i6,' utau = ',e15.6,
      +            ' amonin = ',e15.6)
               stop
-            end if
+            endif
 
 c ---- for unstable, free convection pbl
 
@@ -8513,7 +8538,7 @@ c ----------------- limit the min (-l/z) change to accmmodate stable flow
               call busngr(zeta_a,phim,phis,psim,psis)
             else
               call fzol(zeta_a,phim,phis,psim,psis)
-            end if
+            endif
             utau     = windm*vk/(zody-psim)
             thstar(1)=-qstar(1)/utau
             amonold  = amonin
@@ -8530,7 +8555,7 @@ c ----------------- limit the min (-l/z) change to accmmodate stable flow
               write(6,232)utau,windm
   232         format(' stop because utau=',e15.6,' windm=',e15.6)
               stop 9999
-            end if
+            endif
             t10xy(1) = -qstar(1)/utau*vk74in*(zody-psis)
             t_grnd(ix,iy,1) = u_level1(ix,iy,3) - t10xy(1)
 
@@ -8548,8 +8573,8 @@ c ----------------- limit the min (-l/z) change to accmmodate stable flow
 
 c ------- end of x-y loops
 
-          end do
-        end do
+          enddo
+        enddo
 
         return
       end
@@ -8610,8 +8635,8 @@ c              so that you get the desired size in physical space
 
           if(iz_space == 4) then
             zl = zl + zw1
-          end if
-        end if
+          endif
+        endif
 
         time     = 0.0
         t_stage  = 0.0
@@ -8644,19 +8669,19 @@ c ------------ build z grid for w points
 
           do iz=0,nnz+1
             z(iz) = dz*float(iz) + zwstrt
-          end do
+          enddo
         else
           z_gues = 1.1
         !call vgrid(zw1,zi,zl,z_gues,nnz,z(0),l_root,l_debug)
           call vgrid_channel(zw1,zi,zl,nnz,z(0),l_root,l_debug)
-        end if
+        endif
 
         call get_dz
 
         if(l_root) then
           write(6,8002) zwstrt
           write(6,8003) (iz,z(iz),zz(iz),iz=0,nnz+1)
-        end if
+        endif
 
         nnzm1 = nnz-1
         dx    = xl/nnx
@@ -8694,7 +8719,7 @@ c ---- set constants for large similarity functions
           vk74    = vk
           vk74in  = 1.0/vk
           zody74  = zody
-        end if
+        endif
         ugal   = 0.0
 c     ugal   = ugcont*0.5
 c     ugcont = ugcont - ugal
@@ -8710,13 +8735,13 @@ c ---- note : new estimate for utau !!!
 
           utau  = vk*(ufree+ugcont)/zody
 c        utau  = vk*(ufree)/zody
-        end if
+        endif
         utau2    = utau*utau
         if(ibuoy == 0 .or. qstar(1) == 0.) then
           amonin = 1000.0
         else
           amonin = -utau2*utau/(batagk*qstar(1))
-        end if
+        endif
         hol   = abs(zi)/amonin
         zol   = abs(z1)/amonin
         uwsfc = -utau*utau
@@ -8728,13 +8753,13 @@ c ------- make sure tsfcc is gt than t00 for both isfc=0 or 1
           write(6,80)
           write(6,2)wtsfc(1),utau,amonin,dtdzf(1),zody,zo
      +        ,cdbtm,ugcont
-        end if
+        endif
 
         if(l_debug) then
           write(nprt,80)
           write(nprt,2)wtsfc(1),utau,amonin,dtdzf(1),zody,zo
      +        ,cdbtm,ugcont
-        end if
+        endif
 
         return
 c ------------------------
@@ -8757,7 +8782,7 @@ c --------- uniform vertical grid
         ddz = zl/float(nnz)
         do k=1,nnz
           z(k) = float(k)*ddz
-        end do
+        enddo
         z(nnz) = zl
         z(0)   = 0.0
         z(nnz+1) = z(nnz) + (z(nnz) - z(nnz-1))
@@ -8791,8 +8816,8 @@ c --------- allocate surface arrays
             eta0(2,i,j)  = 0.0
             u_orbit(i,j) = 0.0
             v_orbit(i,j) = 0.0
-          end do
-        end do
+          enddo
+        enddo
 
         return
       end
@@ -8815,21 +8840,21 @@ c         bumps by varying the amplitude
         if(t_bndy < t1_st) then
           ampl_fac  = 1.0
           ampl_rate = 0.0
-        else if(t_bndy >= t1_st .and. t_bndy < t1_en) then
+        elseif(t_bndy >= t1_st .and. t_bndy < t1_en) then
           ampl_fac  = amax1((1.0 - b_rate*(t_bndy - t1_st)),0.0)
           ampl_rate = -b_rate
-        else if(t_bndy >= t1_en) then
+        elseif(t_bndy >= t1_en) then
           ampl_fac  = 0.0
           ampl_rate = 0.0
-        end if
+        endif
 
         do j=iys,iye
           do i=1,nnx
             bndy(i,j)    = ampl_fac*eta0(1,i,j)
             hdot(i,j)    = ampl_rate*eta0(1,i,j)
             w_orbit(i,j) = hdot(i,j)
-          end do
-        end do
+          enddo
+        enddo
 
         return
       end
@@ -8871,8 +8896,8 @@ c               and radial frequencies
         do j=1,nny
           do i=1,nnx
             omega(i,j) = sqrt(sqrt(xkn(i)**2 + ykn(j)**2)*grav)
-          end do
-        end do
+          enddo
+        enddo
         idum = -1
         if(i_ranp == 0) then
           do j=1,nny
@@ -8880,8 +8905,8 @@ c               and radial frequencies
               aa_phase       = pi2*(ran1(idum) - 0.5)
               ran_amp(1,i,j) = cos(aa_phase)
               ran_amp(2,i,j) = sin(aa_phase)
-            end do
-          end do
+            enddo
+          enddo
         else
 
 c ------- normalize amplitudes so that their squared sum = 1
@@ -8891,16 +8916,16 @@ c ------- normalize amplitudes so that their squared sum = 1
             do i=1,nnx
               ran_amp(1,i,j) =  gasdev(idum)*fac
               ran_amp(2,i,j) =  gasdev(idum)*fac
-            end do
-          end do
+            enddo
+          enddo
           sum1 = 0.0
           sum2 = 0.0
           do j=1,nny
             do i=1,nnx
               sum1 = sum1 + ran_amp(1,i,j)
               sum2 = sum2 + ran_amp(2,i,j)
-            end do
-          end do
+            enddo
+          enddo
           sum1 = sum1*fnxy
           sum2 = sum2*fnxy
           var1 = 0.0
@@ -8909,15 +8934,15 @@ c ------- normalize amplitudes so that their squared sum = 1
             do i=1,nnx
               var1 = var1 + (ran_amp(1,i,j) - sum1)**2
               var2 = var2 + (ran_amp(2,i,j) - sum2)**2
-            end do
-          end do
+            enddo
+          enddo
           var1 = var1*fnxy
           var2 = var2*fnxy
           write(nprt,1345) sum1,var1, sum2,var2
  1345     format(' 1345 get surf:',/,
      +        '      sum1 = ',e15.6,' var1 = ',e15.6,/,
      +        '      sum2 = ',e15.6,' var2 = ',e15.6)
-        end if
+        endif
 
         sum1  = 0.0
         sum2  = 0.0
@@ -8929,8 +8954,8 @@ c ------- normalize amplitudes so that their squared sum = 1
             sum2 = sum2 + ran_amp(2,i,j)
             if(ran_amp(1,i,j) > p_max) p_max = ran_amp(1,i,j)
             if(ran_amp(1,i,j) < p_min) p_max = ran_amp(1,i,j)
-          end do
-        end do
+          enddo
+        enddo
         sum1 = sum1*fnxy
         sum2 = sum2*fnxy
         write(nprt,5000) p_max, p_min, sum1, sum2
@@ -8954,7 +8979,7 @@ c ---------- donelan spectrum
 
           call donelan(dkx,dky,xkn,ykn,nnx,nny,u10,age,angle,amp)
 
-        end if
+        endif
 
 c ------- use a gaussian filter to smooth the wave shape
 
@@ -8969,8 +8994,8 @@ c ------- use a gaussian filter to smooth the wave shape
             eta0(1,i,j) = fac_a*amp_root*ran_amp(1,i,j)
             eta0(2,i,j) = fac_a*amp_root*ran_amp(2,i,j)
             sum_spec    = sum_spec + amp(i,j)*dkx*dky
-          end do
-        end do
+          enddo
+        enddo
 
         write(6,8001) sum_spec
  8001   format(' 8001 sum_spec = ',e15.6)
@@ -8980,11 +9005,11 @@ c --------- build coefficients at t = 0
         do j=1,nny
           eta0(1,ncx,j) = 0.0
           eta0(2,ncx,j) = 0.0
-        end do
+        enddo
         do i=1,nnx
           eta0(1,i,ncy) = 0.0
           eta0(2,i,ncy) = 0.0
-        end do
+        enddo
 
 c --------- make surface smooth
 
@@ -8997,16 +9022,16 @@ c --------- make surface smooth
           do i=i_cut_l,i_cut_u
             eta0(1,i,j) = 0.0
             eta0(2,i,j) = 0.0
-          end do
-        end do
+          enddo
+        enddo
         j_cut_l = m_cut_y
         j_cut_u = nny + 2 - j_cut_l
         do j=j_cut_l,j_cut_u
           do i=1,nnx
             eta0(1,i,j) = 0.0
             eta0(2,i,j) = 0.0
-          end do
-        end do
+          enddo
+        enddo
 
         return
       end
@@ -9034,29 +9059,25 @@ c --------- allocate surface arrays
 
         lut    = 89
         close(lut)
-        if(i_tank == 1) then     ! no breaking case
-          open(lut,file='./les_tank_nobreak.dat')
-          npts_t  = 1485
-          wave_l  = 0.232780E+02*0.01
-          c_speed = 0.602861E+00
-          wave_k  = pi2/wave_l
-          ustar_tank = 0.381 ! from table 2 of banner 1990
-        else if(i_tank == 10) then !7/12/18: Particle-laden monochromatic turbulence
-          open(lut,file='./monochromatic.dat')
-          npts_t  = 128
-          wave_k  = pi2/wave_l
-        else if(i_tank == 13) then !7/12/18: Particle-laden real wave
-          open(lut,file='./polychromatic.dat')
-          npts_t  = 1000
-          wave_k  = pi2/wave_l
-        end if
+        wave_k  = pi2/wave_l
 
+c---------- count number of points in wave file
+        open(lut,file=wave_file)
+        npts_t = -4 ! don't count top 4 comment lines
+        do
+          read (lut,*, end=10) ! break at end of file
+          npts_t = npts_t + 1
+        enddo
+10      close (lut)
+        open (lut, file = wave_file) !re-open to read
+
+c--------- read in wave file
         do i=1,4
           read(lut,'(a1)') idum
-        end do
+        enddo
         do i=1,npts_t
           read(lut,*) xx(i), zz_tank(i), us(i), ws(i)
-        end do
+        enddo
         if (myid==0) write(*,*) 'Finished reading tank data'
 
         write(nprt,1001) (i,xx(i), zz_tank(i),us(i),ws(i),
@@ -9081,27 +9102,27 @@ c ---------- interpolate into the spline function at les points
           call splint(xx,zz_tank,y2,npts_t,xles(i),z_tank(i))
           call splint(xx,us,u2,npts_t,xles(i),u_tank(i))
           call splint(xx,ws,w2,npts_t,xles(i),w_tank(i))
-        end do
+        enddo
 
         sum = 0.0
         do i=1,nnx
           sum = sum + z_tank(i)
-        end do
+        enddo
         sum = sum/float(nnx)
         do i=1,nnx
           z_tank(i) = z_tank(i) - sum
-        end do
+        enddo
 
 c --------- force mean w = 0 from the data
 
         sum_w = 0.0
         do i=1,nnx
           sum_w = sum_w + w_tank(i)
-        end do
+        enddo
         sum_w = sum_w/float(nnx)
         do i=1,nnx
           w_tank(i) = w_tank(i) - sum_w
-        end do
+        enddo
 
         write(nprt,4001) sum, sum_w
  4001   format(' Mean wave height = ',e15.6,' sum w = ',e15.6)
@@ -9114,7 +9135,7 @@ c           to use in building shape at t > 0
           z_tank_f(i) = z_tank(i)*fnx
           u_tank_f(i) = u_tank(i)*fnx
           w_tank_f(i) = w_tank(i)*fnx
-        end do
+        enddo
         call rfftf(nnx,z_tank_f(1),trigx(1,1))
         call rfftf(nnx,u_tank_f(1),trigx(1,1))
         call rfftf(nnx,w_tank_f(1),trigx(1,1))
@@ -9129,7 +9150,7 @@ c     ix_cut   = 44
           z_tank_f(i) = 0.0
           u_tank_f(i) = 0.0
           w_tank_f(i) = 0.0
-        end do
+        enddo
 
         return
       end
@@ -9157,29 +9178,24 @@ c --------- allocate surface arrays
 
         lut    = 89
         close(lut)
-        if(i_tank == 1) then     ! no breaking case
-          open(lut,file='./les_tank_nobreak.dat')
-          npts_t  = 1485
-          wave_l  = 0.232780E+02*0.01
-          c_speed = 0.602861E+00
-          wave_k  = pi2/wave_l
-          ustar_tank = 0.381 ! from table 2 of banner 1990
-        else if(i_tank == 10) then !7/12/18: Particle-laden monochromatic turbulence
-          open(lut,file='./monochromatic.dat')
-          npts_t  = 128
-          wave_k  = pi2/wave_l
-        else if(i_tank == 13) then !7/12/18: Particle-laden real wave
-          open(lut,file='./polychromatic.dat')
-          npts_t  = 1000
-          wave_k  = pi2/wave_l
-        end if
 
+c---------- count number of points in wave file
+        open(lut,file=wave_file)
+        npts_t = -4 ! don't count top 4 comment lines
+        do
+          read (lut,*, end=10) ! break at end of file
+          npts_t = npts_t + 1
+        enddo
+10      close (lut)
+        open (lut, file = wave_file) !re-open to read
+       
+c--------- read in wave file 
         do i=1,4
           read(lut,'(a1)') idum
-        end do
+        enddo
         do i=1,npts_t
           read(lut,*) xx(i), zz_tank(i), us(i), ws(i)
-        end do
+        enddo
         if (myid==0) write(*,*) 'Finished reading tank data'
 
         write(nprt,1001) (i,xx(i), zz_tank(i),us(i),ws(i),
@@ -9193,8 +9209,6 @@ c ---------- fit a spline to the data
         yp1 = 2.0e+30
         ypn = yp1
         call spline(xx,zz_tank,npts_t,yp1,ypn,y2)
-        ! call spline(xx,us,npts_t,yp1,ypn,u2)
-        ! call spline(xx,ws,npts_t,yp1,ypn,w2)
 
 c ---------- interpolate into the spline function at les points
 
@@ -9202,25 +9216,23 @@ c ---------- interpolate into the spline function at les points
         do i=1,nnx
           xles(i) = float(i-1)*ddx
           call splint(xx,zz_tank,y2,npts_t,xles(i),z_tank(i))
-          ! call splint(xx,us,u2,npts_t,xles(i),u_tank(i))
-          ! call splint(xx,ws,w2,npts_t,xles(i),w_tank(i))
-        end do
+        enddo
 
         sum = 0.0
         do i=1,nnx
           sum = sum + z_tank(i)
-        end do
+        enddo
         sum = sum/float(nnx)
         do i=1,nnx
           z_tank(i) = z_tank(i) - sum
-        end do
+        enddo
 
 c --------- zero orbitals for calculation
 
         do i=1,nnx
           u_tank(i) = 0.0
           w_tank(i) = 0.0
-        end do
+        enddo
 
         write(nprt,4001) sum, sum_w
  4001   format(' Mean wave height = ',e15.6,' sum w = ',e15.6)
@@ -9231,12 +9243,8 @@ c           to use in building shape at t > 0
         fnx = 1.0/float(nnx)
         do i=1,nnx
           z_tank_f(i) = z_tank(i)*fnx
-          ! u_tank_f(i) = u_tank(i)*fnx
-          ! w_tank_f(i) = w_tank(i)*fnx
-        end do
+        enddo
         call rfftf(nnx,z_tank_f(1),trigx(1,1))
-        ! call rfftf(nnx,u_tank_f(1),trigx(1,1))
-        ! call rfftf(nnx,w_tank_f(1),trigx(1,1))
 
 c ------ dealias the inputs to match the grid resolution
 c        careful with the indices, match fftpack order
@@ -9246,9 +9254,7 @@ c     ix_cut   = 44
 
         do i=ix_cut,nnx
           z_tank_f(i) = 0.0
-          ! u_tank_f(i) = 0.0
-          ! w_tank_f(i) = 0.0
-        end do
+        enddo
 
         return
       end
@@ -9279,13 +9285,13 @@ c --------- for debug turn on waves right away
         if(t_bndy < t1_st) then
           ampl_fac  = 0.0
           ampl_rate = 0.0
-        else if(t_bndy >= t1_st .and. t_bndy < t1_en) then
+        elseif(t_bndy >= t1_st .and. t_bndy < t1_en) then
           ampl_fac  = amax1((b_rate*(t_bndy - t1_st)),0.0)
           ampl_rate = b_rate
-        else if(t_bndy >= t1_en) then
+        elseif(t_bndy >= t1_en) then
           ampl_fac  = 1.0
           ampl_rate = 0.0
-        end if
+        endif
 
 c -------------- make surface flat, for initialization
 
@@ -9298,8 +9304,8 @@ c -------------- make surface flat, for initialization
             somg         = sin(omega(i,j)*t_bndy)
             s_wrk(1,i,j) = comg*aa + somg*bb
             s_wrk(2,i,j) = comg*bb - somg*aa
-          end do
-        end do
+          enddo
+        enddo
 
 c --------- get the u_orbital velocity of the wave
 
@@ -9308,26 +9314,26 @@ c --------- get the u_orbital velocity of the wave
             fac_o        = (grav/omega(i,j))*ampl_fac
             v_wrk(1,i,j) = fac_o*xkn(i)*s_wrk(1,i,j)
             v_wrk(2,i,j) = fac_o*xkn(i)*s_wrk(2,i,j)
-          end do
-        end do
+          enddo
+        enddo
         i  = 1
         do j=max(2,iys),iye
           fac_o        = (grav/omega(i,j))*ampl_fac
           v_wrk(1,i,j) = fac_o*xkn(i)*s_wrk(1,i,j)
           v_wrk(2,i,j) = fac_o*xkn(i)*s_wrk(2,i,j)
-        end do
+        enddo
         if(iys == 1) then
           v_wrk(1,i,iys) = 0.0
           v_wrk(2,i,iys) = 0.0
-        end if
+        endif
         call fft2d_cmplx_mpi(v_wrk(1,1,iys),eta_wrk(1,i2xs),trigcx,
      +      trigc,nnx,nx2,nny,i2xs,i2xe,i2x_s,i2x_e,iys,iye,iy_s,iy_e,1,
      +      1,myid,ncpu_s,numprocs)
         do j=iys,iye
           do i=1,nnx
             u_orbit(i,j) = v_wrk(1,i,j)
-          end do
-        end do
+          enddo
+        enddo
 
 c --------- get the v_orbital velocity of the wave
 
@@ -9336,26 +9342,26 @@ c --------- get the v_orbital velocity of the wave
             fac_o        = (grav/omega(i,j))*ampl_fac
             v_wrk(1,i,j) = fac_o*ykn(j)*s_wrk(1,i,j)
             v_wrk(2,i,j) = fac_o*ykn(j)*s_wrk(2,i,j)
-          end do
-        end do
+          enddo
+        enddo
         i  = 1
         do j=max(2,iys),iye
           fac_o        = (grav/omega(i,j))*ampl_fac
           v_wrk(1,i,j) = fac_o*ykn(j)*s_wrk(1,i,j)
           v_wrk(2,i,j) = fac_o*ykn(j)*s_wrk(2,i,j)
-        end do
+        enddo
         if(iys == 1) then
           v_wrk(1,i,iys) = 0.0
           v_wrk(2,i,iys) = 0.0
-        end if
+        endif
         call fft2d_cmplx_mpi(v_wrk(1,1,iys),eta_wrk(1,i2xs),trigcx,
      +      trigc,nnx,nx2,nny,i2xs,i2xe,i2x_s,i2x_e,iys,iye,iy_s,iy_e,1,
      +      1,myid,ncpu_s,numprocs)
         do j=iys,iye
           do i=1,nnx
             v_orbit(i,j) = v_wrk(1,i,j)
-          end do
-        end do
+          enddo
+        enddo
 
 c ------------- get hdot
 
@@ -9365,27 +9371,27 @@ c ------------- get hdot
      +          ampl_rate*s_wrk(1,i,j)
             v_wrk(2,i,j) = -omega(i,j)*s_wrk(1,i,j)*ampl_fac +
      +          ampl_rate*s_wrk(2,i,j)
-          end do
-        end do
+          enddo
+        enddo
         i  = 1
         do j=max(2,iys),iye
           v_wrk(1,i,j) = omega(i,j)*s_wrk(2,i,j)*ampl_fac +
      +        ampl_rate*s_wrk(1,i,j)
           v_wrk(2,i,j) = -omega(i,j)*s_wrk(1,i,j)*ampl_fac +
      +        ampl_rate*s_wrk(2,i,j)
-        end do
+        enddo
         if(iys == 1) then
           v_wrk(1,i,iys) = 0.0
           v_wrk(2,i,iys) = 0.0
-        end if
+        endif
         call fft2d_cmplx_mpi(v_wrk(1,1,iys),eta_wrk(1,i2xs),trigcx,
      +      trigc,nnx,nx2,nny,i2xs,i2xe,i2x_s,i2x_e,iys,iye,iy_s,iy_e,1,
      +      1,myid,ncpu_s,numprocs)
         do j=iys,iye
           do i=1,nnx
             hdot(i,j) = v_wrk(1,i,j)
-          end do
-        end do
+          enddo
+        enddo
 
 c -------- get the surface
 
@@ -9397,8 +9403,8 @@ c -------- get the surface
             bndy(i,j)          = s_wrk(1,i,j)*ampl_fac
             bndyx(i,j)         = bndy(i,j)
             bndyy(i,j,izs:izs) = bndy(i,j)
-          end do
-        end do
+          enddo
+        enddo
 
 c -------- get variance of surface
 
@@ -9406,8 +9412,8 @@ c -------- get variance of surface
         do j=iys,iye
           do i=1,nnx
             sumb = sumb + bndy(i,j)
-          end do
-        end do
+          enddo
+        enddo
         sumb = sumb*fnxy
         call mpi_sum_xy(sumb,myid,iss,ise,1)
 
@@ -9415,8 +9421,8 @@ c -------- get variance of surface
         do j=iys,iye
           do i=1,nnx
             varb = varb + (bndy(i,j) - sumb)**2
-          end do
-        end do
+          enddo
+        enddo
         varb = varb*fnxy
         call mpi_sum_xy(varb,myid,iss,ise,1)
 
@@ -9430,8 +9436,8 @@ c --------  w_o = hdot +  u_o*h_x + v_o*h_y
           do i=1,nnx
             w_orbit(i,j) = hdot(i,j) + u_orbit(i,j)*bndyx(i,j) +
      +          v_orbit(i,j)*bndyy(i,j,izs)
-          end do
-        end do
+          enddo
+        enddo
 
 c ----------- make sure mean of w_orbit = 0
 
@@ -9439,16 +9445,16 @@ c ----------- make sure mean of w_orbit = 0
         do j=iys,iye
           do i=1,nnx
             sum_w = sum_w + w_orbit(i,j)
-          end do
-        end do
+          enddo
+        enddo
         sum_w = sum_w*fnxy
         call mpi_sum_xy(sum_w,myid,iss,ise,1)
 
         do j=iys,iye
           do i=1,nnx
             w_orbit(i,j) = w_orbit(i,j) - sum_w
-          end do
-        end do
+          enddo
+        enddo
 
         return
       end
@@ -9483,13 +9489,13 @@ c --------- for debug turn on waves right away
         if(t_bndy < t1_st) then
           ampl_fac  = 0.0
           ampl_rate = 0.0
-        else if(t_bndy >= t1_st .and. t_bndy < t1_en) then
+        elseif(t_bndy >= t1_st .and. t_bndy < t1_en) then
           ampl_fac  = amax1((b_rate*(t_bndy - t1_st)),0.0)
           ampl_rate = b_rate
-        else if(t_bndy >= t1_en) then
+        elseif(t_bndy >= t1_en) then
           ampl_fac  = 1.0
           ampl_rate = 0.0
-        end if
+        endif
 
 c ------------ get (u,w) components of surface velocity and wave
 c              height. Make h, hdot, uo, wo match
@@ -9504,7 +9510,7 @@ c              height. Make h, hdot, uo, wo match
         sum_w = 0.0
         do i=1,nnx
           sum = sum + z_tank_i(i)
-        end do
+        enddo
         sum = sum/float(nnx)
 
         ampl_fac = 1.0
@@ -9513,8 +9519,8 @@ c              height. Make h, hdot, uo, wo match
             u_orbit(i,j) = u_tank_i(i)*ampl_fac
             v_orbit(i,j) = 0.0
             bndy(i,j)    = z_tank_i(i)*ampl_fac
-          end do
-        end do
+          enddo
+        enddo
 
 c -------- get variance of surface
 
@@ -9522,8 +9528,8 @@ c -------- get variance of surface
         do j=iys,iye
           do i=1,nnx
             sumb = sumb + bndy(i,j)
-          end do
-        end do
+          enddo
+        enddo
         sumb = sumb*fnxy
         call mpi_sum_xy(sumb,myid,iss,ise,1)
 
@@ -9531,8 +9537,8 @@ c -------- get variance of surface
         do j=iys,iye
           do i=1,nnx
             varb = varb + (bndy(i,j) - sumb)**2
-          end do
-        end do
+          enddo
+        enddo
         varb = varb*fnxy
         call mpi_sum_xy(varb,myid,iss,ise,1)
 
@@ -9542,8 +9548,8 @@ c -------- use w_o = hdot + u_o*h_x + v_o*h_y
           do i=1,nnx
             hdot(i,j)    = hdot_i(i)*ampl_fac
             w_orbit(i,j) = hdot(i,j) + u_orbit(i,j)*hx_i(i)*ampl_fac
-          end do
-        end do
+          enddo
+        enddo
 
 c ----------- make sure mean of w_orbit = 0
 
@@ -9551,16 +9557,16 @@ c ----------- make sure mean of w_orbit = 0
         do j=iys,iye
           do i=1,nnx
             sum_w = sum_w + w_orbit(i,j)
-          end do
-        end do
+          enddo
+        enddo
         sum_w = sum_w*fnxy
         call mpi_sum_xy(sum_w,myid,iss,ise,1)
 
         do j=iys,iye
           do i=1,nnx
             w_orbit(i,j)    = w_orbit(i,j) - sum_w
-          end do
-        end do
+          enddo
+        enddo
 
         ! if (myid==0) then
         !   write(*,*) "z_tank_i u_orbit w_orbit"
@@ -9586,7 +9592,7 @@ c         with fix sr. hx_deriv
         use wavy_pars
         use tank_pars
 
-        real gam, k_main, f_main
+        real gam, f_main
 
 c ------------ for doing restart with gradually growing bumps
 c              specify initial and end times to blend over
@@ -9604,13 +9610,13 @@ c --------- for debug turn on waves right away
         if(t_bndy < t1_st) then
           ampl_fac  = 0.0
           ampl_rate = 0.0
-        else if(t_bndy >= t1_st .and. t_bndy < t1_en) then
+        elseif(t_bndy >= t1_st .and. t_bndy < t1_en) then
           ampl_fac  = amax1((b_rate*(t_bndy - t1_st)),0.0)
           ampl_rate = b_rate
-        else if(t_bndy >= t1_en) then
+        elseif(t_bndy >= t1_en) then
           ampl_fac  = 1.0
           ampl_rate = 0.0
-        end if
+        endif
 c
 c ------------ get (u,w) components of surface velocity and wave
 c              height. Make h, hdot, uo, wo match
@@ -9624,7 +9630,7 @@ c              height. Make h, hdot, uo, wo match
         sum_w = 0.0
         do i=1,nnx
           sum = sum + z_tank_i(i)
-        end do
+        enddo
         sum = sum/float(nnx)
 
         ampl_fac = 1.0
@@ -9635,7 +9641,7 @@ c       ! note: using u_tank_[fi] as calculation vars
         fnx = 1.0/float(nnx)
         do i=1,nnx
           u_tank_i(i) = hdot_i(i)*fnx  ! pre-normalize as rfftf does not
-        end do
+        enddo
         call rfftf(nnx,u_tank_i,trigx)
         j = 1
         do i=2, nnx-1, 2
@@ -9652,8 +9658,8 @@ c       ! note: using u_tank_[fi] as calculation vars
      +          - (hdot_i(i) + hx_i(i)*u_tank_f(i)) / (1 + hx_i(i)**2)
             v_orbit(i,j) = 0.0
             bndy(i,j)    = z_tank_i(i)*ampl_fac
-          end do
-        end do
+          enddo
+        enddo
 
 c -------- use w_o = hdot + u_o*h_x + v_o*h_y
 
@@ -9661,8 +9667,8 @@ c -------- use w_o = hdot + u_o*h_x + v_o*h_y
           do i=1,nnx
             hdot(i,j)    = hdot_i(i)*ampl_fac
             w_orbit(i,j) = hdot(i,j) + u_orbit(i,j)*hx_i(i)*ampl_fac
-          end do
-        end do
+          enddo
+        enddo
 
 c ----------- make sure mean of w_orbit = 0
 
@@ -9670,28 +9676,28 @@ c ----------- make sure mean of w_orbit = 0
         do j=iys,iye
           do i=1,nnx
             sum_w = sum_w + w_orbit(i,j)
-          end do
-        end do
+          enddo
+        enddo
         sum_w = sum_w*fnxy
         call mpi_sum_xy(sum_w,myid,iss,ise,1)
 
         do j=iys,iye
           do i=1,nnx
             w_orbit(i,j)    = w_orbit(i,j) - sum_w
-          end do
-        end do
+          enddo
+        enddo
 
 c ----------- add drift velocity to u_orbit
 
-        gam = 0.5           ! set gamma here
-        k_main = 2*pi/2.35  ! set dominant wavelength
-        f_main = sqrt(grav*k_main)
+        gam = 0.7*0.9   ! set gamma here 0.5
+        wave_k = 2*pi/wave_l  ! set dominant wavelength wave_l in params.in
+        f_main = sqrt(grav*wave_k)
         do j=iys,iye
           do i = 1, nnx
             u_orbit(i,j) = u_orbit(i,j)
-     +        + gam * (1 + cos(k_main*bndy(i,j) - f_main*t_bndy))
-          end do
-        end do
+     +          + gam * (1 + cos(wave_k*bndy(i,j) - f_main*t_bndy))
+          enddo
+        enddo
 
 c -------- get variance of surface
 
@@ -9699,8 +9705,8 @@ c -------- get variance of surface
         do j=iys,iye
           do i=1,nnx
             sumb = sumb + bndy(i,j)
-          end do
-        end do
+          enddo
+        enddo
         sumb = sumb*fnxy
         call mpi_sum_xy(sumb,myid,iss,ise,1)
 
@@ -9708,8 +9714,8 @@ c -------- get variance of surface
         do j=iys,iye
           do i=1,nnx
             varb = varb + (bndy(i,j) - sumb)**2
-          end do
-        end do
+          enddo
+        enddo
         varb = varb*fnxy
         call mpi_sum_xy(varb,myid,iss,ise,1)
 
@@ -9751,25 +9757,25 @@ c ----------- simple directional spectrum
 
               if(xk(i) >= 0.0 .and. yk(j) >= 0.0) then
                 angle = acos(xk(i)/kmag)
-              else if(xk(i) >= 0.0 .and. yk(j) <= 0.0) then
+              elseif(xk(i) >= 0.0 .and. yk(j) <= 0.0) then
                 angle =  -acos(xk(i)/kmag)
-              else if(xk(i) <= 0.0 .and. yk(j) >= 0.0) then
+              elseif(xk(i) <= 0.0 .and. yk(j) >= 0.0) then
                 angle = pi2*0.5 - acos(abs(xk(i))/kmag)
-              else if(xk(i) <= 0.0 .and. yk(j) <= 0.0) then
+              elseif(xk(i) <= 0.0 .and. yk(j) <= 0.0) then
                 angle = -pi2*0.5 + acos(abs(xk(i))/kmag)
-              end if
+              endif
               if(angle < -pi2/4.0 .or. angle > pi2/4.0) then
                 fac = 0.0
               else
                 fac1     = cos(angle)
                 fac      = fac1**8
-              end if
+              endif
               amp(i,j) = amp(i,j)*fac
               sum_dir  = sum_dir + fac*dkx*dky
-            end if
+            endif
 
-          end do
-        end do
+          enddo
+        enddo
 
         sum_dir_i = 1.0/sum_dir
         sum_spec  = 0.0
@@ -9777,8 +9783,8 @@ c ----------- simple directional spectrum
           do i=1,nx
             amp(i,j) = amp(i,j)*sum_dir_i
             sum_spec = sum_spec + amp(i,j)*dkx*dky
-          end do
-        end do
+          enddo
+        enddo
 
         write(6,3000) sum_spec, sum_dir
  3000   format(' 3000: PM 64 sum_spec = ',e15.6,' sum_dir = ',e15.6)
@@ -9814,7 +9820,7 @@ c     amp --- amplitude of spectrum at wavenumber (xk,yk)
           grav  = 9.81
           pi2   = 8.0*atan(1.0)
           ionce = 1
-        end if
+        endif
 
 c     write(6,5601) u10, age, dir_mean
  5601   format(' 5601: u10 = ',e15.6,' age = ',e15.6,/,
@@ -9837,7 +9843,7 @@ c     write(6,5601) u10, age, dir_mean
         else
           aa = amin1(age_i,5.0)
           gamma_d = 1.7 + 6.0*alog10(age_i)
-        end if
+        endif
 
         sum_spec = 0.0
         sum_dir  = 0.0
@@ -9850,17 +9856,17 @@ c     write(6,5601) u10, age, dir_mean
             if(kmag == 0.0) then
               amp(i,j) = 0.0
               go to 999
-            end if
+            endif
 
             if(xk(i) >= 0.0 .and. yk(j) >= 0.0) then
               angle = acos(xk(i)/kmag)
-            else if(xk(i) >= 0.0 .and. yk(j) <= 0.0) then
+            elseif(xk(i) >= 0.0 .and. yk(j) <= 0.0) then
               angle =  -acos(xk(i)/kmag)
-            else if(xk(i) <= 0.0 .and. yk(j) >= 0.0) then
+            elseif(xk(i) <= 0.0 .and. yk(j) >= 0.0) then
               angle = pi2*0.5 - acos(abs(xk(i))/kmag)
-            else if(xk(i) <= 0.0 .and. yk(j) <= 0.0) then
+            elseif(xk(i) <= 0.0 .and. yk(j) <= 0.0) then
               angle = -pi2*0.5 + acos(abs(xk(i))/kmag)
-            end if
+            endif
 
             gamma = exp(-(omega - omega_p)**2/
      +          (2.0*(sigma_d**2)*omega_p**2))
@@ -9874,11 +9880,11 @@ c --------- directional spreading
             ratio = omega/omega_p
             if(ratio > 0.56 .and. ratio < 0.95) then
               beta = 2.61*ratio**1.3
-            else if(ratio >= 0.95 .and. ratio < 1.6) then
+            elseif(ratio >= 0.95 .and. ratio < 1.6) then
               beta = 2.28/ratio**1.3
             else
               beta = 1.24
-            end if
+            endif
 
             fac      = (angle - dir_mean)*beta
             sech     = 2.0/(exp(fac) + exp(-fac))
@@ -9898,8 +9904,8 @@ c --------- get integrals in wavenumber space
 
   999       continue
 
-          end do
-        end do
+          enddo
+        enddo
 
         write(6,6000) sum_spec, sum_dir
  6000   format(' 6000: in Donelan ',/,
@@ -9932,7 +9938,7 @@ c            spectrum to make sure its integral = 1
         else
           gasdev = gset
           iset   = 0
-        end if
+        endif
 
         return
       end
@@ -9975,10 +9981,10 @@ c -------- pick boundary shape
               hdot(i,j) = 0.0
               u_orbit(i,j) = 0.0
               v_orbit(i,j) = 0.0
-            end do
-          end do
+            enddo
+          enddo
 
-        else if(ikase == 2) then ! monochromatic wave
+        elseif(ikase == 2) then ! monochromatic wave
 
           wave = xl/4.0
           fac  = pi2/wave
@@ -9990,10 +9996,10 @@ c -------- pick boundary shape
               hdot(i,j) = 0.0
               u_orbit(i,j) = 0.0
               v_orbit(i,j) = 0.0
-            end do
-          end do
+            enddo
+          enddo
 
-        else if(ikase == 3) then ! 2-D hill
+        elseif(ikase == 3) then ! 2-D hill
 
           a      = 25.0
           xcntr  = 0.5*xl
@@ -10014,14 +10020,14 @@ c        a      = 0.0
                 bndy(i,j) = a*(1.0 + cos(pi2*x_temp/(4.0*hill_l)))
               else
                 bndy(i,j) = 0.0
-              end if
+              endif
               hdot(i,j) = 0.0
               u_orbit(i,j) = 0.0
               v_orbit(i,j) = 0.0
-            end do
-          end do
+            enddo
+          enddo
 
-        else if(ikase == 4) then ! 3-D hill
+        elseif(ikase == 4) then ! 3-D hill
 
           xo    = xl/2.0
           yo    = yl/2.0
@@ -10034,14 +10040,14 @@ c        a      = 0.0
                 bndy(i,j) = ampl*(1.0 + cos(pi2*rad/rlen))
               else
                 bndy(i,j) = 0.0
-              end if
+              endif
               hdot(i,j) = 0.0
               u_orbit(i,j) = 0.0
               v_orbit(i,j) = 0.0
-            end do
-          end do
+            enddo
+          enddo
 
-        else if(ikase == 5) then ! propagating monochromatic wave
+        elseif(ikase == 5) then ! propagating monochromatic wave
 
           wave_l  = xl/12.0
           wave_k  = pi2/wave_l
@@ -10060,10 +10066,10 @@ c ---------- get Cartesian orbital velocities
      +            sin(wave_k*(xgrid(i) - c_speed*t_bndy))
               u_orbit(i,j) = bndy(i,j)*con_u
               v_orbit(i,j) = 0.0
-            end do
-          end do
+            enddo
+          enddo
 
-        else if(ikase == 6) then ! propagating monochromatic wave
+        elseif(ikase == 6) then ! propagating monochromatic wave
                                  ! long wave moving vertically
 
           wave_l  = xl/12.0
@@ -10084,8 +10090,8 @@ c ---------- get Cartesian orbital velocities
      +            sin(wave_k*(xgrid(i) - c_speed*t_bndy))
               bndy2     = ampl2*cos(wave_k2*(ygrid(j) - c_spd2*t_bndy))
               bndy(i,j) = bndy2 + bndy(i,j)
-            end do
-          end do
+            enddo
+          enddo
 
 c ---------- get Cartesian orbital velocities
 
@@ -10096,9 +10102,9 @@ c ---------- get Cartesian orbital velocities
             do i=1,nnx
               u_orbit(i,j) = bndy(i,j)*con_u
               v_orbit(i,j) = bndy(i,j)*con_v
-            end do
-          end do
-        else if(ikase == 7) then ! stationary monochromatic wave
+            enddo
+          enddo
+        elseif(ikase == 7) then ! stationary monochromatic wave
                                  ! long wave moving vertically
 
           wave_l  = xl/2.0
@@ -10116,8 +10122,8 @@ c -------- make it flat
             do i=1,nnx
               bndy(i,j) = ampl*cos(wave_k*(xgrid(i)))
               hdot(i,j) = 0.0
-            end do
-          end do
+            enddo
+          enddo
 
 c ---------- get Cartesian orbital velocities
 
@@ -10128,9 +10134,9 @@ c ---------- get Cartesian orbital velocities
             do i=1,nnx
               u_orbit(i,j) = 0.0
               v_orbit(i,j) = 0.0
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
         return
       end
       subroutine mesh
@@ -10172,11 +10178,11 @@ c     gm(.,.,.,5)  = z_t = grid speed; zeta_t = - z_t*J
         dx = xl/float(nnx)
         do i=1,nnx
           xgrid(i) = float(i-1)*dx
-        end do
+        enddo
         dy = yl/float(nny)
         do j=1,nny
           ygrid(j) = float(j-1)*dy
-        end do
+        enddo
 
         if(iflat == 0) then
           do k=izs-1,ize+1
@@ -10190,23 +10196,23 @@ c     gm(.,.,.,5)  = z_t = grid speed; zeta_t = - z_t*J
                 gm(i,j,k,2)      = 0.0
                 gm(i,j,k,3)      = 0.0
                 gm(i,j,k,5)      = 0.0
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           do j=iys,iye
             do i=1,nnx
               z1b(i,j)      = zz(1)
               bndy_t(i,j,1) = zz(0)
               hdot_t(i,j,1) = 0.0
-            end do
-          end do
+            enddo
+          enddo
 
           if(l_debug) then
             ix = nnx/2
             iy = iys
             write(nprt,1020) (k,xgrid(ix),zgrid_u(ix,iy,k),
      +          zgrid_w(ix,iy,k,1), k=izs-1,ize+1)
-          end if
+          endif
 
         else
           t_bndy = amax1(0.,time - t_zero)
@@ -10218,15 +10224,15 @@ c     gm(.,.,.,5)  = z_t = grid speed; zeta_t = - z_t*J
 
           if(i3d_surf == 0) then
             call l_bndy(t_bndy)
-          else if(i3d_surf == 1) then
+          elseif(i3d_surf == 1) then
             call get_surf(t_bndy)
-          else if(i3d_surf == 2) then
+          elseif(i3d_surf == 2) then
             call get_surf_gabls(t_bndy)
-          else if(i3d_surf == 3) then
+          elseif(i3d_surf == 3) then
             call get_surf_tank(t_bndy)
-          else if(i3d_surf == 4) then
+          elseif(i3d_surf == 4) then
             call get_surf_real(t_bndy)
-          end if
+          endif
 
 c -------- initial guess for stretching factor
           z_gues = 1.1
@@ -10236,42 +10242,42 @@ c -------- initial guess for stretching factor
               if(iz_space == 1) then
                 call vgrid(zw1,zi,zl-bndy(i,j),z_gues,nnz,
      +              ztemp(0),l_root,l_debug)
-              else if(iz_space == 2) then
+              elseif(iz_space == 2) then
                 z_first = zw1*(1.0 - bndy(i,j)/zl)
                 call vgrid(z_first,zi,zl-bndy(i,j),z_gues,nnz,
      +              ztemp(0),l_root,l_debug)
-              else if(iz_space == 3) then
+              elseif(iz_space == 3) then
                 call exp_grid(bndy(i,j),zl,z(0),ztemp(0),nnz,a_exp_grd)
-              else if(iz_space == 4) then
+              elseif(iz_space == 4) then
                 call exp_grid2(bndy(i,j),zl,z(0),ztemp(0),nnz,
      +              a_exp_grd2)
-              else if(iz_space == 5) then
+              elseif(iz_space == 5) then
 
                 call algeb_grid(bndy(i,j),zl,z(0),ztemp(0),nnz,a_decay)
               else
                 call cgrid(zl-bndy(i,j),nnz,ztemp(0))
-              end if
+              endif
               do k=izs-1,ize+1
                 zgrid_w(i,j,k,1) = ztemp(k) + bndy(i,j)
-              end do
+              enddo
               do k=izs,ize+1
                 zgrid_u(i,j,k) = bndy(i,j) + 0.5*(ztemp(k) + ztemp(k-1))
-              end do
+              enddo
               if(izs == 1) then
                 zgrid_u(i,j,izs-1) = 2.0*zgrid_w(i,j,izs-1,1) -
      +              zgrid_u(i,j,izs)
               else
                 zgrid_u(i,j,izs-1) = bndy(i,j) +
      +              0.5*(ztemp(izs-1) + ztemp(izs-2))
-              end if
+              endif
 
 c --------- distance off the surface (every processor)
 
               z1b(i,j)      = 0.5*(ztemp(1) + ztemp(0))
               bndy_t(i,j,1) = bndy(i,j)
               hdot_t(i,j,1) = hdot(i,j)
-            end do
-          end do
+            enddo
+          enddo
 
           if(l_debug) then
             ix = nnx/2
@@ -10279,7 +10285,7 @@ c --------- distance off the surface (every processor)
             write(nprt,1020) (k,xgrid(ix),zgrid_u(ix,iy,k),
      +          zgrid_w(ix,iy,k,1),
      +          k=izs-1,ize+1)
-          end if
+          endif
 
 c ------ generate metric components at cell centers
 c        set metric components outside domain = to boundary values
@@ -10289,9 +10295,9 @@ c        set metric components outside domain = to boundary values
               do i=1,nnx
                 gm(i,j,k,1) = (zgrid_w(i,j,k,1) - zgrid_w(i,j,k-1,1))*
      +              dzw_i(k)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
 c ---------- pass the vertical gradient at ize
 c            to the processor above at level izs-1
@@ -10300,17 +10306,17 @@ c            to the processor above at level izs-1
           nt = myid + ncpu_s
           if(iss == 0) then
             nb = mpi_proc_null
-          end if
+          endif
           if(ise == numprocs-1) then
             nt = mpi_proc_null
-          end if
+          endif
           nsend = nnx*(iye + 1 - iys)
           nrecv = nsend
           do j=iys,iye
             do i=1,nnx
               fs(i,j) = gm(i,j,ize,1)
-            end do
-          end do
+            enddo
+          enddo
           call mpi_sendrecv(
      +        fs(1,iys),nsend,mpi_real8,nt,2,
      +        fr(1,iys),nrecv,mpi_real8,nb,2,
@@ -10319,15 +10325,15 @@ c            to the processor above at level izs-1
             do j=iys,iye
               do i=1,nnx
                 gm(i,j,izs-1,1) = fr(i,j)
-              end do
-            end do
+              enddo
+            enddo
           else
             do j=iys,iye
               do i=1,nnx
                 gm(i,j,izs-1,1) = gm(i,j,izs,1)
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
           do k=izs-1,ize+1
             do j=iys,iye
@@ -10335,15 +10341,15 @@ c            to the processor above at level izs-1
                 gm(i,j,k,4) = 1.0/gm(i,j,k,1)
                 fnt1(i,j,k) = zgrid_u(i,j,k)
                 gm(i,j,k,5) = 0.0
-              end do
-            end do
+              enddo
+            enddo
             call xderivp(fnt1(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
             do j=iys,iye
               do i=1,nnx
                 gm(i,j,k,2) = -fnt1(i,j,k)*gm(i,j,k,4)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           if(ize == nnz) then
             k = ize + 1
             j = (iys + iye )/2
@@ -10352,15 +10358,15 @@ c            to the processor above at level izs-1
  3131       format('3131 mesh',/,
      +          ' i ',5x,' zu ',5x,' gm 4 ',5x,' gm 2',/,
      +          (i5,3e15.6))
-          end if
+          endif
 
           do k=izs-1,ize+1
             do j=iys,iye
               do i=1,nnx
                 fnt1(i,j,k) = zgrid_u(i,j,k)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call yd_mpi(fnt1(1,iys,izs-1),trigx(1,2),yk(1),
      +        nnx,nny,ixs,ixe,ix_s,ix_e,
      +        iys,iye,iy_s,iy_e,izs-1,ize+1,myid,ncpu_s,numprocs)
@@ -10368,11 +10374,11 @@ c            to the processor above at level izs-1
             do j=iys,iye
               do i=1,nnx
                 gm(i,j,k,3) = -fnt1(i,j,k)*gm(i,j,k,4)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
-        end if
+        endif
         if(l_debug) then
           ix = nnx/2
           iy = iys
@@ -10394,7 +10400,7 @@ c            to the processor above at level izs-1
           write(nprt,1010) (iy,gm(ix,iy,k,1),gm(ix,iy,k,2),
      +        gm(ix,iy,k,3),gm(ix,iy,k,4),
      +        gm(ix,iy,k,5),iy=iys,iye)
-        end if
+        endif
 
 c ----------- save the grid file
 
@@ -10420,7 +10426,7 @@ c ---- write data
           izen = ize + 1
         else
           izen = ize
-        end if
+        endif
 c     do k=izs,ize
         do k=izs,izen
           do j=iys,iye
@@ -10429,8 +10435,8 @@ c     do k=izs,ize
               temp(2,i,j) = gm(i,j,k-1,1)
               temp(3,i,j) = gm(i,j,k-1,2)
               temp(4,i,j) = gm(i,j,k-1,3)
-            end do
-          end do
+            enddo
+          enddo
 #if defined(SWAP)
           call byteswap(temp)
 #endif
@@ -10443,7 +10449,7 @@ c -------- mpi i/o with non-uniform blocks of data use _at
      +        mpi_real8,status,ierr)
           if (ierr /= 0) goto 9991
 
-        end do
+        enddo
 
 c ---- close file
 
@@ -10456,9 +10462,9 @@ c ---- check file
           if(.not.there) then
             write(6,8000) ngrd,myid
             call mpi_abort(mpi_comm_world,icode,ierr)
-          end if
+          endif
           write(6,7000) path_sav_g
-        end if
+        endif
 
         deallocate(temp)
 
@@ -10469,26 +10475,26 @@ c ----------- store metrics for possible time variation
             do j=iys,iye
               do i=1,nnx
                 gm2(i,j,k,l) = gm(i,j,k,l)
-              end do
-            end do
-          end do
-        end do
+              enddo
+            enddo
+          enddo
+        enddo
 
         do k=izs-1,ize+1
           do j=iys,iye
             do i=1,nnx
               zgrid_w(i,j,k,2) = zgrid_w(i,j,k,1)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do j=iys,iye
           do i=1,nnx
             z1b_2(i,j)    = z1b(i,j)
             bndy_t(i,j,2) = bndy_t(i,j,1)
             hdot_t(i,j,2) = hdot_t(i,j,1)
-          end do
-        end do
+          enddo
+        enddo
 
         return
 c --------------------------  errors in writing grid file
@@ -10534,19 +10540,19 @@ c --------- update the metrics [note gm2(.,.,.,5) = 0]
               do i=1,nnx
                 gm(i,j,k,l)  = gm2(i,j,k,l)
                 gm2(i,j,k,l) = gm3(i,j,k,l)
-              end do
-            end do
-          end do
-        end do
+              enddo
+            enddo
+          enddo
+        enddo
 
         do k=izs-1,ize+1
           do j=iys,iye
             do i=1,nnx
               zgrid_w(i,j,k,1) = zgrid_w(i,j,k,2)
               zgrid_w(i,j,k,2) = zgrid_w(i,j,k,3)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c --------- distance off the surface
 
@@ -10558,8 +10564,8 @@ c --------- distance off the surface
             bndy_t(i,j,2) = bndy_t(i,j,3)
             hdot_t(i,j,1) = hdot_t(i,j,2)
             hdot_t(i,j,2) = hdot_t(i,j,3)
-          end do
-        end do
+          enddo
+        enddo
 
 c --------- get the new boundary shape
 c           at t = t_stage3
@@ -10568,15 +10574,15 @@ c           at t = t_stage3
 
         if(i3d_surf == 0) then
           call l_bndy(t_bndy)
-        else if(i3d_surf == 1) then
+        elseif(i3d_surf == 1) then
           call get_surf(t_bndy)
-        else if(i3d_surf == 2) then
+        elseif(i3d_surf == 2) then
           call get_surf_gabls(t_bndy)
-        else if(i3d_surf == 3) then
+        elseif(i3d_surf == 3) then
           call get_surf_tank(t_bndy)
-        else if(i3d_surf == 4) then
+        elseif(i3d_surf == 4) then
           call get_surf_real(t_bndy)
-        end if
+        endif
 
 c -------- initial guess for stretching factor
 
@@ -10587,41 +10593,41 @@ c -------- initial guess for stretching factor
             if(iz_space == 1) then
               call vgrid(zw1,zi,zl-bndy(i,j),z_gues,nnz,
      +            ztemp(0),l_root,l_debug)
-            else if(iz_space == 2) then
+            elseif(iz_space == 2) then
               z_first = zw1*(1.0 - bndy(i,j)/zl)
               call vgrid(z_first,zi,zl-bndy(i,j),z_gues,nnz,
      +            ztemp(0),l_root,l_debug)
-            else if(iz_space == 3) then
+            elseif(iz_space == 3) then
               call exp_grid(bndy(i,j),zl,z(0),ztemp(0),nnz,a_exp_grd)
-            else if(iz_space == 4) then
+            elseif(iz_space == 4) then
               call exp_grid2(bndy(i,j),zl,z(0),ztemp(0),nnz,a_exp_grd2)
-            else if(iz_space == 5) then
+            elseif(iz_space == 5) then
 
               call algeb_grid(bndy(i,j),zl,z(0),ztemp(0),nnz,a_decay)
             else
               call cgrid(zl-bndy(i,j),nnz,ztemp(0))
-            end if
+            endif
             do k=izs-1,ize+1
               zgrid_w(i,j,k,3) = ztemp(k) + bndy(i,j)
-            end do
+            enddo
             do k=izs,ize+1
               zgrid_u(i,j,k) = bndy(i,j) + 0.5*(ztemp(k) + ztemp(k-1))
-            end do
+            enddo
             if(izs == 1) then
               zgrid_u(i,j,izs-1) = 2.0*zgrid_w(i,j,izs-1,3) -
      +            zgrid_u(i,j,izs)
             else
               zgrid_u(i,j,izs-1) = bndy(i,j) +
      +            0.5*(ztemp(izs-1) + ztemp(izs-2))
-            end if
+            endif
 
 c --------- distance off the surface (every processor)
 
             z1b_3(i,j)    = 0.5*(ztemp(1) + ztemp(0))
             bndy_t(i,j,3) = bndy(i,j)
             hdot_t(i,j,3) = hdot(i,j)
-          end do
-        end do
+          enddo
+        enddo
 
 c ------ generate metric components at cell centers
 c        set metric components outside domain = to boundary values
@@ -10631,9 +10637,9 @@ c        set metric components outside domain = to boundary values
             do i=1,nnx
               gm3(i,j,k,1) = (zgrid_w(i,j,k,3) - zgrid_w(i,j,k-1,3))*
      +            dzw_i(k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ---------- pass the 1/J at ize
 c            to the processor above at level izs-1
@@ -10642,17 +10648,17 @@ c            to the processor above at level izs-1
         nt = myid + ncpu_s
         if(iss == 0) then
           nb = mpi_proc_null
-        end if
+        endif
         if(ise == numprocs-1) then
           nt = mpi_proc_null
-        end if
+        endif
         nsend = nnx*(iye + 1 - iys)
         nrecv = nsend
         do j=iys,iye
           do i=1,nnx
             fs(i,j) = gm3(i,j,ize,1)
-          end do
-        end do
+          enddo
+        enddo
         call mpi_sendrecv(
      +      fs(1,iys),nsend,mpi_real8,nt,2,
      +      fr(1,iys),nrecv,mpi_real8,nb,2,
@@ -10661,15 +10667,15 @@ c            to the processor above at level izs-1
           do j=iys,iye
             do i=1,nnx
               gm3(i,j,izs-1,1) = fr(i,j)
-            end do
-          end do
+            enddo
+          enddo
         else
           do j=iys,iye
             do i=1,nnx
               gm3(i,j,izs-1,1) = gm3(i,j,izs,1)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
 c ----- compute grid speed gm2(.,.,.,5) in sr. grid_speed
 
@@ -10678,23 +10684,23 @@ c ----- compute grid speed gm2(.,.,.,5) in sr. grid_speed
             do i=1,nnx
               gm3(i,j,k,4) = 1.0/gm3(i,j,k,1)
               fnt1(i,j,k) = zgrid_u(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
           do j=iys,iye
             do i=1,nnx
               gm3(i,j,k,2) = -fnt1(i,j,k)*gm3(i,j,k,4)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do k=izs-1,ize+1
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = zgrid_u(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fnt1(1,iys,izs-1),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs-1,ize+1,myid,ncpu_s,numprocs)
@@ -10702,9 +10708,9 @@ c ----- compute grid speed gm2(.,.,.,5) in sr. grid_speed
           do j=iys,iye
             do i=1,nnx
               gm3(i,j,k,3) = -fnt1(i,j,k)*gm3(i,j,k,4)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -10740,18 +10746,18 @@ c --------- update the metrics [note gm2(.,.,.,5) = 0]
             do j=iys,iye
               do i=1,nnx
                 gm2(i,j,k,l)  = gm(i,j,k,l)
-              end do
-            end do
-          end do
-        end do
+              enddo
+            enddo
+          enddo
+        enddo
 
         do j=iys,iye
           do i=1,nnx
             z1b_2(i,j)    = z1b(i,j)
             bndy_t(i,j,2) = bndy_t(i,j,1)
             hdot_t(i,j,2) = hdot_t(i,j,1)
-          end do
-        end do
+          enddo
+        enddo
 
 c --------- get the new boundary shape
 c           at t = t_stage2
@@ -10760,15 +10766,15 @@ c           at t = t_stage2
 
         if(i3d_surf == 0) then
           call l_bndy(t_bndy)
-        else if(i3d_surf == 1) then
+        elseif(i3d_surf == 1) then
           call get_surf(t_bndy)
-        else if(i3d_surf == 2) then
+        elseif(i3d_surf == 2) then
           call get_surf_gabls(t_bndy)
-        else if(i3d_surf == 3) then
+        elseif(i3d_surf == 3) then
           call get_surf_tank(t_bndy)
-        else if(i3d_surf == 4) then
+        elseif(i3d_surf == 4) then
           call get_surf_real(t_bndy)
-        end if
+        endif
 
 c -------- initial guess for stretching factor
 
@@ -10779,41 +10785,41 @@ c -------- initial guess for stretching factor
             if(iz_space == 1) then
               call vgrid(zw1,zi,zl-bndy(i,j),z_gues,nnz,
      +            ztemp(0),l_root,l_debug)
-            else if(iz_space == 2) then
+            elseif(iz_space == 2) then
               z_first = zw1*(1.0 - bndy(i,j)/zl)
               call vgrid(z_first,zi,zl-bndy(i,j),z_gues,nnz,
      +            ztemp(0),l_root,l_debug)
-            else if(iz_space == 3) then
+            elseif(iz_space == 3) then
               call exp_grid(bndy(i,j),zl,z(0),ztemp(0),nnz,a_exp_grd)
-            else if(iz_space == 4) then
+            elseif(iz_space == 4) then
               call exp_grid2(bndy(i,j),zl,z(0),ztemp(0),nnz,a_exp_grd2)
-            else if(iz_space == 5) then
+            elseif(iz_space == 5) then
 
               call algeb_grid(bndy(i,j),zl,z(0),ztemp(0),nnz,a_decay)
             else
               call cgrid(zl-bndy(i,j),nnz,ztemp(0))
-            end if
+            endif
             do k=izs-1,ize+1
               zgrid_w(i,j,k,3) = ztemp(k) + bndy(i,j)
-            end do
+            enddo
             do k=izs,ize+1
               zgrid_u(i,j,k) = bndy(i,j) + 0.5*(ztemp(k) + ztemp(k-1))
-            end do
+            enddo
             if(izs == 1) then
               zgrid_u(i,j,izs-1) = 2.0*zgrid_w(i,j,izs-1,3) -
      +            zgrid_u(i,j,izs)
             else
               zgrid_u(i,j,izs-1) = bndy(i,j) +
      +            0.5*(ztemp(izs-1) + ztemp(izs-2))
-            end if
+            endif
 
 c --------- distance off the surface (every processor)
 
             z1b_3(i,j)    =  0.5*(ztemp(1) + ztemp(0))
             bndy_t(i,j,3) =  bndy(i,j)
             hdot_t(i,j,3) =  hdot(i,j)
-          end do
-        end do
+          enddo
+        enddo
 
 c ------ generate metric components at cell centers
 c        set metric components outside domain = to boundary values
@@ -10823,9 +10829,9 @@ c        set metric components outside domain = to boundary values
             do i=1,nnx
               gm3(i,j,k,1) = (zgrid_w(i,j,k,3) - zgrid_w(i,j,k-1,3))*
      +            dzw_i(k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ---------- pass the 1/J at ize
 c            to the processor above at level izs-1
@@ -10834,17 +10840,17 @@ c            to the processor above at level izs-1
         nt = myid + ncpu_s
         if(iss == 0) then
           nb = mpi_proc_null
-        end if
+        endif
         if(ise == numprocs-1) then
           nt = mpi_proc_null
-        end if
+        endif
         nsend = nnx*(iye + 1 - iys)
         nrecv = nsend
         do j=iys,iye
           do i=1,nnx
             fs(i,j) = gm3(i,j,ize,1)
-          end do
-        end do
+          enddo
+        enddo
         call mpi_sendrecv(
      +      fs(1,iys),nsend,mpi_real8,nt,2,
      +      fr(1,iys),nrecv,mpi_real8,nb,2,
@@ -10853,15 +10859,15 @@ c            to the processor above at level izs-1
           do j=iys,iye
             do i=1,nnx
               gm3(i,j,izs-1,1) = fr(i,j)
-            end do
-          end do
+            enddo
+          enddo
         else
           do j=iys,iye
             do i=1,nnx
               gm3(i,j,izs-1,1) = gm3(i,j,izs,1)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
 c ----- compute grid speed gm2(.,.,.,5) in sr. grid_speed
 
@@ -10870,23 +10876,23 @@ c ----- compute grid speed gm2(.,.,.,5) in sr. grid_speed
             do i=1,nnx
               gm3(i,j,k,4) = 1.0/gm3(i,j,k,1)
               fnt1(i,j,k) = zgrid_u(i,j,k)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(fnt1(1,iys,k),trigx(1,1),xk(1),nnx,iys,iye)
           do j=iys,iye
             do i=1,nnx
               gm3(i,j,k,2) = -fnt1(i,j,k)*gm3(i,j,k,4)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         do k=izs-1,ize+1
           do j=iys,iye
             do i=1,nnx
               fnt1(i,j,k) = zgrid_u(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call yd_mpi(fnt1(1,iys,izs-1),trigx(1,2),yk(1),
      +      nnx,nny,ixs,ixe,ix_s,ix_e,
      +      iys,iye,iy_s,iy_e,izs-1,ize+1,myid,ncpu_s,numprocs)
@@ -10894,9 +10900,9 @@ c ----- compute grid speed gm2(.,.,.,5) in sr. grid_speed
           do j=iys,iye
             do i=1,nnx
               gm3(i,j,k,3) = -fnt1(i,j,k)*gm3(i,j,k,4)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -10920,7 +10926,7 @@ c ---------- get grid speeds for the mesh at t = t_stage
         else
           dtgama_2 = dt1*gama(istage-2)
           dtzeta_2 = dt1*zetas(istage-2)
-        end if
+        endif
 
 c ------- get the grid speed at t = t_stage
 
@@ -10931,9 +10937,9 @@ c ------- get the grid speed at t = t_stage
             do i=1,nnx
               gm2(i,j,k,5) = dzw(k)*gami*(gm3(i,j,k,1) - gm2(i,j,k,1) -
      +            dtzeta_2*rj(i,j,k))
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         call xtoz_trans(gm2(1,iys,izs-1,5),gt,nnx,nnz,mxs,mxe,mx_s,mx_e,
      +      iys,iye,izs,ize,iz_s,iz_e,myid,ncpu_s,
      +      numprocs)
@@ -10946,14 +10952,14 @@ c            hdot comes from boundary routine
           do j=iys,iye
             do k=1,nnz
               rh(k) = gt(k,j,i)
-            end do
+            enddo
             gt(0,j,i) = hdot_t(i,j,2)
             do k=1,nnz
               gt(k,j,i) = rh(k) + gt(k-1,j,i)
-            end do
+            enddo
             gt(nnz+1,j,i) = gt(nnz,j,i)
-          end do
-        end do
+          enddo
+        enddo
 
 c --------- transpose back defining ghost point values [izs-1,ize+1]
 c           surface value [izs-1] /= value at [izs]
@@ -10969,9 +10975,9 @@ c ------- get the new rhs of the 1/J equation
           do j=iys,iye
             do i=1,nnx
               rj(i,j,k) = (gm2(i,j,k,5) - gm2(i,j,k-1,5))*dzw_i(k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ---------- determine boundary speeds at t = t_stage
 c            for use in psolver
@@ -10981,18 +10987,18 @@ c            for use in psolver
           do j=iys,iye
             do i=1,nnx
               wfbc(i,j,3) = gm2(i,j,k,5)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
         if(ise == numprocs-1) then
           k = nnz
           do j=iys,iye
             do i=1,nnx
               wfbc(i,j,4) = gm2(i,j,k,5)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
         return
       end
@@ -11009,14 +11015,14 @@ c             first grid point. see hres test code
 
         do i=0,nz
           zw(i) = zeta(i) + h*(1.0 - zeta(i)/zl)**alp
-        end do
+        enddo
         zw(nz+1) = zw(nz) + (zw(nz) - zw(nz-1))
 
 c --------- fix to match rest of code
 
         do i=0,nz+1
           zw(i) = zw(i) - h
-        end do
+        enddo
 
         return
       end
@@ -11038,7 +11044,7 @@ c     alp = 50.00
 
         do i=0,nz
           zw(i) = zeta(i) + h*exp(-alp*zeta(i))
-        end do
+        enddo
 c     zw(nz)   = zeta(nz)
         zw(nz+1) = zw(nz) + (zw(nz) - zw(nz-1))
 
@@ -11046,7 +11052,7 @@ c --------- fix to match rest of code
 
         do i=0,nz+1
           zw(i) = zw(i) - h
-        end do
+        enddo
 
         return
       end
@@ -11072,7 +11078,7 @@ c     alp = 0.00010
         do i=1,nz
           d_zeta = zeta(i) - zeta(1)
           zw(i) = d_zeta + (h + zeta(1))*exp(-alp*d_zeta**2)
-        end do
+        enddo
 c     zw(nz)   = zeta(nz)
         zw(nz+1) = zw(nz) + (zw(nz) - zw(nz-1))
 
@@ -11080,7 +11086,7 @@ c --------- fix to match rest of code
 
         do i=0,nz+1
           zw(i) = zw(i) - h
-        end do
+        enddo
 
         return
       end
@@ -11112,13 +11118,13 @@ c ----------------- build grid up to zi first
  9000     format(' Cannot find stretching factor',/,
      +        ' z_fac = ',e15.6,' z_facn = ',e15.6,' knt = ',i3)
           stop
-        end if
+        endif
         z_fac = z_facn
         if(test > tol) go to 10
         z(1) = z_frst
         do iz=2,nnz
           z(iz) = z_frst*(z_fac**(float(iz)) - 1.0)/(z_fac - 1.0)
-        end do
+        enddo
         z(nnz)   = zl
         z(0)     = 0.0
         z(nnz+1) = z(nnz) + (z(nnz) - z(nnz-1))
@@ -11138,12 +11144,12 @@ c                 point distribution
 
         do iz=1,nnz+1
           dzw(iz) = z(iz) - z(iz-1)
-        end do
+        enddo
         dzw(0)     = dzw(1)
         dzw(nnz+2) = dzw(nnz+1)
         do iz=0,nnz+2
           dzw_i(iz) = 1.0/dzw(iz)
-        end do
+        enddo
 
 c ------------ build weights for vertical interpolation
 c              of a centered variable to a wf-level
@@ -11151,23 +11157,23 @@ c              of a centered variable to a wf-level
         do iz=0,nnz+1
           weit(iz)  = dzw(iz)/(dzw(iz) + dzw(iz+1))
           weitm(iz) = 1.0 - weit(iz)
-        end do
+        enddo
 
 c ------------ build z grid for u points
 
         dzovr2 = dz*0.5
         do iz=1,nnz+1
           zz(iz) = 0.5*(z(iz) + z(iz-1))
-        end do
+        enddo
         zz(0) = - zz(1)
         do iz=1,nnz+1
           dzu(iz) = zz(iz) - zz(iz-1)
-        end do
+        enddo
         dzu(0)     = dzu(1)
         dzu(nnz+2) = dzu(nnz+1)
         do iz=0,nnz+2
           dzu_i(iz) = 1.0/dzu(iz)
-        end do
+        enddo
 
         return
       end
@@ -11197,7 +11203,7 @@ c     n_pbl  = (5*nnz)/8
  9000     format(' Cannot find stretching factor',/,
      +        ' z_fac = ',e15.6,' z_facn = ',e15.6,' knt = ',i3)
           stop
-        end if
+        endif
         z_fac = z_facn
         if(test > tol) go to 10
         if(l_root) write(6,9100) z_fac, z_cntr, z1, knt
@@ -11208,11 +11214,11 @@ c     n_pbl  = (5*nnz)/8
         z(1) = z_frst
         do iz=2,n_pbl/2-1
           z(iz) = z_frst*(z_fac**(float(iz)) - 1.0)/(z_fac - 1.0)
-        end do
+        enddo
         z(n_pbl/2) = z_cntr
         do iz=1,n_pbl/2 - 1
           z(n_pbl-iz) = zi - z(iz)
-        end do
+        enddo
         z(n_pbl) = zi
         z(0)   = 0.0
 
@@ -11285,7 +11291,7 @@ c        ug(iz)   = ugcont*(zz(iz)/zl)
           ug(iz)   = ugcont
           vg(iz)   = vgcont
           divz(iz) = 0.0
-        end do
+        enddo
 
         izi = 92
         zi  = z(izi)
@@ -11303,14 +11309,14 @@ c           u(ix,iy,iz) = ug(iz) - ugal
               v(ix,iy,iz) = vgcont
               w(ix,iy,iz) = 0.0
               e(ix,iy,iz) = 0.0
-            end do
-          end do
+            enddo
+          enddo
           do iy=iys,iye
             do ix=1,nnx
               t(ix,iy,1,iz) = 300.0
-              t(ix,iy,2,iz) = 0.01
-            end do
-          end do
+              t(ix,iy,2,iz) = 0.02   ! modified to match RH profile in Bruch's tank (long waves)  0.01
+            enddo
+          enddo
           do iy=iys,iye
             do ix=1,nnx
               w(ix,iy,iz)   = 0.
@@ -11325,9 +11331,9 @@ c           u(ix,iy,iz) = ug(iz) - ugal
               uf(ix,iy,iz)  = u(ix,iy,iz)
               vf(ix,iy,iz)  = v(ix,iy,iz)
               wf(ix,iy,iz)  = 0.0
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------------- set initial random field to be
 c               divergence free
@@ -11350,8 +11356,8 @@ c ------- simple random field scaled between -0.5 and 0.5
             do ix=1,nnx
               psi(ix,iy) = ran1(idum)
               sum_psi = sum_psi + psi(ix,iy)
-            end do
-          end do
+            enddo
+          enddo
           sum_psi = sum_psi*fnxy
           call mpi_sum_xy(sum_psi,myid,iss,ise,1)
           do iy=iys,iye
@@ -11359,8 +11365,8 @@ c ------- simple random field scaled between -0.5 and 0.5
               psi(ix,iy) = psi(ix,iy) - sum_psi
               psix(ix,iy)     = psi(ix,iy)
               psiy(ix,iy,izs) = psi(ix,iy)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(psix(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call yd_mpi(psiy(1,iys,izs),trigx(1,2),yk(1),
      +        nnx,nny,ixs,ixe,ix_s,ix_e,
@@ -11370,8 +11376,8 @@ c ------- simple random field scaled between -0.5 and 0.5
             do ix=1,nnx
               vmag = sqrt(psix(ix,iy)**2 + psiy(ix,iy,izs)**2)
               if(vmag > vmaxx) vmaxx = vmag
-            end do
-          end do
+            enddo
+          enddo
           facv = ampv/vmaxx
 
           if (z(iz) <= 50.0) then
@@ -11380,17 +11386,17 @@ c ------- simple random field scaled between -0.5 and 0.5
                 u(ix,iy,iz)   = u(ix,iy,iz) - psiy(ix,iy,izs)*facv
                 v(ix,iy,iz)   = v(ix,iy,iz) + psix(ix,iy)*facv
                 t(ix,iy,1,iz) = t(ix,iy,1,iz) + psi(ix,iy)*ampt
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
           if(z(iz) <= 250.0) then
             do iy=iys,iye
               do ix=1,nnx
                 e(ix,iy,iz) = 0.4*(1.0 - z(iz)/250.0)**3
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
 c ---------- check divergence of initial field
 
@@ -11398,8 +11404,8 @@ c ---------- check divergence of initial field
             do ix=1,nnx
               uxx(ix,iy)     = uf(ix,iy,iz)
               vyy(ix,iy,izs) = vf(ix,iy,iz)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(uxx(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call yd_mpi(vyy(1,iys,izs),trigx(1,2),yk(1),
      +        nnx,nny,ixs,ixe,ix_s,ix_e,
@@ -11407,13 +11413,13 @@ c ---------- check divergence of initial field
           do iy=iys,iye
             do ix=1,nnx
               divz(iz) = divz(iz) + (uxx(ix,iy) + vyy(ix,iy,izs))**2
-            end do
-          end do
+            enddo
+          enddo
           divz(iz) = divz(iz)*fnxy
 
 c -------- end z loop
 
-        end do
+        enddo
 
         call mpi_sum_z(divz(1),i_root,myid,nnz,1)
 
@@ -11447,7 +11453,7 @@ c        ug(iz)   = ugcont*(zz(iz)/zl)
           ug(iz)   = ugcont
           vg(iz)   = vgcont
           divz(iz) = 0.0
-        end do
+        enddo
 
         izi = 100
         zi  = z(izi)
@@ -11461,13 +11467,13 @@ c        ug(iz)   = ugcont*(zz(iz)/zl)
               v(ix,iy,iz) = 0.0
               w(ix,iy,iz) = 0.0
               e(ix,iy,iz) = 0.0
-            end do
-          end do
+            enddo
+          enddo
           do iy=iys,iye
             do ix=1,nnx
               t(ix,iy,1,iz) = tsfcc(1)
-            end do
-          end do
+            enddo
+          enddo
           do iy=iys,iye
             do ix=1,nnx
               w(ix,iy,iz)   = 0.
@@ -11481,9 +11487,9 @@ c        ug(iz)   = ugcont*(zz(iz)/zl)
               uf(ix,iy,iz)  = u(ix,iy,iz)
               vf(ix,iy,iz)  = v(ix,iy,iz)
               wf(ix,iy,iz)  = 0.0
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------------- set initial random field to be
 c               divergence free
@@ -11507,8 +11513,8 @@ c ------- simple random field scaled between -0.5 and 0.5
             do ix=1,nnx
               psi(ix,iy) = ran1(idum)
               sum_psi = sum_psi + psi(ix,iy)
-            end do
-          end do
+            enddo
+          enddo
           sum_psi = sum_psi*fnxy
           call mpi_sum_xy(sum_psi,myid,iss,ise,1)
           do iy=iys,iye
@@ -11516,8 +11522,8 @@ c ------- simple random field scaled between -0.5 and 0.5
               psi(ix,iy) = psi(ix,iy) - sum_psi
               psix(ix,iy)     = psi(ix,iy)
               psiy(ix,iy,izs) = psi(ix,iy)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(psix(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call yd_mpi(psiy(1,iys,izs),trigx(1,2),yk(1),
      +        nnx,nny,ixs,ixe,ix_s,ix_e,
@@ -11527,8 +11533,8 @@ c ------- simple random field scaled between -0.5 and 0.5
             do ix=1,nnx
               vmag = sqrt(psix(ix,iy)**2 + psiy(ix,iy,izs)**2)
               if(vmag > vmaxx) vmaxx = vmag
-            end do
-          end do
+            enddo
+          enddo
           facv = ampv/vmaxx
 
           if (z(iz) <= 0.2) then
@@ -11537,18 +11543,18 @@ c ------- simple random field scaled between -0.5 and 0.5
                 u(ix,iy,iz)   = u(ix,iy,iz) - psiy(ix,iy,izs)*facv
                 v(ix,iy,iz)   = v(ix,iy,iz) + psix(ix,iy)*facv
                 t(ix,iy,1,iz) = t(ix,iy,1,iz) + psi(ix,iy)*ampt
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
           if(z(iz) <= 0.2) then
             do iy=iys,iye
               do ix=1,nnx
 c           e(ix,iy,iz) = 0.4*(1.0 - z(iz)/zl)**3
                 e(ix,iy,iz) = 0.05*(1.0 - z(iz)/zl)**3
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
 c ---------- check divergence of initial field
 
@@ -11556,8 +11562,8 @@ c ---------- check divergence of initial field
             do ix=1,nnx
               uxx(ix,iy)     = uf(ix,iy,iz)
               vyy(ix,iy,izs) = vf(ix,iy,iz)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(uxx(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call yd_mpi(vyy(1,iys,izs),trigx(1,2),yk(1),
      +        nnx,nny,ixs,ixe,ix_s,ix_e,
@@ -11565,13 +11571,13 @@ c ---------- check divergence of initial field
           do iy=iys,iye
             do ix=1,nnx
               divz(iz) = divz(iz) + (uxx(ix,iy) + vyy(ix,iy,izs))**2
-            end do
-          end do
+            enddo
+          enddo
           divz(iz) = divz(iz)*fnxy
 
 c -------- end z loop
 
-        end do
+        enddo
 
         call mpi_sum_z(divz(1),i_root,myid,nnz,1)
 
@@ -11740,7 +11746,7 @@ c --------- find time location of initial profiles
      +        v_i(iz,jtp1)*t_weit
           ti_temp(iz) = theta_i(iz,jt)*(1.0 - t_weit) +
      +        theta_i(iz,jtp1)*t_weit
-        end do
+        enddo
 
 c ----------- interpolate vertically
 
@@ -11764,9 +11770,9 @@ c ----------- interpolate vertically
               r3(ix,iy,iz)  = 0.
               r4(ix,iy,1,iz)= 0.
               r5(ix,iy,iz)  = 0.
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------------- set initial random field to be
 c               divergence free
@@ -11786,15 +11792,15 @@ c ------- simple random field scaled between 0 and 1
             do iy=iys,iye
               do ix=1,nnx
                 psi(ix,iy) = ran1(idum)
-              end do
-            end do
+              enddo
+            enddo
 
             do iy=iys,iye
               do ix=1,nnx
                 psix(ix,iy) = psi(ix,iy)
                 psiy(ix,iy,izs) = psi(ix,iy)
-              end do
-            end do
+              enddo
+            enddo
             call xderivp(psix(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
             call yd_mpi(psiy(1,iys,izs),trigx(1,2),yk(1),
      +          nnx,nny,ixs,ixe,ix_s,ix_e,
@@ -11805,8 +11811,8 @@ c ------- simple random field scaled between 0 and 1
               do ix=1,nnx
                 vmag = sqrt(psix(ix,iy)**2 + psiy(ix,iy,izs)**2)
                 if(vmag > vmaxx) vmaxx = vmag
-              end do
-            end do
+              enddo
+            enddo
             facv = ampv/vmaxx
             do iy=iys,iye
               do ix=1,nnx
@@ -11814,9 +11820,9 @@ c ------- simple random field scaled between 0 and 1
                 v(ix,iy,iz)   = v(ix,iy,iz) + psix(ix,iy)*facv
                 t(ix,iy,1,iz) = t(ix,iy,1,iz) + psi(ix,iy)*ampt
                 e(ix,iy,iz)   = 1.0
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
 c ---------- check divergence of initial field
 
@@ -11824,8 +11830,8 @@ c ---------- check divergence of initial field
             do ix=1,nnx
               uxx(ix,iy)     = u(ix,iy,iz)
               vyy(ix,iy,izs) = v(ix,iy,iz)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(uxx(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call yd_mpi(vyy(1,iys,izs),trigx(1,2),yk(1),
      +        nnx,nny,ixs,ixe,ix_s,ix_e,
@@ -11833,13 +11839,13 @@ c ---------- check divergence of initial field
           do iy=iys,iye
             do ix=1,nnx
               divz(iz) = divz(iz) + (uxx(ix,iy) + vyy(ix,iy,izs))**2
-            end do
-          end do
+            enddo
+          enddo
           divz(iz) = divz(iz)*fnxy
 
 c -------- end z loop
 
-        end do
+        enddo
 
         call mpi_sum_z(divz(1),i_root,myid,nnz,1)
 
@@ -11877,9 +11883,9 @@ c          ocean simulation
                 w(ix,iy,iz)   = 0.0
                 t(ix,iy,1,iz) = tmixed
                 e(ix,iy,iz)   = 0.0
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
           if (iz>izi) then
             do iy=iys,iye
               do ix=1,nnx
@@ -11888,9 +11894,9 @@ c          ocean simulation
                 w(ix,iy,iz)   = 0.0
                 t(ix,iy,1,iz) = tmixed + dtdzf(1)*(zz(iz)-zi)
                 e(ix,iy,iz)   = 0.0
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
           do iy=iys,iye
             do ix=1,nnx
               w(ix,iy,iz)    = 0.0
@@ -11899,9 +11905,9 @@ c          ocean simulation
               r3(ix,iy,iz)   = 0.0
               r4(ix,iy,1,iz) = 0.0
               r5(ix,iy,iz)   = 0.0
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
 c ------------- set initial random field to be
 c               divergence free
@@ -11922,15 +11928,15 @@ c ------- simple random field scaled between 0 and 1
             do iy=iys,iye
               do ix=1,nnx
                 psi(ix,iy) = ran1(idum)
-              end do
-            end do
+              enddo
+            enddo
 
             do iy=iys,iye
               do ix=1,nnx
                 psix(ix,iy) = psi(ix,iy)
                 psiy(ix,iy,izs) = psi(ix,iy)
-              end do
-            end do
+              enddo
+            enddo
             call xderivp(psix(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
             call yd_mpi(psiy(1,iys,izs),trigx(1,2),yk(1),
      +          nnx,nny,ixs,ixe,ix_s,ix_e,
@@ -11941,8 +11947,8 @@ c ------- simple random field scaled between 0 and 1
               do ix=1,nnx
                 vmag = sqrt(psix(ix,iy)**2 + psiy(ix,iy,izs)**2)
                 if(vmag > vmaxx) vmaxx = vmag
-              end do
-            end do
+              enddo
+            enddo
             facv = ampv/vmaxx
             do iy=iys,iye
               do ix=1,nnx
@@ -11950,9 +11956,9 @@ c ------- simple random field scaled between 0 and 1
                 v(ix,iy,iz) = v(ix,iy,iz) + psix(ix,iy)*facv
                 t(ix,iy,1,iz) = t(ix,iy,1,iz) + psi(ix,iy)*ampt
                 e(ix,iy,iz) = 0.0001
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
 
 c ---------- check divergence of initial field
 
@@ -11960,8 +11966,8 @@ c ---------- check divergence of initial field
             do ix=1,nnx
               uxx(ix,iy) = u(ix,iy,iz)
               vyy(ix,iy,izs) = v(ix,iy,iz)
-            end do
-          end do
+            enddo
+          enddo
           call xderivp(uxx(1,iys),trigx(1,1),xk(1),nnx,iys,iye)
           call yd_mpi(vyy(1,iys,izs),trigx(1,2),yk(1),
      +        nnx,nny,ixs,ixe,ix_s,ix_e,
@@ -11969,13 +11975,13 @@ c ---------- check divergence of initial field
           do iy=iys,iye
             do ix=1,nnx
               divz(iz) = divz(iz) + (uxx(ix,iy) + vyy(ix,iy,izs))**2
-            end do
-          end do
+            enddo
+          enddo
           divz(iz) = divz(iz)*fnxy
 
 c -------- end z loop
 
-        end do
+        enddo
 
         call mpi_sum_z(divz(1),i_root,myid,nnz,1)
 
@@ -11988,7 +11994,7 @@ c -------- end z loop
         do iz=izs,ize
           ug(iz)=ugcont
           vg(iz)=vgcont
-        end do
+        enddo
 
         return
       end
@@ -12009,8 +12015,8 @@ c             constant cooling rate
         do j=iys,iye
           do i=1,nnx
             t_grnd(i,j,1) = t_surface
-          end do
-        end do
+          enddo
+        enddo
 
         return
       end
@@ -12051,11 +12057,11 @@ c           dt_new from flow field at end of current it+1 step
 c ---------- increment time if not first time through
 
           time=time+dt
-        end if
+        endif
 
         if(istart == 0) then
           dt1 = dt_new
-        end if
+        endif
 
         it=it+1
 
@@ -12072,7 +12078,7 @@ c ---------- decide frequency history fields are saved
           mhis = .false.
         else
           mhis = (mod(it,ihst)==0 .and. it >= it_his)
-        end if
+        endif
         mtrans = (mod(it+1,ihst)==0)
 
 c ---------- decide frequency viz fields are saved
@@ -12081,7 +12087,7 @@ c ---------- decide frequency viz fields are saved
           msave_v = .false.
         else
           msave_v = (mod(it,iviz)==0 .and. it >= it_viz)
-        end if
+        endif
 
 c ---------- decide whether velocity fields are saved
 
@@ -12090,7 +12096,7 @@ c ---------- decide whether velocity fields are saved
           msave = .true.
           call get_output_filenames
           itn=itn+1
-        end if
+        endif
 
 c --------- decide whether history files are to be saved
 
@@ -12099,16 +12105,16 @@ c --------- decide whether history files are to be saved
             call open_his_netcdf
           else
             call open_his(it)
-          end if
+          endif
           it_his_nxt = it_his_nxt + itape
-        end if
+        endif
 
 c --------- decide whether viz files are to be saved
 
         if((iviz > 0) .and. (it >= it_viz_nxt)) then
           call viz_output_filename(it)
           it_viz_nxt = it_viz_nxt + itape
-        end if
+        endif
 
 c ---------- if first time thru and moving mesh
 c            setup the grid and set t_zero = reference time
@@ -12118,7 +12124,7 @@ c            setup the grid and set t_zero = reference time
           imesh  = 0
           t_zero = time
           go to 999
-        end if
+        endif
 
         if(it == move_step .and. imesh == 0) then
 
@@ -12135,11 +12141,11 @@ c -------- first time thru set W = grid speed everywhere
               do i=1,nnx
                 wf(i,j,k) = gm2(i,j,k,5) + wf(i,j,k)
 c             wf(i,j,k) = gm2(i,j,k,5)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
 
-        else if(it > move_step .and. imesh == 0) then
+        elseif(it > move_step .and. imesh == 0) then
 
 c ---------- restart with moving grid
 
@@ -12148,7 +12154,7 @@ c ---------- restart with moving grid
           t_stage2 = time + dt*etas(2)
           call start_mesh(it,1)
           call grid_speed(it,0)
-        end if
+        endif
 
   999   continue
 
@@ -12194,10 +12200,10 @@ c              process need find zi
               if (wttot<=wtmin) then
                 itop=iz
                 wtmin=wttot
-              end if
-            end do
+              endif
+            enddo
             zi=z(itop)
-          else if (method == 1) then
+          elseif (method == 1) then
             itop = 1
             crit = 0.05
             uwsf = utau*utau
@@ -12207,15 +12213,15 @@ c              process need find zi
               uwtot = sqrt(uwtot)
               if(uwtot/uwsf > crit) then
                 itop=iz
-              end if
-            end do
+              endif
+            enddo
             zi=z(itop)
-          else if (method == 2) then
+          elseif (method == 2) then
             trun(1) = txym(1,1)
             do iz=2,nnz
               weight = z(iz-1)/z(iz)
               trun(iz) = trun(iz-1)*weight + (1.0-weight)*txym(iz,1)
-            end do
+            enddo
             itop = 1
             tcrit = 0.25
             if(iocean == 1) tcrit = 0.1
@@ -12223,20 +12229,20 @@ c              process need find zi
               if(txym(iz,1) > (trun(iz) + tcrit)) then
                 itop = iz
                 go to 320
-              end if
-            end do
+              endif
+            enddo
   320       continue
             zi=z(itop)
-          end if
+          endif
           do iy=1,nny
             do ix=1,nnx
               gradmax(2,ix,iy) = zi
-            end do
-          end do
+            enddo
+          enddo
 
 c ----------- use gradient method, every process computes
 
-        else if(method == 3) then
+        elseif(method == 3) then
 
 c ------- similar to zeroing the stat array in sr. mean_stat
 
@@ -12244,8 +12250,8 @@ c ------- similar to zeroing the stat array in sr. mean_stat
             do ix=1,nnx
               gradloc(1,ix,iy) = 0.0
               gradloc(2,ix,iy) = z(iz_min)
-            end do
-          end do
+            enddo
+          enddo
 
 c ------------- now all z in this process
 
@@ -12258,11 +12264,11 @@ c ------------- now all z in this process
                   if(grad > gradloc(1,ix,iy)) then
                     gradloc(1,ix,iy) = grad
                     gradloc(2,ix,iy) = z(iz)
-                  end if
-                end do
-              end do
-            end do
-          end if
+                  endif
+                enddo
+              enddo
+            enddo
+          endif
 
 c ----------- alternate version using already defined function in mpi
 c             passes 2 real8 variables
@@ -12277,18 +12283,18 @@ c ------------ get average on root process
             do iy=1,nny
               do ix=1,nnx
                 zi_avg = zi_avg + gradmax(2,ix,iy)
-              end do
-            end do
+              enddo
+            enddo
             zi = zi_avg*fnxy
             itop = 1
             do k=1,nnz-1
               if(zi > z(k) .and. zi <= z(k+1)) then
                 itop = k
-              end if
-            end do
-          end if
+              endif
+            enddo
+          endif
 
-        end if
+        endif
 
 c -------- send average zi everywhere
 
@@ -12299,13 +12305,13 @@ c -------- send average zi everywhere
           do iz=1,nnz
             if(zi >= z(iz) .and.
      +          zi < z(iz+1)) itop = iz
-          end do
+          enddo
         else
           do iz=1,nnz
             if(zi <= z(iz) .and.
      +          zi > z(iz+1)) itop = iz
-          end do
-        end if
+          enddo
+        endif
 
 c ---------- get zi/L
 
@@ -12326,8 +12332,8 @@ c     if(l_root) write(6,7001) myid,zi,itop
           if(gradmax(i) > gradout(i)) then
             gradout(i)   = gradmax(i)
             gradout(i+1) = gradmax(i+1)
-          end if
-        end do
+          endif
+        enddo
 
         return
       end
@@ -12373,7 +12379,7 @@ c     if(l_root) write(6,7001) myid,zi,itop
           write(lu,4500) stokess,udrift,vdrift
  4500     format(/,' STOKESS = ',e12.4,' UDRIFT = ',e12.4,
      +        ' VDRIFT = ',e12.4)
-        end if
+        endif
         write(lu,4600) (iz,uxym(iz)+ugal,vxym(iz),uwle(iz),
      +      uwsb(iz),vwle(iz),vwsb(iz),pm(iz),iz=iz_strt,iz_end)
  4600   format(//,' IZ',5x,' UXYM + UGAL',8x,' VXYM',10x,' UWLE',11x,
@@ -12385,7 +12391,7 @@ c     if(l_root) write(6,7001) myid,zi,itop
      +        ' VISCON = ',e15.6,' VISE = ',e15.6)
           write(lu,4700) (iz,dfac(iz),iz=iz_strt,iz_end)
  4700     format(//,'   IZ',5x,'  DFAC',/,(1x,i4,3x,e15.6))
-        end if
+        endif
 
 c --------------- output additional scalars
 
@@ -12398,7 +12404,7 @@ c --------------- output additional scalars
  5100     format(//,' IZ',5x,' SCALAR-1 MEAN',8x,' WS1LE',10x,
      +        ' WS1SB',10x
      +        ,/,(1x,i4,3(3x,e13.6)))
-        end if
+        endif
 
         return
       end
@@ -12476,8 +12482,8 @@ c           by setting stat array = 0 for all z on each process
         do i=1,nstat
           do k=1,nnz
             stat(k,i) = 0.0
-          end do
-        end do
+          enddo
+        enddo
 
 c -------- indices for scalars
 
@@ -12557,11 +12563,11 @@ c --------- get drag [p(z)*z_xi(1), p(z)*z_eta(1)]
               stat(k,37) = stat(k,37) + partfluxdn(i,j,k)
 
               RHtmp = t(i,j,1,k)*t(i,j,2,k)*
-     +                Ru/Mw/mod_magnus(t(i,j,1,k))*rhoa*100.0
+     +            Ru/Mw/mod_magnus(t(i,j,1,k))*rhoa*100.0
 
               stat(k,38) = stat(k,38) + RHtmp
-            end do
-          end do
+            enddo
+          enddo
 
 c ------------ get scalar resolved fluxes and variances
 
@@ -12572,8 +12578,8 @@ c ------------ get scalar resolved fluxes and variances
                   stat(k,m1+l)=stat(k,m1+l) +
      +                0.5*(wf(i,j,k) - gm(i,j,k,5))*
      +                (t(i,j,l,k)-txym(k,l)+t(i,j,l,kp1)-txym(kp1,l))
-                end do
-              end do
+                enddo
+              enddo
             else
 
 c ------------------- monotone fluxes
@@ -12586,9 +12592,9 @@ c ------------------- monotone fluxes
      +                rlim(t(i,j,l,kp1),t(i,j,l,k),t(i,j,l,km1))) +
      +                amin1(sgn*wflx,0.)*(t(i,j,l,kp1) +
      +                rlim(t(i,j,l,k),t(i,j,l,kp1),t(i,j,l,kp2)))
-                end do
-              end do
-            end if
+                enddo
+              enddo
+            endif
             stat(k,m1+l)= sgn*stat(k,m1+l)
 
             do j=iys,iye
@@ -12596,8 +12602,8 @@ c ------------------- monotone fluxes
                 stat(k,m6+l) = stat(k,m6+l) +
      +              (w(i,j,k) - wxym(k))*
      +              (t(i,j,l,k)-txym(k,l))
-              end do
-            end do
+              enddo
+            enddo
 
 c ------------ get horizontal scalar resolved fluxes
 
@@ -12607,8 +12613,8 @@ c ------------ get horizontal scalar resolved fluxes
      +              uf(i,j,k)*(t(i,j,l,k)-txym(k,l))
                 stat(k,m3+l) = stat(k,m3+l)+
      +              vf(i,j,k)*(t(i,j,l,k)-txym(k,l))
-              end do
-            end do
+              enddo
+            enddo
 
 c ------------------- scalar variances & higher moments
 
@@ -12618,16 +12624,16 @@ c ------------------- scalar variances & higher moments
      +              (t(i,j,l,k) - txym(k,l))**2
                 stat(k,m5+l) = stat(k,m5+l) +
      +              (t(i,j,l,k) - txym(k,l))**3
-              end do
-            end do
+              enddo
+            enddo
 
 c ------ end scalar loop
 
-          end do
+          enddo
 
 c ------ end z loop
 
-        end do
+        enddo
 
 c -------- add partial sums and send it to all
 
@@ -12688,8 +12694,8 @@ c ------------ get scalar resolved fluxes and variances
             tcube(k,l)  = stat(k,m5+l)*fnxy
             wctle(k,l)  = stat(k,m6+l)*fnxy
             wt_tot(k,l) = wtle(k,l) + wtsb(k,l)
-          end do
-        end do
+          enddo
+        enddo
 
 c ---------- drag at first zu grid point
 
@@ -12718,7 +12724,7 @@ c          stat(.,2) = pressure transport  = wp
         do k=1,nnz
           stat(k,1) = 0.0
           stat(k,2) = 0.0
-        end do
+        enddo
 
 c --------------- get transport terms as vertical arrays
 
@@ -12740,11 +12746,11 @@ c --------- get estimate of pressure transport term
 
               pfluc     = pm(k) + p(i,j,k) - c23*e(i,j,k)
               stat(k,2) = stat(k,2) + pfluc*wfluc
-            end do
-          end do
+            enddo
+          enddo
           stat(k,1) = stat(k,1)*fnxy
           stat(k,2) = stat(k,2)*fnxy
-        end do
+        enddo
         call mpi_sum_z(stat(1,1),i_root,myid,nnz*2,1)
 
 c ------ we have all terms on all processors for all z, add them up
@@ -12765,7 +12771,7 @@ c        treat tr_tau at bottom special, tr_tau = 0
             t_tau(k) = -(t_tau_u - t_tau_l)*dzu_i(kp1)
             t_wq(k)  = -(stat(kp1,1) - stat(k,1))*dzu_i(kp1)
             t_wp(k)  = -(stat(kp1,2) - stat(k,2))*dzu_i(kp1)
-          end if
+          endif
           dudz = (uxym(kp1) - uxym(k))*dzu_i(kp1)
           dvdz = (vxym(kp1) - vxym(k))*dzu_i(kp1)
 
@@ -12776,7 +12782,7 @@ c ------------- gather all the budget terms
           t_sprod(k) =  (dudz*uwsb(k) + dvdz*vwsb(k))
           t_buoy(k)  =  batag*wtle(k,1)
 
-        end do
+        enddo
 
         return
       end
@@ -12796,7 +12802,7 @@ c       write tsfcc specially to preserve digits!
         divgmax = 0.0
         do iz=1,nnz
           divgmax = amax1(divgmax, divz(iz))
-        end do
+        enddo
 
         ziavg = zi
         holtop = hol
@@ -12825,7 +12831,7 @@ c        subtract reference before saving history file
         do k=1,nnz
           save_theta(k) = txym(k,1)
           txym(k,1)     = txym(k,1) - t_ref
-        end do
+        enddo
 
 c -------------- write profile information
 
@@ -12833,7 +12839,7 @@ c -------------- write profile information
 
         do k=1,nnz
           txym(k,1) = save_theta(k)
-        end do
+        enddo
 
         return
       end
@@ -12845,7 +12851,7 @@ c -------------- build special 32 bit arrays for profiles
 
         do i=1,num
           f32(i) = f(i)
-        end do
+        enddo
 
         write(nhisp,err=999,rec=krec) (f32(i),i=1,num)
 
@@ -12874,13 +12880,13 @@ c ---- root closes and checks the files
           write(6,8000) path_sav_h
           call mpi_finalize(ierr)
           stop
-        end if
+        endif
         inquire(file=path_sav_hp,exist=there)
         if(.not.there) then
           write(6,8100) path_sav_hp
           call mpi_finalize(ierr)
           stop
-        end if
+        endif
         write(6,7000) path_sav_h
         write(6,7100) path_sav_hp
 
@@ -12916,8 +12922,8 @@ c --------- sharp spectral cutoff, specific to current 2dfft
             do i=1,nnx
 c        gm_work(i,j) = gm(i,j,izs-1,5)
               gm_work(i,j) = gm2(i,j,izs-1,5)
-            end do
-          end do
+            enddo
+          enddo
           call fft2d_mpi(gm_work(1,iys),wve(1,jxs),
      +        trigx(1,1),trigc,
      +        nnx,nny,jxs,jxe,jx_s,jx_e,iys,iye,iy_s,iy_e,
@@ -12931,10 +12937,10 @@ c        gm_work(i,j) = gm(i,j,izs-1,5)
             do i=1,nnx
 c        gm(i,j,izs-1,5)  = gm_work(i,j)
               gm2(i,j,izs-1,5) = gm_work(i,j)
-            end do
-          end do
+            enddo
+          enddo
 
-        end if
+        endif
 
         if(ise == numprocs-1) then
 
@@ -12942,8 +12948,8 @@ c        gm(i,j,izs-1,5)  = gm_work(i,j)
             do i=1,nnx
 c        gm_work(i,j) = gm(i,j,ize,5)
               gm_work(i,j) = gm2(i,j,ize,5)
-            end do
-          end do
+            enddo
+          enddo
           call fft2d_mpi(gm_work(1,iys),wve(1,jxs),
      +        trigx(1,1),trigc,
      +        nnx,nny,jxs,jxe,jx_s,jx_e,iys,iye,iy_s,iy_e,
@@ -12957,10 +12963,10 @@ c        gm_work(i,j) = gm(i,j,ize,5)
             do i=1,nnx
 c        gm(i,j,ize,5)  = gm_work(i,j)
               gm2(i,j,ize,5) = gm_work(i,j)
-            end do
-          end do
+            enddo
+          enddo
 
-        end if
+        endif
 
         return
       end
@@ -13059,9 +13065,9 @@ c ------------- scalars, not stored in correct order
             do iy=iys,iye
               do ix=1,nnx
                 wves(ix,iy,iz) = t(ix,iy,iscl,iz)
-              end do
-            end do
-          end do
+              enddo
+            enddo
+          enddo
           call fft2d_mpi(wves(1,iys,izs),wve(1,jxs,izs),trigx(1,1),
      +        trigc,nnx,nny,jxs,jxe,jx_s,jx_e,iys,iye,iy_s,iy_e,
      +        izs,ize,myid,ncpu_s,numprocs,-2)
@@ -13073,10 +13079,10 @@ c ------------- scalars, not stored in correct order
             do iy=iys,iye
               do ix=1,nnx
                 t(ix,iy,iscl,iz) = wves(ix,iy,iz)
-              end do
-            end do
-          end do
-        end do
+              enddo
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -13092,9 +13098,9 @@ c           in 2d-fft order
           do ix=jxs,jxe
             do iy=iy_cut_l,iy_cut_u
               wve(iy,ix,iz) = 0.0
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         if(jxe < ix_cut) go to 999
 
@@ -13102,9 +13108,9 @@ c           in 2d-fft order
           do ix=max(jxs,ix_cut),jxe
             do iy=1,nny
               wve(iy,ix,iz) = 0.0
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
   999   continue
 
@@ -13121,16 +13127,16 @@ c           in 2d-fft order
         do ix=jxs,jxe
           do iy=iy_cut_l,iy_cut_u
             wve(iy,ix) = 0.0
-          end do
-        end do
+          enddo
+        enddo
 
         if(jxe < ix_cut) go to 999
 
         do ix=max(jxs,ix_cut),jxe
           do iy=1,nny
             wve(iy,ix) = 0.0
-          end do
-        end do
+          enddo
+        enddo
 
   999   continue
 
@@ -13173,7 +13179,7 @@ c ----------- make sure problem and cpu's match
         if(mod(numprocs,ncpu_s) /= 0 .or.
      +      ncpu_z > nnz) then
           go to 999
-        end if
+        endif
         if(l_root) write(6, 1100) ncpu_s, ncpu_z, numprocs, maxp
         write(nprt,1100) ncpu_s, ncpu_z, numprocs, maxp
  1100   format(' Number of x-y slab cpus = ',i5,/,
@@ -13261,7 +13267,7 @@ c ------------- allocate space for grid and metrics
 c ------------- allocate extended arrays for interpolation of
 c               particle/spray location
 
-        if (ispray==1) then
+        if (ispray > 0) then
           allocate(uext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3),
      +        vext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3),
      +        wext(0:nnz+1,iys-2:iye+3,mxs-2:mxe+3),
@@ -13273,7 +13279,7 @@ c               particle/spray location
      +        w_t(0:nnz+1,iys:iye,mxs:mxe),
      +        T_t(0:nnz+1,iys:iye,mxs:mxe),
      +        T2_t(0:nnz+1,iys:iye,mxs:mxe))
-        end if
+        endif
       !Keep track of particle counts at each node (its surrounding volume)
       !NOTE: allocate even if ispray == 0, since it's in xy_stats
         allocate(partcount(nnx,iys:iye,izs-1:ize+1))
@@ -13405,7 +13411,7 @@ c --------------------- check if file is there
         else
           if(l_root) write(6,6005) path_res
           stop
-        end if
+        endif
 
 c ------------------ get constant file
 
@@ -13417,7 +13423,7 @@ c ------------------ get constant file
         else
           if(l_root) write(6,6006) path_res_c
           stop
-        end if
+        endif
         open(nvelc,err=200,file=path_res_c,form='unformatted',
      +      status='old')
 
@@ -13459,9 +13465,9 @@ c -----------------------
           do j=iys,iye
             do ii=1,nvar
               temp_x(ii,j,k) = buf(ii,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -13543,8 +13549,8 @@ c      [iz_s:iz_e] z-range for a particular vertical slab
 
             is_s(ii)  = (ii/ncpu_s)*ncpu_s
             is_e(ii)  = is_s(ii) + ncpu_s - 1
-          end do
-        end do
+          enddo
+        enddo
 
         iys  =  iy_s(myid)
         iye  =  iy_e(myid)
@@ -13589,7 +13595,7 @@ c ------------ debug ranges
      +        ' jys ',5x,' jye ',5x,
      +        ' izs ',5x,' ize',5x,' iss ',5x,' ise ',/,
      +        (9i6))
-        end if
+        endif
 
         return
       end
@@ -13607,19 +13613,19 @@ c           for vector f(i). f(i) is overwritten. skip if single processor
         do j=1,nsend
           work(j,myid) = f(j)
           f(j)         = 0.0
-        end do
+        enddo
         do i=iss,ise
           if(i /= myid) then
             call mpi_sendrecv(work(1,myid),nsend,mpi_real8,i,1,
      +          work(1,i),nsend,mpi_real8,i,1,
      +          mpi_comm_world,istatus,ierr)
-          end if
-        end do
+          endif
+        enddo
         do i=iss,ise
           do j=1,nsend
             f(j) = f(j) + work(j,i)
-          end do
-        end do
+          enddo
+        enddo
 
   999   continue
 
@@ -13642,8 +13648,8 @@ c -------- just root gets the result
           if(myid == i_root) then
             do i=1,nsend
               f(i) = recv_b(i)
-            end do
-          end if
+            enddo
+          endif
         else
 
 c -------- everyone gets the result
@@ -13652,8 +13658,8 @@ c -------- everyone gets the result
      +        mpi_comm_world,ierr)
           do i=1,nsend
             f(i) = recv_b(i)
-          end do
-        end if
+          enddo
+        endif
 
         return
       end
@@ -13673,18 +13679,18 @@ c           for all z for vector f(i,nscl)
             do iscl=1,nscl
               do i=1,nsend
                 f(i,iscl) = recv_b(i,iscl)
-              end do
-            end do
-          end if
+              enddo
+            enddo
+          endif
         else
           call mpi_allreduce(f(1,1),recv_b(1,1),nsend*nscl,mpi_real8,
      +        mpi_sum, mpi_comm_world,ierr)
           do iscl=1,nscl
             do i=1,nsend
               f(i,iscl) = recv_b(i,iscl)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
         return
       end
@@ -13709,8 +13715,8 @@ c ---------- gather results on root processors
             num = iz_e(l) + 1 - iz_s(l)
             call mpi_recv(fr(ind),num,mpi_real8,l,1,
      +          mpi_comm_world,istatus,ierr)
-          end do
-        end if
+          enddo
+        endif
 
   999   continue
 
@@ -13734,8 +13740,8 @@ c ---------- send root results to other processors above it
           do l=irow_r+ns,np-1,ns
             call mpi_send(fs(1),num,mpi_real8,l,1,
      +          mpi_comm_world,ierr)
-          end do
-        end if
+          enddo
+        endif
 
   999   continue
 
@@ -13779,10 +13785,10 @@ c ----------- get cpus on slab for myid
      +          ft(1),nsend,mpi_real8,i,1,
      +          gt(1),nrecv,mpi_real8,i,1,
      +          mpi_comm_world,istatus,ierr)
-          end if
+          endif
           call recv_xtoy(g,gt(1),ny,ix_s(myid),ix_e(myid),
      +        iy_s(i),iy_e(i),iz1,iz2)
-        end do
+        enddo
 
         return
       end
@@ -13796,9 +13802,9 @@ c ------------- grab correct chunk of array to be sent
           do j=iys,iye
             do i=ixs,ixe
               ft(i,j,k) = f(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -13809,9 +13815,9 @@ c ------------- grab correct chunk of array to be sent
           do j=iys,iye
             do i=ixs,ixe
               g(j,i,k) = gt(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -13853,10 +13859,10 @@ c ----------- get cpus on slab for myid
      +          gt(1),nsend,mpi_real8,i,1,
      +          ft(1),nrecv,mpi_real8,i,1,
      +          mpi_comm_world,istatus,ierr)
-          end if
+          endif
           call recv_ytox(f,ft(1),nx,ix_s(i),ix_e(i),
      +        iy_s(myid),iy_e(myid),iz1,iz2)
-        end do
+        enddo
 
         return
       end
@@ -13870,9 +13876,9 @@ c ------------- grab correct chunk of array to be sent
           do i=ixs,ixe
             do j=iys,iye
               gt(j,i,k) = g(j,i,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -13883,9 +13889,9 @@ c ------------- grab correct chunk of array to be sent
           do i=ixs,ixe
             do j=iys,iye
               f(i,j,k) = ft(j,i,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -13925,10 +13931,10 @@ c ----------- get starting location
      +          ft(1),nsend,mpi_real8,i,1,
      +          gt(1),nrecv,mpi_real8,i,1,
      +          mpi_comm_world,istatus,ierr)
-          end if
+          endif
           call recv_xtoz(g,gt(1),nz,ix_s(myid),ix_e(myid),
      +        iys,iye,iz_s(i),iz_e(i))
-        end do
+        enddo
 
         return
       end
@@ -13942,9 +13948,9 @@ c ------- grab correct chunk of array to be sent and skip ghost points
           do j=iys,iye
             do i=ixs,ixe
               ft(i,j,k) = f(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -13955,9 +13961,9 @@ c ------- grab correct chunk of array to be sent and skip ghost points
           do j=iys,iye
             do i=ixs,ixe
               g(k,j,i) = gt(i,j,k)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -13998,10 +14004,10 @@ c ------------- get starting location
      +          gt(1),nsend,mpi_real8,i,1,
      +          ft(1),nrecv,mpi_real8,i,1,
      +          mpi_comm_world,istatus,ierr)
-          end if
+          endif
           call recv_ztox(f,ft(1),nx,ix_s(i),ix_e(i),
      +        iys,iye,iz_s(myid),iz_e(myid))
-        end do
+        enddo
 
         return
       end
@@ -14016,9 +14022,9 @@ c               account for ghost points
           do i=ixs,ixe
             do k=izs-1,ize+1
               gt(k,j,i) = g(k,j,i)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -14029,9 +14035,9 @@ c               account for ghost points
           do j=iys,iye
             do k=izs-1,ize+1
               f(i,j,k) = ft(k,j,i)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         return
       end
@@ -14056,10 +14062,10 @@ c ------------ account for endpoints
 
         if(iss == 0) then
           nb = mpi_proc_null
-        end if
+        endif
         if(ise == numprocs-1) then
           nt = mpi_proc_null
-        end if
+        endif
         nsend = nnx*(iye + 1 - iys)*(5+nscl)
         nrecv = nsend
 
@@ -14072,16 +14078,16 @@ c --------- send top of myid, receive bottom from myid - ncpu_s
             fs(ix,iy,3) = w(ix,iy,ize)
             fs(ix,iy,4) = e(ix,iy,ize)
             fs(ix,iy,5) = wf(ix,iy,ize)
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           jloc = 5 + iscl
           do iy=iys,iye
             do ix=1,nnx
               fs(ix,iy,jloc) = t(ix,iy,iscl,ize)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         call mpi_sendrecv(
      +      fs(1,iys,1),nsend,mpi_real8,nt,0,
@@ -14097,17 +14103,17 @@ c --------- send top of myid, receive bottom from myid - ncpu_s
               w(ix,iy,izm1) = fr(ix,iy,3)
               e(ix,iy,izm1) = fr(ix,iy,4)
               wf(ix,iy,izm1) = fr(ix,iy,5)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
             jloc = 5 + iscl
             do iy=iys,iye
               do ix=1,nnx
                 t(ix,iy,iscl,izm1) = fr(ix,iy,jloc)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
 
 c -------- send bottom of myid, receive bottom from myid + ncpu_s
 
@@ -14117,16 +14123,16 @@ c -------- send bottom of myid, receive bottom from myid + ncpu_s
             fs(ix,iy,2) = v(ix,iy,izs)
             fs(ix,iy,3) = w(ix,iy,izs)
             fs(ix,iy,4) = e(ix,iy,izs)
-          end do
-        end do
+          enddo
+        enddo
         do iscl=1,nscl
           jloc = 4 + iscl
           do iy=iys,iye
             do ix=1,nnx
               fs(ix,iy,jloc) = t(ix,iy,iscl,izs)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
         nsend = nnx*(iye + 1 - iys)*(4+nscl)
         nrecv = nsend
 
@@ -14143,17 +14149,17 @@ c -------- send bottom of myid, receive bottom from myid + ncpu_s
               v(ix,iy,izp1) = fr(ix,iy,2)
               w(ix,iy,izp1) = fr(ix,iy,3)
               e(ix,iy,izp1) = fr(ix,iy,4)
-            end do
-          end do
+            enddo
+          enddo
           do iscl=1,nscl
             jloc = 4 + iscl
             do iy=iys,iye
               do ix=1,nnx
                 t(ix,iy,iscl,izp1) = fr(ix,iy,jloc)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
 
 c --------------- send extra scalar points
 
@@ -14167,9 +14173,9 @@ c -------------- send top of myid, receive bottom from myid - ncpu_s
           do iy=iys,iye
             do ix=1,nnx
               fs(ix,iy,iscl) = t(ix,iy,iscl,izm1)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         call mpi_sendrecv(
      +      fs(1,iys,1),nsend,mpi_real8,nt,0,
@@ -14182,10 +14188,10 @@ c -------------- send top of myid, receive bottom from myid - ncpu_s
             do iy=iys,iye
               do ix=1,nnx
                 t(ix,iy,iscl,izm2) = fr(ix,iy,iscl)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
 
 c -------------- send bottom of myid, receive bottom from myid + ncpu_s
 
@@ -14194,9 +14200,9 @@ c -------------- send bottom of myid, receive bottom from myid + ncpu_s
           do iy=iys,iye
             do ix=1,nnx
               fs(ix,iy,iscl) = t(ix,iy,iscl,izp1)
-            end do
-          end do
-        end do
+            enddo
+          enddo
+        enddo
 
         call mpi_sendrecv(
      +      fs(1,iys,1),nsend,mpi_real8,nb,1,
@@ -14209,10 +14215,10 @@ c -------------- send bottom of myid, receive bottom from myid + ncpu_s
             do iy=iys,iye
               do ix=1,nnx
                 t(ix,iy,iscl,izp2) = fr(ix,iy,iscl)
-              end do
-            end do
-          end do
-        end if
+              enddo
+            enddo
+          enddo
+        endif
 
         return
       end
@@ -14247,8 +14253,8 @@ c ------ myid is in the top row, send to everyone below
           do l=irow_r,irow_t-ncpu_s,ncpu_s
             call mpi_send(pbc(1,iys,1),num,mpi_real8,l,1,
      +          mpi_comm_world,ierr)
-          end do
-        end if
+          enddo
+        endif
 
 c --------- same thing for another variable
 
@@ -14265,8 +14271,8 @@ c ------ in the top row, send to everyone below
           do l=irow_r,irow_t-ncpu_s,ncpu_s
             call mpi_send(pbc2(1,iys,1),num,mpi_real8,l,1,
      +          mpi_comm_world,ierr)
-          end do
-        end if
+          enddo
+        endif
 
   999   continue
 
@@ -14289,9 +14295,9 @@ c      for computation of pressure drag at all z
               gms(i,j,1) = gm(i,j,k,1)
               gms(i,j,2) = gm(i,j,k,2)
               gms(i,j,3) = gm(i,j,k,3)
-            end do
-          end do
-        end if
+            enddo
+          enddo
+        endif
 
         if(numprocs == 1) go to 999
 
@@ -14314,8 +14320,8 @@ c ------ myid is in the bottom row, send to everyone else
           do l=irow_r+ncpu_s,irow_t,ncpu_s
             call mpi_send(gms(1,iys,1),num,mpi_real8,l,1,
      +          mpi_comm_world,ierr)
-          end do
-        end if
+          enddo
+        endif
 
 c --------- same thing for another variable
 
@@ -14332,8 +14338,8 @@ c ------ myid is in the bottom row, send to everyone else
           do l=irow_r+ncpu_s,irow_t,ncpu_s
             call mpi_send(gms(1,iys,2),num,mpi_real8,l,1,
      +          mpi_comm_world,ierr)
-          end do
-        end if
+          enddo
+        endif
 
 c --------- same thing for another variable
 
@@ -14350,8 +14356,8 @@ c ------ myid is in the bottom row, send to everyone else
           do l=irow_r+ncpu_s,irow_t,ncpu_s
             call mpi_send(gms(1,iys,3),num,mpi_real8,l,1,
      +          mpi_comm_world,ierr)
-          end do
-        end if
+          enddo
+        endif
   999   continue
 
         return
@@ -14359,37 +14365,37 @@ c ------ myid is in the bottom row, send to everyone else
 
       subroutine change_RH_bcs_to_q
       !This converts the RH provided in the params file to a value of q that code needs
-      use pars
-      use con_data
-      use particles
-      implicit none
-      real :: mod_magnus
+        use pars
+        use con_data
+        use particles
+        implicit none
+        real :: mod_magnus
 
       !Assuming tsfcc(2),Ttop(2),Tbot(2) in params.in are giving RH:
-      if (iDNS == 1) then
+        if (iDNS == 1) then
 
-         RHT = Ttop(2)
-         RHB = Tbot(2)
+          RHT = Ttop(2)
+          RHB = Tbot(2)
 
          !Convert RH given in input file into specific humidity
-         Ttop(2) = RHT/100.0*Mw/Ru/Ttop(1)*mod_magnus(Ttop(1))/rhoa
-         Tbot(2) = RHB/100.0*Mw/Ru/Tbot(1)*mod_magnus(Tbot(1))/rhoa
+          Ttop(2) = RHT/100.0*Mw/Ru/Ttop(1)*mod_magnus(Ttop(1))/rhoa
+          Tbot(2) = RHB/100.0*Mw/Ru/Tbot(1)*mod_magnus(Tbot(1))/rhoa
 
-         if (myid==0) then
-           write(*,*) 'SURFACE HUMIDITY: %RH, q = ',RHB,Tbot(2)
-         end if
+          if (myid==0) then
+            write(*,*) 'SURFACE HUMIDITY: %RH, q = ',RHB,Tbot(2)
+          endif
 
-      else !(doing LES)
+        else !(doing LES)
 
-         RHB = tsfcc(2)
+          RHB = tsfcc(2)
 
-         tsfcc(2) = RHB/100.0*Mw/Ru/tsfcc(1)*mod_magnus(tsfcc(1))/rhoa
+          tsfcc(2) = RHB/100.0*Mw/Ru/tsfcc(1)*mod_magnus(tsfcc(1))/rhoa
 
-         if (myid==0) then
-           write(*,*) 'SURFACE HUMIDITY: %RH, q = ',RHB,tsfcc(2)
-         end if
+          if (myid==0) then
+            write(*,*) 'SURFACE HUMIDITY: %RH, q = ',RHB,tsfcc(2)
+          endif
 
-      end if
+        endif
 
 
 
@@ -14413,9 +14419,9 @@ c ------ myid is in the bottom row, send to everyone else
             idum=IA1*(idum-k*IQ1)-k*IR1
             if (idum < 0) idum=idum+IM1
             if (j <= NTAB) iv(j) = idum
-          end do
+          enddo
           iy=iv(1)
-        end if
+        endif
         k=idum/IQ1
         idum=IA1*(idum-k*IQ1)-k*IR1
         if (idum < 0) idum=idum+IM1
@@ -14430,51 +14436,14 @@ c ------ myid is in the bottom row, send to everyone else
         return
       end function ran2
 
-      subroutine linInterp(xa,ya,n,x,y)
-        integer n
-        real x, xper, y, xa(n), ya(n)
-        integer i1, i2
-        xper = x
-      ! enforce periodic domain
-        if (xper >= xa(n)) then
-          xper = xper-xa(n)
-        else if (xper < 0) then
-          xper = xa(n)+xper
-        end if
-      ! calc neighboring indices
-        i1 = floor((n-1)*xper/xa(n)) + 1
-        i2 = i1+1
-        y = ya(i1) + (xper-xa(i1))*(ya(i2)-ya(i1))/(xa(i2)-xa(i1))
-        return
-      end
-
-      subroutine linInterpSlope(xa,ya,n,x,dy_dx)
-        integer n
-        real x, xper, dy_dx, xa(n), ya(n)
-        integer i1, i2
-        xper = x
-      ! enforce periodic domain
-        if (xper >= xa(n)) then
-          xper = xper-xa(n)
-        else if (xper < 0) then
-          xper = xa(n)+xper
-        end if
-      ! calc neighboring indices
-        i1 = floor((n-1)*xper/xa(n)) + 1
-        i2 = i1+1
-
-        dy_dx = (ya(i2)-ya(i1))/(xa(i2)-xa(i1))
-        return
-      end
-
       function mod_magnus(T)
-      implicit none
+        implicit none
 
       !Take in T in Kelvin and return saturation vapor pressure using function of Alduchov and Eskridge, 1996
-      real,intent(in) :: T
-      real :: mod_magnus
+        real,intent(in) :: T
+        real :: mod_magnus
 
-      mod_magnus = 610.94 *exp((17.6257*(T-273.15))/(243.04+(T-273.15)))
+        mod_magnus=610.94*exp((17.6257*(T-273.15))/(243.04+(T-273.15)))
 
 
       end function mod_magnus

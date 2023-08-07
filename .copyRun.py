@@ -60,7 +60,9 @@ def printHelp():
         + "  The paths set in params.in are updated to /scratch365/$USER/[LESdir]/newRun \n" \
         + "  and the process name is set to newRun_[LESdir] in les.run. Optional \n" \
         + "  parameters matching entries in params.in are set to the given values")
-
+    print("Optional parameters:")
+    print("  --help  : Prints this screen")
+    print("  --paths : Updates all restart paths")
 
 if socket.gethostname().find("cheyenne") > -1:
     hpcCode = UCAR
@@ -72,10 +74,10 @@ args = {} # dictionary to hold cli args
 updatePaths = False
 for i in range(0, len(sys.argv)):
     a = sys.argv[i]
-    if a == '-help' or a =='-h':
+    if a == '--help' or a =='-h':
         printHelp()
         quit()
-    if a == "-restartPaths":
+    if a == "--paths":
         updatePaths = True
     elif a[0] == '-':
         args[a[1:]] = sys.argv[i+1]
@@ -97,6 +99,10 @@ else:
     file = open(oldRun+"/les.run")
 lStr = file.read()
 file.close()
+
+# Set correct ncpu_s parameter
+if UCAR: pStr = setVar(pStr, "ncpu_s", "36   ")
+if CRC:  pStr = setVar(pStr, "ncpu_s", "8   ")
 
 # Set parameters given
 for a in args:

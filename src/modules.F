@@ -11,7 +11,7 @@ c ----------------------------------------------------------------------
      +      ivis0,ifix_dt,new_vis,iflat,
      +      i3d_surf,i_pm,lpbc,k_stab,
      +      no_pgrad,ispray,iDNS,
-     +      ifields,ievap,i_tank,i_zeta,
+     +      ifields,ievap,i_zeta,
      +      inetcdf,itrajout,pinertia,verb
 
 c
@@ -33,7 +33,7 @@ c
       !Boundary conditions and other parameters
         real :: Uo,Ttop(nscl),Tbot(nscl),qstar(nscl),tsfcc(nscl),RHbot
         real :: ugcont,vgcont,fcor,t00,grav,ustar_tank,waveslope
-        real :: zi, zl, xl, yl, zw1, zo, dt_new
+        real :: zi, zl, xl, yl, zw1, zo, zos, dt_new
         real :: RHT, RHB
         integer :: isfc(nscl)
 
@@ -110,7 +110,7 @@ c ----------------------------------------------------------------------
      +      path_sav_v, path_sav_c, path_part,
      +      path_sav_p, path_sav_h, path_sav_part,
      +      path_sav_hp, path_sav_g, path_bndy,path_ran,
-     +      path_histog, path_sav_hist,path_traj
+     +      path_histog, path_sav_hist,path_traj,wave_file
         character case_inp*3
         character*80 path_viz_xy, path_viz_xz, path_viz_yz, path_stuf,
      +      path_seed
@@ -255,10 +255,9 @@ c ----------------------------------------------------------------------
      +        gcp, fcor_h, pi2,
      +        batagk, batag,
      +        cdbtm, dtdzf(nscl), dtjump, ugal, divgls,
-     +        z1, utausv, dx, dy, dz,
-     +        dt, dt1,
+     +        utausv, dx, dy, dz, z1, dt, dt1,
      +        fnxy, dzdz, dsl, c23, dtgama, dtzeta, xkmax,
-     +        time, t_zero, zody, zody74,
+     +        time, t_zero, zody, zosdy, zody74,
      +        utau, wtsfc(nscl),
      +        uusfc, uvsfc, uwsfc, vvsfc, vwsfc, wwsfc, amonin,
      +        zol, hol, smal_e, sml_eg,drg_x,drg_y
@@ -269,11 +268,10 @@ c ----------------------------------------------------------------------
      +      gcp, fcor_h, pi2,
      +      batagk, batag,
      +      cdbtm, dtdzf(:), dtjump, ugal, divgls,
-     +      z1, utausv, dx, dy, dz,
+     +      utausv, dx, dy, dz, z1,
      +      dt, dt1,
      +      fnxy, dzdz, dsl, c23, dtgama, dtzeta, xkmax,
-     +      time, t_zero, zody, zody74,
-     +      utau, wtsfc(:),
+     +      time, t_zero, zody, zosdy, zody74, utau, wtsfc(:),
      +      uusfc, uvsfc, uwsfc, vvsfc, vwsfc, wwsfc, amonin,
      +      zol, hol, smal_e, sml_eg,drg_x,drg_y
         contains

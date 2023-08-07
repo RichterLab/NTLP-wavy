@@ -150,12 +150,12 @@ c
           call mesh
           if (inetcdf == 1) then
             call netcdf_init
-          end if
+          endif
 
-          if (ispray==1) then
+          if (ispray > 0) then
             call particle_setup
             call particle_init
-          end if
+          endif
 
 c
 c ---------- choose routine for getting initial guess
@@ -171,8 +171,8 @@ c
               call random
                !call random_f
                !call random_wt
-            end if
-          end if
+            endif
+          endif
           call dns_vis
           call get_max
 
@@ -185,16 +185,16 @@ c
           call setup(it)
           call mesh
 
-          if (ispray==1) then
+          if (ispray > 0) then
             call particle_setup
             call read_part_res
-          end if
-
-          if (inetcdf .eq. 1) then
-             call netcdf_res
           endif
 
-        end if
+          if (inetcdf == 1) then
+            call netcdf_res
+          endif
+
+        endif
 
 
 
@@ -219,7 +219,7 @@ c
           ! write(*,*) 'ran2(-1)', ran2(-1)
 
 
-        end if
+        endif
 c
 c --------------- time loop ------------
 c
@@ -231,8 +231,8 @@ c
         if (myid==0) then
           write(*,*) 'Starting time loop'
           write(*,*) 'it,time = ',it,time
-        end if
-        if (ispray==1) then
+        endif
+        if (ispray > 0) then
           if (it == 1) numpart = 0
           part => first_particle
           do while (associated(part))
@@ -245,12 +245,12 @@ c
               write(*,'(a4,2e15.6)') 'Tf1:',time,part%Tf
               write(*,'(a4,2e15.6)') 'qf1:',time,part%qinf
               write(*,'(a5,2e15.6)') 'rad1:',time,part%radius
-            end if
+            endif
             part => part%next
             if (it == 1) numpart = numpart + 1
-          end do
+          enddo
           if (myid==0) write(*,*) 'time,tnumpart:',time,tnumpart
-        end if
+        endif
 
 c
 c --------- specially designed surface cooling routine
@@ -262,7 +262,7 @@ c
           ivis = 1
         else
           ivis = 0
-        end if
+        endif
 c
 c ---------------- 3 stage runge-kutta time stepping
 c
@@ -278,7 +278,7 @@ c
             t_stage3 = time + dt*etas(istage+2)
           else
             t_stage3 = time + dt + dt1*etas(istage-1)
-          end if
+          endif
 c
 c ---------- compute derivatives of (u,v,w)
 c
@@ -290,7 +290,7 @@ c
           if(imesh == 1) then
             call new_mesh(it,istage)
             call grid_speed(it,istage)
-          end if
+          endif
 
 c
 c --------- new eddy viscosity, and bcs
@@ -298,13 +298,13 @@ c
           if (myid==0.and.verb>0) write(*,*) 'Handling lower bc'
           if(iss == 0 .and. ifree == 0) then
             call lower(it)
-          else if(ifree == 1) then
+          elseif(ifree == 1) then
             call lower_free(it)
-          else if(ifree == 2) then
+          elseif(ifree == 2) then
             call lower_curvy(it,istage)
-          else if(ifree == 3) then
+          elseif(ifree == 3) then
             call lower_curvy_dns(it,istage)
-          end if
+          endif
 c
           if (myid==0.and.verb>0) write(*,*) 'Handling upper bc'
           if(ise == numprocs-1) then
@@ -312,20 +312,20 @@ c
               call upper_dns
             else
               call upper
-            end if
-          end if
+            endif
+          endif
           call bcast_pbc
           call bcast_surf
           call get_means(istage)
           if(ivis == 1) then
             call iso(it)
             call surfvis(it)
-          end if
+          endif
           if(istage == 1)then
             call xy_stats
             call tke_budget
             call pbltop(itop)
-          end if
+          endif
 c
 c ------------ save velocity aand pressure fields
 c
@@ -333,17 +333,17 @@ c
             if(myid==0.and.verb>0)write(*,*)'Saving fields and parts'
             call save_v(it)
             call save_p
-            if (ispray==1) call save_particles
-          end if
+            if (ispray > 0) call save_particles
+          endif
           if(msave_v .and. istage == 1) then
             call save_bndy(it)
 !         call save_viz(it)
-          end if
+          endif
 
           if (msave .and. istage == 1) then
             call write_histograms(it-itape+1)
             call clean_histograms
-          end if
+          endif
 
 c
 c --------- get rhs/J for all equations
@@ -352,7 +352,7 @@ c
 c
           if(istage == 1) then
             if(msave .and. l_root) call save_c(it)
-          end if
+          endif
 c
 c --------- solve for pressure
 c
@@ -366,45 +366,45 @@ c
           if(micut) then
             call dealias
             call dealias_grid_speed
-          end if
+          endif
 c     call chk_div
 
 c
 c -------- update particles
 c
           if (myid==0.and.verb>0) write(*,*) 'Updating particles'
-          if (ispray==1) then
+          if (ispray > 0) then
          !t_s = mpi_wtime()
             call particle_update_rk3(it,istage)
          !t_f = mpi_wtime()
          !call mpi_barrier(mpi_comm_world,ierr)
          !if (myid==5) write(*,*) 'time part: ',t_f-t_s
-          end if
+          endif
 
           if(mnout .and. istage == 1)  then
             if(l_debug) call print(nprt,it,izs,ize)
             if(l_root) call print(6,it,1,nnz)
-          end if
+          endif
           if(l_root) then
             if (inetcdf == 1) then
               if(mhis .and. istage == 1) then
                 call write_his_netcdf
                 if(mtape) call close_his_netcdf
-              end if
+              endif
             else
               if(mhis .and. istage == 1) then
                 call write_his(itop)
                 if(mtape) call close_his
-              end if
-            end if !(inetcdf == 1)
-          end if !(l_root)
+              endif
+            endif !(inetcdf == 1)
+          endif !(l_root)
  8999   continue
         call get_max
         call get_dt(it)
 
         if (mhis .and. itrajout) then
-           call particle_write_traj(it)
-        end if
+          call particle_write_traj(it)
+        endif
 c
         if (it>=itmax) go to 99000
         go to 9000
