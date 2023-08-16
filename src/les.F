@@ -6,7 +6,12 @@ c
         use con_data
         use con_stats
         use netcdf_io
+        implicit none
         include 'mpif.h'
+
+        real :: partwater, partwater_0, partwater_t, partwater_t0
+        real :: hum, hum_0, hum_t, hum_t0, te_mpi, ts_mpi
+        integer :: ix, iy, iz, ierr, it, idum, istage,itop
 c
 c ------------- definition of internal flags
 c
@@ -129,7 +134,6 @@ c
 c
 c -------- set number of x-y slab cpus
 c
-c
         case_inp = 'wav'
 c
         call get_units
@@ -188,6 +192,7 @@ c
           if (ispray > 0) then
             call particle_setup
             call read_part_res
+            ! call particle_init
           endif
 
           if (inetcdf == 1) then
@@ -198,34 +203,18 @@ c
 
 
 
-        if (myid == 0) then
-          idum = 1
-          write(*,*) 'ran1(1)',  ran1(idum)
-          ! write(*,*) 'ran1(1)',  ran1(1)
-          ! write(*,*) 'ran1(-1)', ran1(-1)
-          ! write(*,*) 'ran1(-1)', ran1(-1)
-          ! write(*,*) 'ran1(1)',  ran1(1)
-          ! write(*,*) 'ran1(1)',  ran1(1)
-          ! write(*,*) 'ran1(-1)', ran1(-1)
-          ! write(*,*) 'ran1(-1)', ran1(-1)
-          !
-          ! write(*,*) 'ran2(1)',  ran2(1)
-          ! write(*,*) 'ran2(1)',  ran2(1)
-          ! write(*,*) 'ran2(-1)', ran2(-1)
-          ! write(*,*) 'ran2(-1)', ran2(-1)
-          ! write(*,*) 'ran2(1)',  ran2(1)
-          ! write(*,*) 'ran2(1)',  ran2(1)
-          ! write(*,*) 'ran2(-1)', ran2(-1)
-          ! write(*,*) 'ran2(-1)', ran2(-1)
+C         if (myid == 0) then
+C           idum = 1
+C           write(*,*) 'ran1(1)',  ran1(idum)
 
-
-        endif
+C         endif
 c
 c --------------- time loop ------------
 c
         tzero = time
         call get_dt(it)
  9000   continue
+C         do while (it < itmax)
         call set_sav(it,iti)
 
         if (myid==0) then
@@ -236,21 +225,71 @@ c
           if (it == 1) numpart = 0
           part => first_particle
           do while (associated(part))
-            if (part%pidx == 1 .and. part%procidx == 0) then
-              write(*,'(a4,4e15.6)') 'xp1:',time,part%xp(1:3)
-              write(*,'(a5,4e15.6)') 'xip1:',time,part%xip(1:3)
-              write(*,'(a4,4e15.6)') 'vp1:',time,part%vp(1:3)
-              write(*,'(a4,4e15.6)') 'uf1:',time,part%uf(1:3)
-              write(*,'(a4,2e15.6)') 'Tp1:',time,part%Tp
-              write(*,'(a4,2e15.6)') 'Tf1:',time,part%Tf
-              write(*,'(a4,2e15.6)') 'qf1:',time,part%qinf
-              write(*,'(a5,2e15.6)') 'rad1:',time,part%radius
-            endif
+C             if (part%pidx == 1 .and. part%procidx == 0) then
+C               write(*,'(a4,4e15.6)') 'xp1:',time,part%xp(1:3)
+C               write(*,'(a5,4e15.6)') 'xip1:',time,part%xip(1:3)
+C               write(*,'(a4,4e15.6)') 'vp1:',time,part%vp(1:3)
+C               write(*,'(a4,4e15.6)') 'uf1:',time,part%uf(1:3)
+C               write(*,'(a4,2e15.6)') 'Tp1:',time,part%Tp
+C               write(*,'(a4,2e15.6)') 'Tf1:',time,part%Tf
+C               write(*,'(a4,2e15.6)') 'qf1:',time,part%qinf
+C               write(*,'(a5,2e15.6)') 'rad1:',time,part%radius
+C             endif
             part => part%next
             if (it == 1) numpart = numpart + 1
           enddo
           if (myid==0) write(*,*) 'time,tnumpart:',time,tnumpart
         endif
+        
+
+C         !! KDRB couple WATER BALANCE CHECK !!
+C         if (coupleH == 1) then
+
+C           ! Calculate total water in particles !
+C           partwater = 0
+C           partwater_0 = 0
+C           part => first_particle
+C           do while (associated(part))
+C             partwater   = partwater   + part%radius**3 * 2/3.0*pi2
+C             partwater_0 = partwater_0 + part%radius_0**3 * 2/3.0*pi2
+C C             rhow/rhoa*pi2*2*part%radius**2*part%radrhs*wtt/dV
+C             part => part%next
+C           enddo
+C           call MPI_REDUCE(partwater, partwater_t, 1,
+C      +        MPI_REAL8, MPI_SUM, 0, mpi_comm_world, ierr)
+C           call MPI_REDUCE(partwater_0, partwater_t0, 1,
+C      +        MPI_REAL8, MPI_SUM, 0, mpi_comm_world, ierr)
+
+C           ! Calculate total humidity minus contribution 
+C           !  from particles this time step
+C           hum = 0
+C           hum_0 = 0
+C           do iz=izs,ize
+C             do iy=iys,iye
+C               do ix=1,nnx
+C                 hum = hum + t(ix,iy,2,iz)
+C                 hum_0 = hum_0 + tkdrb(ix,iy,2,iz)
+C               end do
+C             end do
+C           end do
+C           call MPI_REDUCE(hum, hum_t, 1,
+C      +        MPI_REAL8, MPI_SUM, 0, mpi_comm_world, ierr)
+C           call MPI_REDUCE(hum_0, hum_t0, 1,
+C      +        MPI_REAL8, MPI_SUM, 0, mpi_comm_world, ierr)
+
+C           ! Print changes this time step !
+C           if (myid==0) then
+C             write(*,*) 'partwater_t change',partwater_t-partwater_t0
+C             write(*,*) 'hum_t change',hum_t-hum_t0
+C             write(*,*) 'ratio',(partwater_t-partwater_t0)/(hum_t-hum_t0)
+
+C           endif
+ 
+
+C         endif
+
+
+
 
 c
 c --------- specially designed surface cooling routine
@@ -408,6 +447,7 @@ c
 c
         if (it>=itmax) go to 99000
         go to 9000
+C         enddo
 c
 99000   continue
         te_mpi = mpi_wtime()
