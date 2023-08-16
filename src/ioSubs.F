@@ -1,5 +1,4 @@
 
-
       subroutine read_input_file
         use pars
         use particles
@@ -13,20 +12,19 @@
      +      itstr,it_his,it_viz,iviz,itn
 
         namelist /io_params/ inetcdf,ifields,itrajout,
-     +      path_seed,path_part,
-     +      path_res,path_ran,wave_file
+     +      path_seed,path_part,path_res,path_ran,wave_file
 
         namelist /computational_params/ iradup,ifilt,itcut,isubs,ibrcl,
      +      iocean,idebug,ivis0,new_vis,ismlt,ifree,iupwnd,iskew,ibuoy,
      +      ifix_dt,move_step,method,iz_space,iflat,i3d_surf,i_pm,
-     +      lpbc,k_stab,no_pgrad,ispray,iDNS,ievap,isfc,
-     +      i_zeta,pinertia,verb,ncpu_s,minwavez,zi,zw1,dt_new,cfl
+     +      lpbc,k_stab,no_pgrad,ispray,iDNS,couple,coupleT,coupleH,
+     +      ievap,isfc,i_zeta,pinertia,verb,ncpu_s,minwavez,zi,zw1,
+     +      dt_new,cfl,use_seed
 
         namelist /physical_params/ nuf,Pra,Sc,Cpa,ustar_tank,ugcont,
      +      vgcont,t00,fcor,grav,zl,xl,yl,zo,Uo,qstar,tsfcc,Ttop,Tbot,
-     +      tnumpart,rhoa,rhow,part_grav,Vpmax,Cpp,Mw,Ru,Ms,zos,
-     +      Sal,Gam,Ion,
-     +      Os,radius_init,Tp_init,vp_init,waveslope,c_speed,wave_l
+     +      tnumpart,rhoa,rhow,part_grav,Vpmax,Cpp,Mw,Ru,Ms,Sal,Gam,Ion,
+     +      Os,radii0,Tp_init,vp_init,c_speed,wave_l,zos
 
 
         !params.in contains namelists to read
@@ -476,6 +474,7 @@ c     path_bndy --- the path where the boundary shape is stored
 c     path_seed --- seed name
 c
         use pars
+        implicit none
 c
 c
 c --------- initialization
@@ -505,12 +504,15 @@ c             if missing data, etc..
 #if defined(SWAP)
         use module_byteswap
 #endif
+        implicit none
         include 'mpif.h'
 
-        integer status(mpi_status_size), ierr
+        integer status(mpi_status_size), ierr, n_read
+        integer i,j,k,ix,iy,iz,is
         integer(kind=mpi_offset_kind) :: offset, disp
         integer(kind=k8)              :: nsize, nsize2
         real, allocatable, dimension(:,:,:) :: temp
+        real u_off_set
         logical there
 
         allocate(temp(nvar+4,nnx,iys:iye))
@@ -632,12 +634,15 @@ c                changed for iys:iye
 #if defined(SWAP)
         use module_byteswap
 #endif
+        implicit none
         include 'mpif.h'
 
         integer status(mpi_status_size), ierr
+        integer n_read, i, j, k, is, iz
         integer(kind=mpi_offset_kind) :: offset, disp
         integer(kind=k8)              :: nsize, nsize2
         real, allocatable, dimension(:,:,:) :: temp
+        real qstars, wtsfcs
         allocate(temp(nvar+4,nnx,iys:iye))
 
 c ---- open file
@@ -775,11 +780,12 @@ c ------------- routine uses send/recv to get information in y-z planes
 #if defined(SWAP)
         use module_byteswap
 #endif
+        implicit none
         include 'mpif.h'
 
 c ------ for xz and yz planes output z grid also
 
-        parameter(nvar_o = 6, nvar_o1 = nvar_o + 1)
+        integer, parameter :: nvar_o = 6, nvar_o1 = nvar_o + 1
 
         integer ix_pick(maxnx),  iy_pick(maxny),  iz_pick(maxnz),
      +      ix_order(maxnx), iy_order(maxny), iz_order(maxnz)
@@ -787,6 +793,9 @@ c ------ for xz and yz planes output z grid also
         integer istatus(mpi_status_size), ierr
         integer(kind=mpi_offset_kind) :: offset, disp
         integer(kind=k8)              :: nsize, nsize2
+        integer i,j,k,iviz_x,iviz_y,iviz_z,ionce_x,ionce_y,ionce_z
+        integer istuff, npln_x, npln_y, npln_z, n_write, n_send
+        integer ii,it,l,ix,iy,iz, km1
 
         real(kind=4), dimension(nvar_o1,nny,izs:ize) :: temp_x
         real(kind=4), dimension(nvar_o1,nnx,izs:ize) :: temp_y
@@ -945,7 +954,7 @@ c ---------- xz planes of data
         iviz_y = iviz_y + npln_y
         nsize  = int(nvar_o1,k8)*nnx*nnz
         nsize2 = int(nvar_o1,k8)*nnx*(izs-1)
-        nwrite = (nvar_o1)*nnx*(ize+1-izs)
+        n_write = (nvar_o1)*nnx*(ize+1-izs)
         do j=iys,iye
           if(iy_pick(j) == j) then
             do k=izs,ize
@@ -974,7 +983,7 @@ c ---------- the shape of the gridlines
             call byteswap(temp_y)
 #endif
             offset = int((iviz_y + iy_order(j) - 1),k8)*nsize + nsize2
-            call mpi_file_write_at(nviz_y,offset,temp_y,nwrite,
+            call mpi_file_write_at(nviz_y,offset,temp_y,n_write,
      +          mpi_real4,istatus,ierr)
             if (ierr /= 0) goto 9992
           endif
@@ -1111,13 +1120,29 @@ c                 at same time step as viz files
 #if defined(SWAP)
         use module_byteswap
 #endif
+        implicit none
         include 'mpif.h'
 
-        parameter(nvar_o = 2)
+        integer, parameter :: nvar_o = 2
 
         integer istatus(mpi_status_size), ierr
         integer(kind=mpi_offset_kind) :: offset, disp
         integer(kind=k8)              :: nsize, nsize2
+        integer i,j,k,it,ix,iy,iz,km1,int,ionce_z,iviz_z,n_write
+
+
+C         integer, parameter :: nvar_o = 6, nvar_o1 = nvar_o + 1
+
+C         integer ix_pick(maxnx),  iy_pick(maxny),  iz_pick(maxnz),
+C      +      ix_order(maxnx), iy_order(maxny), iz_order(maxnz)
+
+C         integer istatus(mpi_status_size), ierr
+C         integer(kind=mpi_offset_kind) :: offset, disp
+C         integer(kind=k8)              :: nsize, nsize2
+C         integer i,j,k,iviz_x,iviz_y,iviz_z,ionce_x,ionce_y,ionce_z
+C         integer istuff, npln_x, npln_y, npln_z, n_write, n_send
+
+
 
         real(kind=4), dimension(2,nnx,iys:iye) :: temp_z
 
@@ -1194,12 +1219,14 @@ c --------------- save 3d fields
 #if defined(SWAP)
         use module_byteswap
 #endif
+        implicit none
         include 'mpif.h'
         logical there
 
         integer status(mpi_status_size), ierr
         integer(kind=mpi_offset_kind) :: offset, disp
         integer(kind=k8)                 nsize, nsize2
+        integer n_write, i, j, k, is, iz, it
 
         real, allocatable, dimension(:,:,:) :: temp
         allocate(temp(nvar+4,nnx,iys:iye))
@@ -1296,10 +1323,11 @@ c                 sequential fortan binary
         use fftwk
         use con_data
         use con_stats
+        implicit none
 
         logical there
         character options*8, passwd*1
-
+        integer ierr, it
 c ---- open file
 
         open(nvelc,err=9992,file=path_sav_c,form='unformatted',
@@ -1337,12 +1365,14 @@ c -------------- save pressure file
 #if defined(SWAP)
         use module_byteswap
 #endif
+        implicit none
         include 'mpif.h'
         logical there
 
         integer status(mpi_status_size), ierr
         integer(kind=mpi_offset_kind) :: offset, disp
         integer(kind=k8)              :: nsize, nsize2
+        integer i,j,k,n_write, iz
 
         real temp(nnx,iys:iye)
 
@@ -1409,6 +1439,7 @@ c -----------------------
       subroutine get_units
 
         use pars
+        implicit none
 
 c -------------- unit numbers for files
 
@@ -1438,6 +1469,7 @@ c ------------- open unit for standard printout
 c ----------- build file names for velocity, pressure, and constants
 
         use pars
+        implicit none
         include 'mpif.h'
         character cgrid*10, num*3
 
@@ -1471,9 +1503,11 @@ c ------------------- open history files by root
 c                     isize determined in sr. fill_cs
 
         use pars
+        implicit none
         include 'mpif.h'
         character cgrid*4, iblks*16
         logical there
+        integer iblnk, istep
 
 c --------------- build character strings for ascii history file name
 
@@ -1536,8 +1570,10 @@ c ------------------- set visualization files,
 c                     leaves files in scratch directory
 
         use pars
+        implicit none
         include 'mpif.h'
         character iblks*16
+        integer istep, iloc
 
 c --------------- build character strings for file names
 c                 with time step
@@ -1565,4 +1601,117 @@ c                 with time step
      +      //'/bndy.'//case(1:3)//iblks(1:16)//'.data'
 
         return
+      end
+
+      subroutine write_his(iloc)
+
+c ----- write history file with global parameters
+c       write tsfcc specially to preserve digits!
+
+        use pars
+        use fields
+        use con_data
+        use con_stats
+        use particles
+
+        real save_theta(0:nnz)
+
+        divgmax = 0.0
+        do iz=1,nnz
+          divgmax = amax1(divgmax, divz(iz))
+        enddo
+
+        ziavg = zi
+        holtop = hol
+        wt_min = wtsb(iloc,1)
+        wt_le  = wtle(iloc,1)
+        krec = krec + 1
+        mid = nnz/4
+
+        write(nhis1,6000) time,dt,utau,ziavg,amonin,holtop,
+     +      (tsfcc(1)-t_ref),uusfc,uvsfc,uwsfc,vvsfc,vwsfc,wwsfc,
+     +      divgmax, wt_min, wt_le,
+     +      ucfl, vcfl, wcfl, wtsfc(1),
+     +      ups(mid),vps(mid),wps(mid),tps(mid,1),
+     +      uwle(mid),uwsb(mid),uw_tot(mid),
+     +      vwle(mid),vwsb(mid),vw_tot(mid),
+     +      uwcle(mid),vwcle(mid),
+     +      wtle(mid,1),wtsb(mid,1),wctle(mid,1),wt_tot(mid,1),
+     +      englez(mid),eavg(mid), wabs, float(ip_max),
+     +      p_iter, p_err, drg_x, drg_y,
+     +      Rep_avg,float(his_reintro)
+ 6000   format(46e17.8)
+
+c ------ to increase resolution of theta
+c        subtract reference before saving history file
+
+        do k=1,nnz
+          save_theta(k) = txym(k,1)
+          txym(k,1)     = txym(k,1) - t_ref
+        enddo
+
+c -------------- write profile information
+
+        call write_prof(nhisp,krec,isize,c_s%wwsb)
+
+        do k=1,nnz
+          txym(k,1) = save_theta(k)
+        enddo
+
+        return
+      end
+      subroutine write_prof(nhisp,krec,num,f)
+        real f(num)
+        real*4 f32(num)
+
+c -------------- build special 32 bit arrays for profiles
+
+        do i=1,num
+          f32(i) = f(i)
+        enddo
+
+        write(nhisp,err=999,rec=krec) (f32(i),i=1,num)
+
+        return
+c --------------- errors
+  999   continue
+        write(6,9000) num,krec
+ 9000   format(' 9000, trouble in ',
+     +      'SR. save_prof cannot write profile data ',/,
+     +      ' num = ',i8, 'krec = ',i6)
+        stop
+      end
+      subroutine close_his
+
+c ---- close history files
+
+        use pars
+        logical there
+
+c ---- root closes and checks the files
+
+        close(nhis1)
+        close(nhisp)
+        inquire(file=path_sav_h,exist=there)
+        if(.not.there) then
+          write(6,8000) path_sav_h
+          call mpi_finalize(ierr)
+          stop
+        endif
+        inquire(file=path_sav_hp,exist=there)
+        if(.not.there) then
+          write(6,8100) path_sav_hp
+          call mpi_finalize(ierr)
+          stop
+        endif
+        write(6,7000) path_sav_h
+        write(6,7100) path_sav_hp
+
+        return
+c -------------------- process write errors
+ 7000   format(' HISTORY DATA IS WRITTEN IN FILE  ',a80)
+ 7100   format(' PROFILE HISTORY DATA IS WRITTEN IN FILE  ',a80)
+ 8000   format(' SR. SAVE_HIS: Truble history file not in path =',a80)
+ 8100   format(' SR. SAVE_HIS: Trouble profile history file',
+     +      ' not in path =',a80)
       end

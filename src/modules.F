@@ -1,18 +1,15 @@
 c ----------------------------------------------------------------------
       module pars
+        implicit none
 c ----------------------------------------------------------------------
         integer :: iti,itmax,imean,ihst,itape
         integer :: itstr,it_his,it_viz,iviz
 
-        integer :: ismlt,ifree,iradup,
-     +      iupwnd,iskew,ibuoy,ifilt,
-     +      itcut,isubs,ibrcl,move_step,
-     +      iocean,method,idebug,iz_space,
-     +      ivis0,ifix_dt,new_vis,iflat,
-     +      i3d_surf,i_pm,lpbc,k_stab,
-     +      no_pgrad,ispray,iDNS,
-     +      ifields,ievap,i_zeta,
-     +      inetcdf,itrajout,pinertia,verb
+        integer :: ismlt,ifree,iradup,iupwnd,iskew,ibuoy,ifilt,
+     +      itcut,isubs,ibrcl,move_step,iocean,method,idebug,iz_space,
+     +      ivis0,ifix_dt,new_vis,iflat,i3d_surf,i_pm,lpbc,k_stab,
+     +      no_pgrad,ispray,iDNS,ifields,ievap,i_zeta,inetcdf,itrajout,
+     +      couple,coupleT,coupleH,pinertia,verb
 
 c
 c -------- j_recl = record length in "bytes" for history file
@@ -27,15 +24,17 @@ c
 c -------- number of vars, size of problem in (x,y,z), max size, max processors
 c
         integer, parameter :: nscl = 2, nvar = (4+nscl)
-        integer, parameter :: nxg1  = 128, nyg1  = 128, nzg1 = 128
-        integer, parameter :: maxnx = 128, maxny = 128, maxnz = 128
+        integer, parameter :: nxg1  = 1024, nyg1  = 256, nzg1  = 128
+        integer, parameter :: maxnx = 1024, maxny = 256, maxnz = 128
+        !integer, parameter :: nxg1  = 128, nyg1  = 128, nzg1  = 128
+        !integer, parameter :: maxnx = 128, maxny = 128, maxnz = 128
 
       !Boundary conditions and other parameters
         real :: Uo,Ttop(nscl),Tbot(nscl),qstar(nscl),tsfcc(nscl),RHbot
-        real :: ugcont,vgcont,fcor,t00,grav,ustar_tank,waveslope
+        real :: ugcont,vgcont,fcor,t00,grav,ustar_tank
         real :: zi, zl, xl, yl, zw1, zo, zos, dt_new
         real :: RHT, RHB
-        integer :: isfc(nscl)
+        integer :: isfc(nscl), use_seed
 
 c
 c ------------ leave following definitions as is
@@ -135,6 +134,8 @@ c ----------------------------------------------------------------------
         real, allocatable :: Text(:,:,:),T_t(:,:,:)
         real, allocatable :: T2ext(:,:,:),T2_t(:,:,:)
         real, allocatable :: partTsrc(:,:,:),partTsrc_t(:,:,:)
+        real, allocatable :: partHsrc(:,:,:),partHsrc_t(:,:,:)   ! KDRB couple
+        real, allocatable :: partTEsrc(:,:,:),partTEsrc_t(:,:,:) ! KDRB couple
         real, allocatable :: partcount_t(:,:,:),partsrc_t(:,:,:,:)
         real, allocatable :: vpsum_t(:,:,:,:),vpsqrsum_t(:,:,:,:)
         real, allocatable :: upwp_t(:,:,:),upwp(:,:,:)
@@ -154,11 +155,12 @@ c ----------------------------------------------------------------------
         real, allocatable :: qstarsum(:,:,:),qstarsum_t(:,:,:)
         integer :: particletype,pad_diff
         integer :: numpart,tnumpart,ngidx,part_created
-        integer :: num_reintro,tot_reintro,his_reintro
+        integer :: tot_reintro,his_reintro
         integer :: iseed
-        integer,parameter :: rbins=4
-        real :: Rep_avg,part_grav(3),Vpmax,dz_U
-        real :: vp_init(3),Tp_init,radius_init
+        integer, parameter :: rbins=4, nRadii=6
+        integer :: num_reintro(nRadii)
+        real :: Rep_avg,part_grav(3),Vpmax,dz_U,vp_init(3),Tp_init
+        real :: radii0(nRadii)
 
         real :: rhoa,rhow,nuf
         real :: CpaCpp,Pra,Sc,Cpa,Cpp
@@ -175,12 +177,12 @@ c ----------------------------------------------------------------------
         real :: bins(histbins+2,numhistvars)  !residence time, wave-relative origin, wave-relative death, max height
 
 
-      !IF ADD//REMOVING ANYTHING, UPDATE MPI DATATYPE IN particleSubs.F->particle_setup
+      !IF ADD/REMOVING ANYTHING, UPDATE MPI DATATYPE IN particleSubs.F->particle_setup
         type :: particle
           integer :: pidx,procidx
           real :: vp(3),xp(3),xip(3),uf(3),xrhs(3),vrhs(3),Tp,Tprhs_s,Tf
           real::Tprhs_L,radius,radrhs,qinf,qstar,m_s,xip_i(3),xp_0(3),t0
-          real :: zpmax,xp_i(3),v0,dh,dh2
+          real :: zpmax,xp_i(3),vp_0(3),radius_0,dh,dh2
           type(particle), pointer :: prev,next
         end type particle
 
@@ -204,8 +206,6 @@ c
 c ----------------------------------------------------------------------
       module tank_pars
 c
-        integer, parameter ::
-     +      nx_tank = 2000
 c
         real :: wave_l, c_speed, minwavez
 c
@@ -222,7 +222,7 @@ c ----------------------------------------------------------------------
         real, allocatable ::
      +      u(:,:,:), v(:,:,:), w(:,:,:), t(:,:,:,:), e(:,:,:),
      +      r1(:,:,:), r2(:,:,:), r3(:,:,:), r4(:,:,:,:), r5(:,:,:),
-     +      uf(:,:,:), vf(:,:,:), wf(:,:,:),
+     +      uf(:,:,:), vf(:,:,:), wf(:,:,:), tkdrb(:,:,:,:),
      +      ufi(:,:,:), vfi(:,:,:), wfi(:,:,:), rj(:,:,:)
         real, allocatable ::
      +      ux(:,:,:), uy(:,:,:), vx(:,:,:), vy(:,:,:),
@@ -268,8 +268,7 @@ c ----------------------------------------------------------------------
      +      gcp, fcor_h, pi2,
      +      batagk, batag,
      +      cdbtm, dtdzf(:), dtjump, ugal, divgls,
-     +      utausv, dx, dy, dz, z1,
-     +      dt, dt1,
+     +      utausv, dx, dy, dz, z1, dt, dt1,
      +      fnxy, dzdz, dsl, c23, dtgama, dtzeta, xkmax,
      +      time, t_zero, zody, zosdy, zody74, utau, wtsfc(:),
      +      uusfc, uvsfc, uwsfc, vvsfc, vwsfc, wwsfc, amonin,
@@ -310,6 +309,7 @@ c
           time   => c_c%time
           t_zero => c_c%t_zero
           zody   => c_c%zody
+          zosdy  => c_c%zosdy
           zody74 => c_c%zody74
           utau   => c_c%utau
           wtsfc  => c_c%wtsfc
@@ -367,6 +367,7 @@ c ----------------------------------------------------------------------
      +        Tpmean(maxnz),Tpmsqr(maxnz),wpTpm(maxnz),
      +        Tfmean(maxnz),qfmean(maxnz),radmean(maxnz),
      +        rad2mean(maxnz),qstarmean(maxnz),pflux(maxnz),
+     +        Hpsrc(maxnz),TEpsrc(maxnz),
      +        pfluxup(maxnz),pfluxdn(maxnz),RHxym(maxnz)
           real ::  xkn(maxnx),ykn(maxny),
      +        xk(maxnx),yk(maxny),
@@ -403,6 +404,7 @@ c ----------------------------------------------------------------------
      +      Tpmean(:),Tpmsqr(:),wpTpm(:),
      +      Tfmean(:),qfmean(:),radmean(:),
      +      rad2mean(:),qstarmean(:),pflux(:),
+     +      Hpsrc(:), TEpsrc(:),
      +      pfluxup(:),pfluxdn(:),RHxym(:)
         real, pointer ::
      +      xkn(:), ykn(:), xk(:), yk(:), xkk(:), ykk(:),
@@ -491,6 +493,8 @@ c
           radmean  => c_s%radmean ; isize = isize + size(radmean)
           rad2mean => c_s%rad2mean; isize = isize + size(rad2mean)
           qstarmean => c_s%qstarmean; isize = isize + size(qstarmean)
+          Hpsrc   => c_s%Hpsrc    ; isize = isize + size(Hpsrc)
+          TEpsrc  => c_s%TEpsrc  ; isize = isize + size(TEpsrc)
           pflux => c_s%pflux; isize = isize + size(pflux)
           pfluxup => c_s%pfluxup; isize = isize + size(pfluxup)
           pfluxdn => c_s%pfluxdn; isize = isize + size(pfluxdn)
