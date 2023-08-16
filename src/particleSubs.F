@@ -1,3 +1,4 @@
+
 !!!!! ----- D. Richter, 3/11/14 ---
 !!!!! ----- Adding particles to Peter's wavy code
 
@@ -9,15 +10,18 @@
         implicit none
         include 'mpif.h'
         integer :: values(8)
-        integer :: idx,ix
+        integer :: idx,ix,tmp
         real :: xv,yv,zv,ran2,xp_init(3)
-        real :: yp1,ypn,ddx
+        real :: yp1,ypn,ddx,vinj
         real :: xpart(nnx),yspln(nnx),dyspln(nnx),dy2spln(nnx)
 
       !Create the seed for the random number generator:
+      if (use_seed==0) then
         call date_and_time(VALUES=values)
         iseed = -(myid+values(8)+values(7)+values(6))
-
+      else
+        iseed = -(myid + use_seed)
+      endif
 
       !Initialize ngidx, the particle global index
         ngidx = 1
@@ -44,19 +48,28 @@
 
       !Now initialize all particles with a random location on that processor
         do idx=1,numpart
+          tmp = int(ran2(iseed)*nRadii + 1)
           xv = ran2(iseed)*(xmax-xmin) + xmin
           yv = ran2(iseed)*(ymax-ymin) + ymin
-          zv = ran2(iseed)*zl
-          xp_init = (/xv,yv,zv/)
-          call create_particle(xp_init,vp_init,Tp_init,radius_init,
-     +        ngidx,xpart(1:nnx),z_tank_i(1:nnx),hx_i(1:nnx),
-     +        hx2_i(1:nnx),yspln(1:nnx),dyspln(1:nnx),dy2spln(1:nnx),
-     +        0.0)
+          ! zv = ran2(iseed)*zl
+          ! xp_init = (/xv,yv,zv/)
+          zv = -1.0
+          xp_init = (/xv,yv,-1.0/)
+          vinj = ran2(iseed)*Vpmax
+
+          call create_particle(xp_init,(/0.0,0.0,vinj/),Tp_init,
+     +        radii0(tmp),ngidx,xpart(1:nnx),z_tank_i(1:nnx),
+     +        hx_i(1:nnx),hx2_i(1:nnx),yspln(1:nnx),dyspln(1:nnx),
+     +        dy2spln(1:nnx),0.0)
           ngidx = ngidx + 1
         enddo
 
-        partTsrc = 0.0
-        partTsrc_t = 0.0
+        partTsrc    = 0.0
+        partTsrc_t  = 0.0
+        partHsrc    = 0.0
+        partHsrc_t  = 0.0
+        partTEsrc   = 0.0
+        partTEsrc_t = 0.0
 
       end subroutine particle_init
       subroutine particle_setup
@@ -78,6 +91,8 @@
         character*4 :: myid_char
         character*80 :: traj_file
 
+        
+
       !First set up the neighbors for the interpolation stage:
         call assign_nbrs
 
@@ -93,7 +108,9 @@
           open(ntraj,file=path_traj,form='formatted',status='replace')
         endif
 
-        num_reintro = 0
+        do ix=1,nRadii
+          num_reintro(ix) = 0
+        enddo
         tot_reintro = 0
         his_reintro = 0
         pi = 4.0*atan(1.0)
@@ -117,7 +134,7 @@
         !Set up MPI datatypes for sending particle information
         !MUST UPDATE IF THINGS ARE ADDED/REMOVED FROM PARTICLE STRUCTURE IN modules.F
 
-        num_reals = 3*10 + 11
+        num_reals = 3*11 + 11
         blcts(1:3) = (/2, num_reals, 2/) ! block variable counts
         types(1:3) = (/mpi_integer, mpi_real8, mpi_integer8/) ! block types
 
@@ -342,7 +359,6 @@
         part%xp_i(1:3) = part%xp(1:3)
 
         part%vp(1:3) = vp(1:3)
-        part%v0 = vp(1)
         part%Tp = Tp
         part%Tf = Tp
         part%uf(1:3) = 0.0
@@ -357,6 +373,8 @@
         part%radius = rad
         part%m_s = Sal/1000.0*4.0/3.0*pi*rad**3*rhow
         part%xp_0(1:3) = part%xp(1:3)
+        part%vp_0(1:3) = part%vp(1:3)
+        part%radius_0 = part%radius
         part%t0 = t_born
         part%zpmax = 0.0
         call splint(xles,hx,dyspln,nnx,part%xip(1),part%dh)
@@ -375,7 +393,7 @@
 
         integer :: istage,ierr,it
         real :: denom,dtl,sigma,ttest
-        integer :: ix,iy,iz
+        integer :: ix,iy,iz!,probid
         real :: Rep,diff(3),diffnorm,corrfac,myRep_avg,xtmp(3),vtmp(3)
         real :: Nup,Tptmp,taup_i,rhop,Volp,radiustmp,Shp
         real :: TfC,einf,TpC,Lv,Eff_C,Eff_S,estar
@@ -403,17 +421,24 @@
       !update xip since waves have moved since last particle
         part => first_particle
         do while (associated(part))
-            !Update part%xip
+                  
+          !Update part%xip
           call splint(xpart,z_tank_i,yspln,nnx,part%xp(1),hpart)
           part%xip(1:3) = part%xp(1:3)
+
+          ! if(probid==part%pidx)write(*,*)"2:xip",part%xip
           if (iz_space == 5) then    !Algebraic stretching to smooth out waves
             call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
           endif
+
+          ! if(probid==part%pidx)write(*,*)"3:zeta xip",part%xip
           part => part%next
         enddo
 
       !Apply bottom boundary conditions here since mesh will have moved from previous:
-        num_reintro = 0
+        do ix=1,nRadii
+          num_reintro(ix) = 0
+        enddo
         call particle_bcs_nonperiodic
 
         partcount_t = 0.0
@@ -442,12 +467,14 @@
       !Loop over the linked list of particles:
         part => first_particle
         do while (associated(part))
+        ! if(probid==part%pidx)write(*,*)"4: uf, vp",part%uf,part%vp
 
          !First, interpolate to get the fluid velocity part%uf(1:3):
          !For wavy code, must pass in the wave height at particle location
          !Get this from spline:
           call splint(xpart,z_tank_i,yspln,nnx,part%xp(1),hpart)
           call uf_interp(hpart)
+          ! if(probid==part%pidx)write(*,*)"5:uf uf,vp",part%uf,part%vp
 
           if (it <= 1) then
             part%vp(1:3) = part%uf
@@ -471,7 +498,7 @@
 
           !Mass Transfer calculations
           TfC = part%Tf-273.15
-          !einf = 610.94*EXP(17.6257*TfC/(TfC+243.04))
+          ! einf = 610.94*EXP(17.6257*TfC/(TfC+243.04))
           einf = mod_magnus(part%Tf)
           TpC = part%Tp-273.15
           Lv =(25.0 - 0.02274*26.0)*10.0**5
@@ -488,7 +515,7 @@
           Tptmp = part%Tp + dt*zetas(istage)*part%Tprhs_s
           Tptmp = Tptmp + dt*zetas(istage)*part%Tprhs_L
           radiustmp = part%radius + dt*zetas(istage)*part%radrhs
-
+          ! if(probid==part%pidx)write(*,*)"6: part",part%xip,part%vp
 
           !Assemble RHS
           part%xrhs(1:3) = part%vp(1:3)
@@ -506,37 +533,46 @@
      +        rhop/rhow*taup_i*(part%Tp-part%Tf)
           part%Tprhs_L = 3.0*Lv/Cpp/part%radius*part%radrhs
 
-
           !Update the particle properties
           if (istage==1) then
             part%xip_i(1:3) = part%xip(1:3)
             part%xp_i(1:3) = part%xp(1:3)
+            ! if(probid==part%pidx)write(*,*)"7: part",part%xip,part%vp
           endif
 
           part%xp(1:3) = xtmp(1:3) + dt*gama(istage)*part%xrhs(1:3)
-
           if (pinertia==1) then
             part%vp(1:3) = vtmp(1:3) + dt*gama(istage)*part%vrhs(1:3)
+            ! if(probid==part%pidx)write(*,*)"8: part",part%xip,part%vp
           else
             part%vp = part%uf - part_grav/taup_i
           endif
           part%Tp = Tptmp + dt*gama(istage)*part%Tprhs_s
           part%Tp = part%Tp + dt*gama(istage)*part%Tprhs_L
+C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! KDRB couple testing hack
           part%radius = radiustmp + dt*gama(istage)*part%radrhs
 
           !Update part%xip as well:
+          ! if(probid==part%pidx)write(*,*)"9: part",part%xip,part%vp
           call splint(xpart,z_tank_i,yspln,nnx,part%xp(1),hpart)
           part%xip(1:3) = part%xp(1:3)
           if (iz_space == 5) then    !Algebraic stretching to smooth out waves
             call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
           endif
+          ! if(probid==part%pidx)write(*,*)"10: part",part%xip,part%vp
 
           !Keep track of max height particle reaches during lifetime
           if (part%xip(3) > part%zpmax) part%zpmax = part%xip(3)
+
+          ! Eliminate small particles for ssgf, added 11/2022 - Rolf Seh
+          if (ispray==2 .and. part%radius < 4e-6) then
+            part%xip(3) = -1
           endif
 
           part => part%next
         enddo
+
+
         !t_f1 = mpi_wtime()
         !write(*,*) 'proc,loop time: ',myid,t_f1-t_s
         !call mpi_barrier(mpi_comm_world,ierr)
@@ -580,10 +616,12 @@
         !Now that particles are in their updated position,
         !compute their contribution to the momentum coupling:
         !t_s = mpi_wtime()
-        call update_particle_stats
+        !!call particle_coupling_update
         !call mpi_barrier(mpi_comm_world,ierr)
         !t_f = mpi_wtime()
         !if (myid==5) write(*,*) 'time cpl: ', t_f - t_s
+
+        call update_particle_stats
 
         !Finally, now that coupling and statistics arrays are filled,
         !Transpose them back to align with the velocities:
@@ -601,6 +639,14 @@
      +      ncpu_s,numprocs)
         call ztox_trans(partTsrc_t(0:nnz+1,iys:iye,mxs:mxe),
      +      partTsrc(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
+     +      mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
+     +      ncpu_s,numprocs)
+      call ztox_trans(partHsrc_t(0:nnz+1,iys:iye,mxs:mxe),     ! KDRB couple
+     +      partHsrc(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,
+     +      mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
+     +      ncpu_s,numprocs)
+      call ztox_trans(partTEsrc_t(0:nnz+1,iys:iye,mxs:mxe),
+     +      partTEsrc(1:nnx,iys:iye,izs-1:ize+1),nnx,nnz,mxs,  ! KDRB couple
      +      mxe,mx_s,mx_e,iys,iye,izs,ize,iz_s,iz_e,myid,
      +      ncpu_s,numprocs)
 
@@ -745,8 +791,8 @@
       !Remove particles which fall under the radius
       !Rebound particles which hit top
 
-          top = zl - radius_init
-          bot = 0.0 + radius_init
+          top = zl - minval(radii0)
+          bot = 0.0 + minval(radii0)
 
           if (part%xip(3) > top) then
             part%xp(3) = top - (part%xp(3)-top)
@@ -791,7 +837,7 @@
 
          !JPDF of wave-relative origin and max height
             call add_histogram(bins(:,2),bins(:,5),hist_momentum,
-     +          histbins+2,beg_phase,0) ! part%vp(1)-part%v0
+     +          histbins+2,beg_phase,0) 
 
          !JPDF of residence time and wave slope at origin
             call add_histogram(bins(:,1),bins(:,6),hist_slopes,
@@ -799,10 +845,14 @@
 
          !JPDF of max height and initial vertical speed
             call add_histogram(bins(:,1),bins(:,7),hist_initV,
-     +          histbins+2,log10(restime),part%v0)
+     +          histbins+2,log10(restime),part%vp_0(3))
 
+            do ix=1,nRadii
+              if (part%radius == radii0(ix)) then
+                num_reintro(ix) = num_reintro(ix) + 1
+              endif
+            enddo
             call destroy_particle
-            num_reintro = num_reintro + 1
 
           else
             part => part%next
@@ -813,7 +863,7 @@
       end subroutine particle_bcs_nonperiodic
 
 
-      ! Implemented SSGFs (refer to Bruch et al. 2021) - Rolf and Sarah
+      ! Bruch et al. 2021 SSGF - Rolf and Sarah
       subroutine part_reintro_ssgf(it,istage)
         use particles
         use pars
@@ -822,7 +872,7 @@
         implicit none
         include 'mpif.h'
 
-        integer :: ierr,randproc,np,tmp_reintro,istage,ix,it
+        integer :: ierr,randproc,np,istage,ix,it
         real :: xv,yv,zv,ran2,vinj,t_bndy,uorb,worb,yp1,ypn,ddx
         real :: xpart(nnx),yspln(nnx),dyspln(nnx),dy2spln(nnx)
         real :: u2part(nnx),w2part(nnx)
@@ -939,7 +989,7 @@
       end subroutine part_reintro_ssgf
 
 
-      subroutine part_reintro
+      subroutine part_reintro(istage)
         use particles
         use pars
         use con_data
@@ -947,17 +997,24 @@
         implicit none
         include 'mpif.h'
 
-        integer :: ierr,randproc,np,tmp_reintro,ix
+
+        integer :: ierr,randproc,np,ix,ir,istage,tmp_reintro(nRadii)
+        integer :: numEvents, max_reintro
         real :: xv,yv,zv,ran2,vinj,t_bndy,uorb,worb,yp1,ypn,ddx
         real :: xpart(nnx),yspln(nnx),dyspln(nnx),dy2spln(nnx)
         real :: u2part(nnx),w2part(nnx)
 
         t_bndy = t_stage - t_zero
 
-        call mpi_allreduce(num_reintro,tmp_reintro,1,mpi_integer,
-     +      mpi_sum,mpi_comm_world,ierr)
-        tot_reintro = tot_reintro + tmp_reintro
-        if (myid==0) write(*,*) 'time,tmp_reintro: ',time,tmp_reintro
+        do ir=1,nRadii
+          call mpi_allreduce(num_reintro(ir),tmp_reintro(ir),1,
+     +        mpi_integer,mpi_sum,mpi_comm_world,ierr)
+          tot_reintro = tot_reintro + tmp_reintro(ir)
+        enddo
+        if (myid==0) then
+          write(*,*) 'sum(tmp_reintro):', sum(tmp_reintro)
+          ! write(*,*) tmp_reintro
+        endif
 
         !Set up xpart for interpolation of h:
         yp1 = 2.0e+30
@@ -969,33 +1026,31 @@
         call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
         call spline(xpart,hx_i,nnx,yp1,ypn,dyspln)
         call spline(xpart,hx2_i,nnx,yp1,ypn,dy2spln)
-
-       !Now everyone knows how many total particles need to be reintroduced
-       !For each one to be reintroduced, get a random processor who creates it:
-        do np=1,tmp_reintro
-
+        
+        max_reintro = maxval(tmp_reintro)
+        ! if (myid==0) write(*,*) 'max_reintro:', max_reintro
+        do np=1,max_reintro
           !Proc 0 gets a random proc ID, broadcasts it out:
           if (myid==0) randproc = floor(ran2(iseed)*numprocs)
           call mpi_bcast(randproc,1,mpi_integer,0,mpi_comm_world,ierr)
 
-          if (myid==randproc) then
+          if (myid==randproc) then 
             xv = ran2(iseed)*(xmax-xmin) + xmin
             yv = ran2(iseed)*(ymax-ymin) + ymin
-            !Local orbital velocity as well as a random component for ejection
-
-            ! vinj = worb + ran2(iseed)*Vpmax
+            zv = zw1
             uorb = 0.0
             vinj = ran2(iseed)*Vpmax
 
-            zv = zw1
-
-            call create_particle((/xv,yv,zv/),(/uorb,0.0,vinj/),300.0,
-     +          radius_init,ngidx,xpart(1:nnx),z_tank_i(1:nnx),
-     +          hx_i(1:nnx),hx2_i(1:nnx),yspln(1:nnx),dyspln(1:nnx),
-     +          dy2spln(1:nnx),t_stage)
-            ngidx = ngidx + 1
-
-
+            ! Create one particle of each size (if needed) at this location
+            do ir=1,nRadii
+              if (np <= tmp_reintro(ir)) then
+                call create_particle((/xv,yv,zv/),(/uorb,0.0,vinj/),
+     +            300.0,radii0(ir),ngidx,xpart(1:nnx),z_tank_i(1:nnx),
+     +            hx_i(1:nnx),hx2_i(1:nnx),yspln(1:nnx),dyspln(1:nnx),
+     +            dy2spln(1:nnx),t_stage)
+                ngidx = ngidx + 1
+              endif
+            enddo
           endif
         enddo
 
@@ -1824,11 +1879,10 @@
 
       !Do (u,v) loop first:
         do iz=0,nnz+1
-          if (zz(iz) > part%xip(3)) go to 1199
+          if (zz(iz) > part%xip(3)) exit
         enddo
-1199    continue
-
         kuvpts(3) = iz-1
+
       !Then fill in the rest:
         kuvpts(4) = kuvpts(3)+1
         kuvpts(5) = kuvpts(4)+1
@@ -2150,12 +2204,9 @@
 
           part => part%next
         enddo
-
-
       end subroutine update_particle_flux
 
       subroutine update_particle_stats
-
         use particles
         use pars
         use con_data
@@ -2163,18 +2214,32 @@
         use tank_pars
         implicit none
         include 'mpif.h'
+        real :: wtx,wty,wtz,wtt,dV  ! KDRB from NTLP
         real :: rhop,taup_i,partmass
         real :: xv,yv,zv
+        real::ctbuf_s(nnz+2,1:iye-iys+2,6),cbbuf_r(nnz+2,1:iye-iys+2,6)! KDRB from NTLP
+        real::crbuf_s(nnz+2,1:mxe-mxs+1,6),clbuf_r(nnz+2,1:mxe-mxs+1,6)! KDRB from NTLP
         integer :: i,j,k,ncount,ipt,jpt,kpt,kwpt,kUpt
+        integer :: istatus(mpi_status_size),ierr ! KDRB from NTLP
         integer :: ix,iy,iz
         real :: lref,Cvv,Cva,Cpv
         real :: zu_1,zu_nnz,ztocheck
         integer :: iz_beg,iz_end
-
+        
+        ! KDRB couple from NTLP 
+        partsrc_t = 0.0 
+        partTsrc_t = 0.0
+        partHsrc_t = 0.0
+        partTEsrc_t = 0.0
+        !!!!!!!!!!!!!!!!
 
         part => first_particle
         do while (associated(part))
 
+          !First, as done in uf_interp, must find the "leftmost" node
+          !of volume where particle belongs:
+          !(must repeat since now particle locations have been updated)
+      
           ipt = floor(part%xp(1)/dx) + 1
           jpt = floor(part%xp(2)/dy) + 1
           kUpt = floor((part%xip(3)-0.0)/dz_U) + 1
@@ -2186,53 +2251,192 @@
           endif
 
           kUpt = floor((ztocheck-minwavez)/dz_U) + 1
-          !if (kUpt > nnz+1) then
-          !  write(*,*) "STATISTICS ERROR - kUpt too large:", kUpt
-          !  kUpt = nnz+1
-          !endif
 
           call particle_stats_U(ipt,jpt,kUpt)
 
 
-
-      !First, as done in uf_interp, must find the "leftmost" node
-      !of volume where particle belongs:
-      !(must repeat since now particle locations have been updated)
-
           do iz=0,nnz+1
-            if (zz(iz) > part%xip(3)) go to 1299
+            if (zz(iz) > part%xip(3)) exit
           enddo
-1299      continue
           kpt = iz-1
 
       !Do again for w:
           do iz = 0,nnz+1
-            if (z(iz) > part%xip(3)) go to 1120
+            if (z(iz) > part%xip(3)) exit 
           enddo
-1120      continue
-
           kwpt = iz
-          !if (kwpt > nnz+1) then
-          !  write(*,*) "STATISTICS ERROR - kwpt too large:", kwpt
-          !  kwpt = nnz+1
-          !endif
-          !kwpt = iz
-
-
+          
+          
 !---------
-!As an aside, use ipt,jpt,kwpt to update the particle numbers at
-!each cell:
+!As an aside, use ipt,jpt,kwpt to update the particle numbers at each cell:
 
-!call inputs are the nodes associated with the volume that each
-!part. lies in
+!call inputs are the nodes associated with the volume that each part. lies in
           call particle_stats(ipt,jpt,kwpt)
 
 
-!---------
+!------------ KDRB START OF SECTION PASTED FROM NTLP -------------------------------------------
+          !Add contribution to each of the 8 surrounding nodes:
+          do i=0,1
+          do j=0,1
+          do k=0,1
+
+            xv = dx*(i+ipt-1)
+            yv = dy*(j+jpt-1)
+            zv = zz(k+kpt)
+
+            dV = dx*dy*dzu(kpt+1)
+
+            wtx = (1.0 - abs(part%xp(1)-xv)/dx)
+            wty = (1.0 - abs(part%xp(2)-yv)/dy)
+            wtz = (1.0 - abs(part%xp(3)-zv)/dzu(kpt+1))
+            wtt = wtx*wty*wtz
+
+            rhop = (part%m_s+pi2*2.0/3.0*part%radius**3*rhow)/
+     +          (pi2*2.0/3.0*part%radius**3)
+            partmass = rhop*2.0/3.0*pi2*(part%radius)**3
+            taup_i = 18.0*rhoa*nuf/rhop/(2.0*part%radius)**2 !Brian 8/4/14
+
+            !write(*,'a6,3i') 'node:',ipt+i,jpt+j,kpt+k
+            !write(*,'a6,5e15.6') 'Vwt: ',dV,wtx,wty,wtz,wtt
+
+            ix = ipt+i
+      !      !Account for periodicity:
+      !      if (ix == nnx+1) ix = 1
+            iy = jpt+j
+            iz = kpt+k
+
+            if (ix .gt. mxe+1) write(*,*) 'proc',myid,'has ix = ',ix
+            if (ix .lt. mxs) write(*,*) 'proc',myid,'has ix = ',ix
+            if (iy .gt. iye+1) write(*,*) 'proc',myid,'has iy = ',iy
+            if (iy .lt. iys) write(*,*) 'proc',myid,'has iy = ',iy
+            if (iz .gt. nnz+1) write(*,*) 'proc',myid,'has iz = ',iz
+            if (iz .lt. 0) write(*,*) 'proc',myid,'has iz = ',iz
+
+            !Recall to subtract minus g (add g) since momentum is extracted from
+            !fluid only through drag term - NOT the gravity term as well
+            if (couple == 1) then
+              !drag momentum coupling
+              partsrc_t(iz,iy,ix,1:3) =
+     +            partsrc_t(iz,iy,ix,1:3) +
+     +            partmass/rhoa*(part%vrhs(1:3)+part_grav(1:3))*wtt/dV
+
+              !vapor momentum coupling
+              partsrc_t(iz,iy,ix,1:3) =
+     +            partsrc_t(iz,iy,ix,1:3) +
+     +            rhow/rhoa*pi2*2*part%radius**2*
+     +            part%radrhs*part%vp(1:3)*wtt/dV
+            endif
+
+            if (coupleT == 1) then
+              partTsrc_t(iz,iy,ix) =
+     +            partTsrc_t(iz,iy,ix) +
+     +            (part%Tprhs_s*6.0*rhow/rhop/CpaCpp/taup_i*
+     +            (pi2/2.0)*part%radius*nuf)*wtt/dV
+            endif
+
+            if (coupleH == 1) then
+              partHsrc_t(iz,iy,ix) =     !Brian 8/5/14
+     +            partHsrc_t(iz,iy,ix) +  !minus comes later
+     +            rhow/rhoa*pi2*2*part%radius**2*part%radrhs*wtt/dV
+     
+        !      http://eesc.columbia.edu/courses/ees/climate/SI_Units.pdf
+        !      or http://catalog.conveyorspneumatic.com/Asset/FLS%20Specific%20Heat%20Capacities%20of%20Gases.pdf
+               Cvv = 1463.0 !J/degkg
+               Cpv = 1952.0 !from E. Toolbox -> 1864.0 !J/degkg
+               !Cva = 717.0 !J/degkg
+               !lref = (25.0 - 0.02274*20.0)*10.0**5
+               partTEsrc_t(iz,iy,ix) =
+     +             partTEsrc_t(iz,iy,ix) +  !minus comes later
+     +             rhow/rhoa*pi2*2*part%radius**2*
+     +             part%radrhs*Cpv/Cpa*part%Tp*wtt/dV -
+     +             rhow/rhoa*pi2*2*part%radius**2*
+     +             part%radrhs*Cpv/Cpa*part%Tf*wtt/dV
+            endif
+
+            !write(*,'a5,3i,3e15.6') 'bsrc:',ix,iy,iz,partsrc(ix,iy,iz,1:3)
+
+          end do
+          end do
+          end do
+!------------ KDRB END OF SECTION PASTED FROM NTLP -------------------------------------------
 
           part => part%next
         enddo
 
+
+ !------------ KDRB START OF SECTION PASTED FROM NTLP -------------------------------------------
+         !Now, partsrc and partTsrc have halos on each processor - give these to the rightful owner:
+        crbuf_s=0.0;ctbuf_s=0.0
+        clbuf_r=0.0;cbbuf_r=0.0
+
+        !First send top:
+        !get send buffer ready:
+        ctbuf_s(1:nnz+2,1:iye-iys+2,1:3)=partsrc_t(0:nnz+1,
+     +                                iys:iye+1,mxe+1,1:3)
+        ctbuf_s(1:nnz+2,1:iye-iys+2,4)=partTsrc_t(0:nnz+1,
+     +                                iys:iye+1,mxe+1)
+
+        ctbuf_s(1:nnz+2,1:iye-iys+2,5)=partHsrc_t(0:nnz+1,
+     +                                iys:iye+1,mxe+1)
+
+        ctbuf_s(1:nnz+2,1:iye-iys+2,6)=partTEsrc_t(0:nnz+1,
+     +                                iys:iye+1,mxe+1)
+
+        ncount = 6*(nnz+2)*(iye-iys+2)
+        call mpi_sendrecv(ctbuf_s,ncount,mpi_real8,tproc,1,
+     +     cbbuf_r,ncount,mpi_real8,bproc,1,mpi_comm_world,istatus,ierr)
+
+         !Now just add the contents of the receive buffer into the entire
+         !iys column of this proc:
+
+        partsrc_t(0:nnz+1,iys:iye+1,mxs,1:3) =
+     +      partsrc_t(0:nnz+1,iys:iye+1,mxs,1:3) +
+     +      cbbuf_r(1:nnz+2,1:iye-iys+2,1:3)
+        partTsrc_t(0:nnz+1,iys:iye+1,mxs) =
+     +      partTsrc_t(0:nnz+1,iys:iye+1,mxs) +
+     +      cbbuf_r(1:nnz+2,1:iye-iys+2,4)
+
+        partHsrc_t(0:nnz+1,iys:iye+1,mxs) =
+     +      partHsrc_t(0:nnz+1,iys:iye+1,mxs) +
+     +      cbbuf_r(1:nnz+2,1:iye-iys+2,5)
+
+
+        partTEsrc_t(0:nnz+1,iys:iye+1,mxs) =
+     +      partTEsrc_t(0:nnz+1,iys:iye+1,mxs) +
+     +      cbbuf_r(1:nnz+2,1:iye-iys+2,6)
+
+         !Now get the right send buffer ready:
+        crbuf_s(1:nnz+2,1:mxe-mxs+1,1:3)=
+     +      partsrc_t(0:nnz+1,iye+1,mxs:mxe,1:3)
+        crbuf_s(1:nnz+2,1:mxe-mxs+1,4)=
+     +      partTsrc_t(0:nnz+1,iye+1,mxs:mxe)
+        crbuf_s(1:nnz+2,1:mxe-mxs+1,5)=
+     +      partHsrc_t(0:nnz+1,iye+1,mxs:mxe)
+
+        crbuf_s(1:nnz+2,1:mxe-mxs+1,6)=
+     +      partTEsrc_t(0:nnz+1,iye+1,mxs:mxe)
+
+        !Now send to right:
+        ncount = 6*(nnz+2)*(mxe-mxs+1)
+        call mpi_sendrecv(crbuf_s,ncount,mpi_real8,rproc,2,
+     +     clbuf_r,ncount,mpi_real8,lproc,2,mpi_comm_world,istatus,ierr)
+
+        !And again add the contents to the top/bottom rows of partsrc:
+        partsrc_t(0:nnz+1,iys,mxs:mxe,1:3) =
+     +      partsrc_t(0:nnz+1,iys,mxs:mxe,1:3) +
+     +      clbuf_r(1:nnz+2,1:mxe-mxs+1,1:3)
+
+        partTsrc_t(0:nnz+1,iys,mxs:mxe) =
+     +      partTsrc_t(0:nnz+1,iys,mxs:mxe) +
+     +      clbuf_r(1:nnz+2,1:mxe-mxs+1,4)
+        partHsrc_t(0:nnz+1,iys,mxs:mxe) =
+     +      partHsrc_t(0:nnz+1,iys,mxs:mxe) +
+     +      clbuf_r(1:nnz+2,1:mxe-mxs+1,5)
+        partTEsrc_t(0:nnz+1,iys,mxs:mxe) =
+     +      partTEsrc_t(0:nnz+1,iys,mxs:mxe) +
+     +      clbuf_r(1:nnz+2,1:mxe-mxs+1,6)
+
+!------------ KDRB END OF SECTION PASTED FROM NTLP -------------------------------------------
 
       end subroutine update_particle_stats
 
