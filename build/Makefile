@@ -1,7 +1,6 @@
-FORTRAN=mpif90
-F90=ifort
+FORTRAN=mpiifort
 
-FLAGS=-i4 -r8 -O2 -assume byterecl -xHost -fpp
+FLAGS=-i4 -r8 -O2 -assume byterecl -march=core-avx2 -fpp -traceback -fc=ifx
 
 ## UNCOMMENT TO RUN IN DEBUG MODE
 #DEBUG_FLAGS=-g -traceback -check bounds
@@ -16,12 +15,14 @@ SRC =   fft.f \
         netcdf_io.f90 \
         subroutines.F \
         particleSubs.F \
-        ioSubs.F
+	boundarySubs.F \
+        ioSubs.F \
+	les.F
 
 OBJS = $(addsuffix .o, $(basename $(SRC)))
 
 
-lesmpi.a: $(OBJS) ../src/les.F
+lesmpi.a: $(OBJS) 
 	$(FORTRAN) $^ -o $@  $(FLAGS) $(DEBUG_FLAGS) $(OUTPUTINC) $(OUTPUTLIB) $(LINKOPTS)
 
 %.o: ../src/%.f
@@ -37,3 +38,8 @@ lesmpi.a: $(OBJS) ../src/les.F
 clean:
 	rm -f *.o *.mod lesmpi.a mach.file
 
+#Dependencies:
+les.o: modules.o 
+partcielSubs.o: modules.o
+boundarySubs.o: modules.o
+netcdf_io.o: modules.o
