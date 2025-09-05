@@ -51,10 +51,10 @@
           tmp = int(ran2(iseed)*nRadii + 1)
           xv = ran2(iseed)*(xmax-xmin) + xmin
           yv = ran2(iseed)*(ymax-ymin) + ymin
-          ! zv = ran2(iseed)*zl
-          ! xp_init = (/xv,yv,zv/)
-          zv = -1.0
-          xp_init = (/xv,yv,-1.0/)
+           zv = ran2(iseed)*zl
+           xp_init = (/xv,yv,zv/)
+          !zv = -1.0
+          !xp_init = (/xv,yv,-1.0/)
           vinj = ran2(iseed)*Vpmax
 
           call create_particle(xp_init,(/0.0,0.0,vinj/),Tp_init,
@@ -394,6 +394,7 @@
         integer :: istage,ierr,it
         real :: denom,dtl,sigma,ttest
         integer :: ix,iy,iz!,probid
+	integer :: flag
         real :: Rep,diff(3),diffnorm,corrfac,myRep_avg,xtmp(3),vtmp(3)
         real :: Nup,Tptmp,taup_i,rhop,Volp,radiustmp,Shp
         real :: TfC,einf,TpC,Lv,Eff_C,Eff_S,estar
@@ -404,6 +405,8 @@
 
       !First fill extended velocity field for interpolation
       !t_s = mpi_wtime()
+      if (verb>0 .and. myid.eq.0) 
+     + write(*,*) 'Before fill_ext'
         call fill_ext
       !t_f = mpi_wtime()
       !call mpi_barrier(mpi_comm_world,ierr)
@@ -419,6 +422,8 @@
         call spline(xpart,z_tank_i,nnx,yp1,ypn,yspln)
 
       !update xip since waves have moved since last particle
+      if (verb>0 .and. myid.eq.0)
+     + write(*,*) 'Before particle location interpolation loop'
         part => first_particle
         do while (associated(part))
                   
@@ -428,7 +433,9 @@
 
           ! if(probid==part%pidx)write(*,*)"2:xip",part%xip
           if (iz_space == 5) then    !Algebraic stretching to smooth out waves
-            call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
+            call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3),flag)
+	  if (flag.eq.1) write(*,*) 'CONVERGENCE ERROR',part%xip(1:3),
+     + part%xp(1:3) ,part%radius
           endif
 
           ! if(probid==part%pidx)write(*,*)"3:zeta xip",part%xip
@@ -436,6 +443,8 @@
         enddo
 
       !Apply bottom boundary conditions here since mesh will have moved from previous:
+      if (verb>0 .and. myid.eq.0) 
+     + write(*,*) 'Before first particle_bcs_nonperiodic'
         do ix=1,nRadii
           num_reintro(ix) = 0
         enddo
@@ -465,6 +474,8 @@
 
 
       !Loop over the linked list of particles:
+      if (verb>0 .and. myid.eq.0) 
+     +  write(*,*) 'Before main particle loop'
         part => first_particle
         do while (associated(part))
         ! if(probid==part%pidx)write(*,*)"4: uf, vp",part%uf,part%vp
@@ -557,7 +568,9 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           call splint(xpart,z_tank_i,yspln,nnx,part%xp(1),hpart)
           part%xip(1:3) = part%xp(1:3)
           if (iz_space == 5) then    !Algebraic stretching to smooth out waves
-            call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
+            call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3),flag)
+	    if (flag.eq.1) write(*,*) 'CONVERGENCE ERROR',part%xip(1:3),
+     + part%xp(1:3) ,part%radius
           endif
           ! if(probid==part%pidx)write(*,*)"10: part",part%xip,part%vp
 
@@ -572,7 +585,6 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           part => part%next
         enddo
 
-
         !t_f1 = mpi_wtime()
         !write(*,*) 'proc,loop time: ',myid,t_f1-t_s
         !call mpi_barrier(mpi_comm_world,ierr)
@@ -584,14 +596,18 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         !Enforce nonperiodic bcs (either elastic or destroying particles)
         !t_s = mpi_wtime()
+      if (verb>0 .and. myid.eq.0)
+     +  write(*,*) 'Before particle_bcs_nonperiodic'
         call particle_bcs_nonperiodic
         !call mpi_barrier(mpi_comm_world,ierr)
         !t_f = mpi_wtime()
         !if (myid==5) write(*,*) 'time bc_non:', t_f - t_s
 
+      if (verb>0 .and. myid.eq.0)
+     +  write(*,*) 'Before part_reintro'
         if (istage == 1) tot_reintro = 0
         if (ispray == 1) then
-          call part_reintro
+          call part_reintro(it,istage)
         elseif (ispray == 2) then
           if (istage == 3) call part_reintro_ssgf(it,istage)
         endif
@@ -600,6 +616,8 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !Check to see if particles left processor
         !If they did, remove from one list and add to another
         !t_s = mpi_wtime()
+      if (verb>0 .and. myid.eq.0)
+     +  write(*,*) 'Before partcle_exchange'
         call particle_exchange
         !call mpi_barrier(mpi_comm_world,ierr)
         !t_f = mpi_wtime()
@@ -608,6 +626,8 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !Now enforce periodic bcs
         !just updates x,y locations if over xl,yl or under 0
         !t_s = mpi_wtime()
+      if (verb>0 .and. myid.eq.0) 
+     +   write(*,*) 'Before partcle_bcs_periodic'
         call particle_bcs_periodic
         !call mpi_barrier(mpi_comm_world,ierr)
         !t_f = mpi_wtime()
@@ -621,6 +641,8 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !t_f = mpi_wtime()
         !if (myid==5) write(*,*) 'time cpl: ', t_f - t_s
 
+      if (verb>0 .and. myid.eq.0)
+     +  write(*,*) 'Before update_particle_stats'
         call update_particle_stats
 
         !Finally, now that coupling and statistics arrays are filled,
@@ -989,7 +1011,7 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       end subroutine part_reintro_ssgf
 
 
-      subroutine part_reintro(istage)
+      subroutine part_reintro(it,istage)
         use particles
         use pars
         use con_data
@@ -998,7 +1020,8 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         include 'mpif.h'
 
 
-        integer :: ierr,randproc,np,ix,ir,istage,tmp_reintro(nRadii)
+	integer, intent(in) :: it,istage
+        integer :: ierr,randproc,np,ix,ir,tmp_reintro(nRadii)
         integer :: numEvents, max_reintro
         real :: xv,yv,zv,ran2,vinj,t_bndy,uorb,worb,yp1,ypn,ddx
         real :: xpart(nnx),yspln(nnx),dyspln(nnx),dy2spln(nnx)
@@ -1803,24 +1826,33 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
       end subroutine fill_ext
-      subroutine get_zeta_algeb(alpha,L,h,xip)
+      subroutine get_zeta_algeb(alpha,L,h,xip,flag)
         implicit none
 
         real :: f,fp,h,alpha,tol,err,zeta,zetanew,L,z
+	integer :: iter_max,iter
         real, intent(inout) :: xip(1:3)
+	integer, intent(out) :: flag
 
         err = 1.0
+	iter_max = 1000
+	iter = 0
+	flag = 0
         z = xip(3)
         zeta = z
-        do while (err > 1e-10)
+        do while (err > 1e-8 .and. iter.le.iter_max)
           f = zeta + h*(1.0 - zeta/L)**alpha - z
           fp = 1 - alpha*h/L*(1.0 - zeta/L)**(alpha-1.0)
 
           zetanew = zeta - f/fp
           err = abs(zeta-zetanew)/zeta
           zeta = zetanew
+	  iter = iter + 1
         enddo
         xip(3) = zeta
+	if (iter.ge.iter_max) then
+          flag = 1
+	end if
 
       end subroutine get_zeta_algeb
       subroutine uf_interp(hpart)
@@ -1832,7 +1864,7 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         implicit none
 
         integer :: ix,iy,izuv,izw,iz,i,k,j
-        integer :: first,last
+        integer :: first,last,flag
         real :: xkval,xjval,pj,dxvec(2)
         integer :: ijpts(2,6),kuvpts(6)
         real :: wt(3,6)
@@ -1849,7 +1881,9 @@ C           part%radius_0 = part%radius         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         part%xip(1:3) = part%xp(1:3)
         if (iz_space == 5) then    !Algebraic stretching to smooth out waves
-          call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3))
+          call get_zeta_algeb(a_decay,zl,hpart,part%xip(1:3),flag)
+	  if (flag.eq.1) write(*,*) 'CONVERGENCE ERROR',part%xip(1:3),
+     + part%xp(1:3) ,part%radius
         endif
 
       !Following Orlando's code, get the "leftmost" node

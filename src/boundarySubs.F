@@ -2062,8 +2062,8 @@ c--------- read in wave file
         if (myid==0) write(*,*) 'Finished reading tank data'
 
         write(nprt,1001) (i,xx(i), zz_tank(i),us(i),ws(i),
-     +      i=1,nnx)
- 1001   format(' 1001: tank ',/,
+     +      i=1,npts_t)
+ 1001   format(' 1001: data from file ',/,
      +      ' i ',5x,' xx ',5x,' zz ',5x,' us ',5x,
      +      ' ws ',/,(i5,4e15.6))
 
@@ -2093,6 +2093,12 @@ c ---------- interpolate into the spline function at les points
         do i=1,nnx
           z_tank(i) = z_tank(i) - sum
         enddo
+
+        write(nprt,1002) (i,xles(i), z_tank(i),u_tank(i),w_tank(i),
+     +      i=1,nnx)
+ 1002   format(' 1002: interpolated wave data ',/,
+     +      ' i ',5x,' x ',5x,' z ',5x,' us ',5x,
+     +      ' ws ',/,(i5,4e15.6))
 
 c --------- force mean w = 0 from the data
 
@@ -2552,12 +2558,12 @@ c ----------- make sure mean of w_orbit = 0
           enddo
         enddo
 
-        ! if (myid==0) then
-        !   write(*,*) "z_tank_i u_orbit w_orbit"
-        !   do i=1,nnx
-        !     write(*,*) z_tank_i(i), u_orbit(i,iys), w_orbit(i,iys)
-        !   end do
-        ! end if
+         !if (myid==0) then
+         !  write(*,*) "z_tank_i u_orbit w_orbit"
+         !  do i=1,nnx
+         !    write(*,*) z_tank_i(i), u_orbit(i,iys), w_orbit(i,iys)
+         !  end do
+         !end if
 
         return
       end

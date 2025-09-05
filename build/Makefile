@@ -39,7 +39,9 @@ clean:
 	rm -f *.o *.mod lesmpi.a mach.file
 
 #Dependencies:
-les.o: modules.o 
-partcielSubs.o: modules.o
+les.o: modules.o particleSubs.o boundarySubs.o netcdf_io.o subroutines.o
+particleSubs.o: modules.o
 boundarySubs.o: modules.o
 netcdf_io.o: modules.o
+subroutines.o: modules.o
+ioSubs.o: modules.o

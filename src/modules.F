@@ -24,10 +24,10 @@ c
 c -------- number of vars, size of problem in (x,y,z), max size, max processors
 c
         integer, parameter :: nscl = 2, nvar = (4+nscl)
-        integer, parameter :: nxg1  = 1024, nyg1  = 256, nzg1  = 128
-        integer, parameter :: maxnx = 1024, maxny = 256, maxnz = 128
-        !integer, parameter :: nxg1  = 128, nyg1  = 128, nzg1  = 128
-        !integer, parameter :: maxnx = 128, maxny = 128, maxnz = 128
+        !integer, parameter :: nxg1  = 1024, nyg1  = 256, nzg1  = 128
+        !integer, parameter :: maxnx = 1024, maxny = 256, maxnz = 128
+        integer, parameter :: nxg1  = 128, nyg1  = 128, nzg1  = 128
+        integer, parameter :: maxnx = 128, maxny = 128, maxnz = 128
 
       !Boundary conditions and other parameters
         real :: Uo,Ttop(nscl),Tbot(nscl),qstar(nscl),tsfcc(nscl),RHbot
@@ -157,7 +157,7 @@ c ----------------------------------------------------------------------
         integer :: numpart,tnumpart,ngidx,part_created
         integer :: tot_reintro,his_reintro
         integer :: iseed
-        integer, parameter :: rbins=4, nRadii=6
+        integer, parameter :: rbins=4, nRadii=2
         integer :: num_reintro(nRadii)
         real :: Rep_avg,part_grav(3),Vpmax,dz_U,vp_init(3),Tp_init
         real :: radii0(nRadii)
